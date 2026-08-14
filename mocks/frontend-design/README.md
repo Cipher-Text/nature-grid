@@ -4,9 +4,11 @@ Static review mocks for Nature Grid visual direction before implementation.
 
 Open `index.html` in a browser to review the proposed theme and layout direction.
 
+The public page mock has been polished around the agreed access model: open public overview first, sign in only for contribution, downloads, advanced dataset access, profile, and role-gated operations.
+
 ## Pages
 
-- `index.html`: public dashboard
+- `index.html`: polished public single-page environmental board
 - `data.html`: data hub
 - `observations.html`: observations explorer
 - `reports.html`: citizen reports
