@@ -1,6 +1,6 @@
 # Progress
 
-Last updated: 2026-08-15
+Last updated: 2026-08-15 (mocks revised)
 
 ## Status Legend
 
@@ -18,7 +18,7 @@ Last updated: 2026-08-15
 | Monorepo scaffold | Done | `apps`, `packages`, `docs`, `infrastructure`, Nx/pnpm config |
 | Public-first product model | Done | Public `/`, login-gated contribution/download/advanced access |
 | Documentation baseline | Done | Mission, vision, stack, roles, business logic, flows, API catalog |
-| Frontend mocks | In Progress | Static mocks exist; production polish still needed |
+| Frontend mocks | Done | All 11 pages revised — proper nav linking, consistent sidebar, design system, trust levels, feed components, admin console, theme reference |
 | Backend API scaffold | In Progress | NestJS shell and early controllers/services exist |
 | Database schema baseline | In Progress | Prisma baseline exists, domain model needs refinement |
 | Real frontend implementation | Planned | Not started beyond minimal shell |
@@ -74,8 +74,8 @@ Mocks:
 
 ## Next Work
 
-1. Review and approve the public-first mock direction.
-2. Revise mocks for production-level responsiveness and copy.
+1. ~~Review and approve the public-first mock direction.~~ Done.
+2. ~~Revise mocks for production-level responsiveness and copy.~~ Done.
 3. Add the domain model v2 doc for geography, providers, monitoring, evidence, audit, datasets, and projects.
 4. Update backend module scaffold to match the accepted domain model.
 5. Implement public web page from approved mock.
