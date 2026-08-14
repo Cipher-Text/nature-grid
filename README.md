@@ -98,6 +98,9 @@ Detailed stack: [docs/tech-stack.md](docs/tech-stack.md)
 - [Access model](docs/access-model.md)
 - [Business logic](docs/business-logic.md)
 - [User and system flows](docs/flows.md)
+- [Roadmap](docs/roadmap.md)
+- [Progress](docs/progress.md)
+- [Implementation plan](docs/implementation-plan.md)
 - [Backend API links](docs/api/backend-api-links.md)
 
 ## Getting Started

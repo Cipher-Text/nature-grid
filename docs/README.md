@@ -8,6 +8,9 @@
 - [Access model](access-model.md)
 - [Business logic](business-logic.md)
 - [User and system flows](flows.md)
+- [Roadmap](roadmap.md)
+- [Progress](progress.md)
+- [Implementation plan](implementation-plan.md)
 
 ## Architecture
 
