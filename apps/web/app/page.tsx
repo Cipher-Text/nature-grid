@@ -1,31 +1,34 @@
-const featureAreas = [
-  'Environmental data hub',
-  'Citizen reports',
-  'Biodiversity observations',
-  'Disaster and environmental alerts',
-];
+import PublicNav from '../components/public-nav';
+import HeroSection from '../components/hero-section';
+import MetricsSection from '../components/metrics-section';
+import MapSection from '../components/map-section';
+import DatasetPreview from '../components/dataset-preview';
+import ReportsAlertsSection from '../components/reports-alerts-section';
+import BiodiversityRestoration from '../components/biodiversity-restoration';
+import CommunitySection from '../components/community-section';
+import PublicFooter from '../components/public-footer';
 
+/**
+ * Public board — accessible without login.
+ *
+ * All data is static seed while the backend is not yet implemented.
+ * Replace the imports in lib/static-data.ts with fetch() calls
+ * once the API endpoints are live (see docs/api/initial-api.md).
+ */
 export default function HomePage() {
   return (
-    <main className="page-shell">
-      <section className="hero">
-        <p className="eyebrow">Nature Grid</p>
-        <h1>Environmental intelligence for Bangladesh and beyond.</h1>
-        <p>
-          A public platform for locations, datasets, observations, reports, alerts,
-          and GIS-backed environmental action.
-        </p>
-      </section>
-
-      <section className="feature-grid" aria-label="Initial feature areas">
-        {featureAreas.map((feature) => (
-          <article key={feature}>
-            <h2>{feature}</h2>
-            <p>Implementation starts from the shared contracts and API modules.</p>
-          </article>
-        ))}
-      </section>
-    </main>
+    <div className="public-shell">
+      <PublicNav />
+      <main>
+        <HeroSection />
+        <MetricsSection />
+        <MapSection />
+        <DatasetPreview />
+        <ReportsAlertsSection />
+        <BiodiversityRestoration />
+        <CommunitySection />
+        <PublicFooter />
+      </main>
+    </div>
   );
 }
-

@@ -1,6 +1,6 @@
 # Progress
 
-Last updated: 2026-08-15 (mocks revised)
+Last updated: 2026-08-15 (Milestone 1 done, Milestone 2 in progress)
 
 ## Status Legend
 
@@ -21,7 +21,8 @@ Last updated: 2026-08-15 (mocks revised)
 | Frontend mocks | Done | All 11 pages revised — proper nav linking, consistent sidebar, design system, trust levels, feed components, admin console, theme reference |
 | Backend API scaffold | In Progress | NestJS shell and early controllers/services exist |
 | Database schema baseline | In Progress | Prisma baseline exists, domain model needs refinement |
-| Real frontend implementation | Planned | Not started beyond minimal shell |
+| Public frontend implementation (M1) | Done | Public board at `/` — 8 components, CSS design system, static seed data |
+| Shared types and contracts (M2) | Done | Full enums (roles, severity, status, category, access policy, trust level), DTOs, paginated envelopes, request/response types, route contract map |
 | Auth implementation | Planned | Placeholder only |
 | PostGIS/geography implementation | Planned | Needs richer model |
 | Provider/provenance model | Planned | Needed before serious dataset work |
@@ -76,10 +77,11 @@ Mocks:
 
 1. ~~Review and approve the public-first mock direction.~~ Done.
 2. ~~Revise mocks for production-level responsiveness and copy.~~ Done.
-3. Add the domain model v2 doc for geography, providers, monitoring, evidence, audit, datasets, and projects.
-4. Update backend module scaffold to match the accepted domain model.
-5. Implement public web page from approved mock.
-6. Implement backend foundation: auth, users, geography, providers, datasets.
+3. ~~Implement public web page from approved mock.~~ Done — Milestone 1.
+4. ~~Define shared enums, DTOs, and route contracts.~~ Done — Milestone 2.
+5. Add the domain model v2 doc for geography, providers, monitoring, evidence, audit, datasets, and projects.
+6. Update backend module scaffold to match the accepted domain model — Milestone 3.
+7. Replace placeholder Prisma schema with domain v2 model and seed data — Milestone 4.
 
 ## Open Questions
 

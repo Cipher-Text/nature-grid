@@ -10,6 +10,8 @@
     "test": "echo \"No web tests configured yet\""
   },
   "dependencies": {
+    "@nature-grid/shared": "workspace:*",
+    "@nature-grid/contracts": "workspace:*",
     "next": "^14.2.23",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
