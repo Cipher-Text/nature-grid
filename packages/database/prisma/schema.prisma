@@ -1,0 +1,117 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  CITIZEN
+  RESEARCHER
+  ORGANIZATION_ADMIN
+  GOVERNMENT
+  ADMIN
+}
+
+enum ReportStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  VERIFIED
+  REJECTED
+  RESOLVED
+}
+
+enum AlertStatus {
+  DRAFT
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+enum IngestionStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  role      UserRole @default(CITIZEN)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  reports CitizenReport[]
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  type      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Division {
+  id        String     @id @default(cuid())
+  name      String
+  districts District[]
+}
+
+model District {
+  id         String   @id @default(cuid())
+  name       String
+  divisionId String
+  division   Division @relation(fields: [divisionId], references: [id])
+
+  reports CitizenReport[]
+}
+
+model Dataset {
+  id          String   @id @default(cuid())
+  name        String
+  category    String
+  source      String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model CitizenReport {
+  id          String       @id @default(cuid())
+  title       String
+  description String
+  status      ReportStatus @default(SUBMITTED)
+  reporterId  String?
+  reporter    User?        @relation(fields: [reporterId], references: [id])
+  districtId  String?
+  district    District?    @relation(fields: [districtId], references: [id])
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model Alert {
+  id          String      @id @default(cuid())
+  title       String
+  description String
+  severity    String
+  status      AlertStatus @default(DRAFT)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model IngestionJob {
+  id        String          @id @default(cuid())
+  provider  String
+  status    IngestionStatus @default(QUEUED)
+  startedAt DateTime?
+  endedAt   DateTime?
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+}
+

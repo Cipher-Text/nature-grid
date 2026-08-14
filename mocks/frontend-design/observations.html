@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><title>Observations | Nature Grid Mock</title><link rel="stylesheet" href="./styles.css" /></head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand"><div class="brand-mark">NG</div><div><strong>Nature Grid</strong><span>Environmental intelligence</span></div></div>
+        <nav>
+          <a href="./index.html">Dashboard</a><a href="./data.html">Data Hub</a><a class="active" href="./observations.html">Observations</a><a href="./reports.html">Citizen Reports</a><a href="./alerts.html">Alerts</a><a href="./biodiversity.html">Biodiversity</a><a href="./restoration.html">Restoration</a><a href="./community.html">Community</a><a href="./profile.html">Profile</a><a href="./admin.html">Admin</a><a href="./theme.html">Theme</a>
+        </nav>
+        <div class="sidebar-note">Observation workflow<br />Citizen + researcher inputs</div>
+      </aside>
+      <main class="main">
+        <header class="topbar">
+          <div><p class="eyebrow">Observations</p><h1>Public verified observations, login-gated contribution</h1></div>
+          <div class="topbar-actions"><input placeholder="Search species, river, district..." /><button class="ghost">Public Filters</button><button>Sign In to Add</button></div>
+        </header>
+        <section class="metric-grid">
+          <article class="metric"><span>Total observations</span><strong>16.8k</strong><small>38 districts</small></article>
+          <article class="metric"><span>Pending verification</span><strong>412</strong><small class="warning">Needs reviewer</small></article>
+          <article class="metric"><span>Research-grade</span><strong>7.4k</strong><small class="success">Verified</small></article>
+          <article class="metric"><span>Media evidence</span><strong>11.2k</strong><small>Photos and files</small></article>
+        </section>
+        <section class="split-list">
+          <article class="panel map-panel"><div class="panel-header"><div><h2>Observation map</h2><p>Clusters by data type and verification state</p></div></div><div class="map-canvas"><div class="zone zone-one"></div><div class="zone zone-two"></div><div class="map-label primary">Wildlife sightings</div><div class="map-label alert">Water quality reports</div></div></article>
+          <article class="panel"><div class="panel-header"><div><h2>Recent observations</h2><p>Designed for cards in the web app</p></div></div><div class="record-list">
+            <div><strong>River turbidity reading</strong><span>Buriganga, Dhaka · under review</span></div>
+            <div><strong>Mangrove health photo</strong><span>Sundarbans · verified</span></div>
+            <div><strong>Bird sighting</strong><span>Sylhet wetland · research-grade</span></div>
+            <div><strong>Air sensor anomaly</strong><span>Narayanganj · flagged</span></div>
+          </div></article>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>

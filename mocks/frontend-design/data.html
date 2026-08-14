@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Data Hub | Nature Grid Mock</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand"><div class="brand-mark">NG</div><div><strong>Nature Grid</strong><span>Environmental intelligence</span></div></div>
+        <nav>
+          <a href="./index.html">Dashboard</a>
+          <a class="active" href="./data.html">Data Hub</a>
+          <a href="./observations.html">Observations</a>
+          <a href="./reports.html">Citizen Reports</a>
+          <a href="./alerts.html">Alerts</a>
+          <a href="./biodiversity.html">Biodiversity</a>
+          <a href="./restoration.html">Restoration</a>
+          <a href="./community.html">Community</a>
+          <a href="./profile.html">Profile</a>
+          <a href="./admin.html">Admin</a>
+          <a href="./theme.html">Theme</a>
+        </nav>
+        <div class="sidebar-note">Dataset catalog mock<br />Weather, water, air, biodiversity</div>
+      </aside>
+      <main class="main">
+        <header class="topbar">
+          <div><p class="eyebrow">Data Hub</p><h1>Environmental datasets and trends</h1></div>
+          <div class="topbar-actions"><input placeholder="Search datasets..." /><button class="ghost">Public Filters</button><button>Sign In for Downloads</button></div>
+        </header>
+        <section class="toolbar">
+          <button class="chip active">Climate</button><button class="chip">Water</button><button class="chip">Air quality</button><button class="chip">Biodiversity</button><button class="chip">Reports</button>
+        </section>
+        <section class="content-grid">
+          <article class="panel">
+            <div class="panel-header"><div><h2>Temperature and rainfall</h2><p>Monthly averages across selected divisions</p></div></div>
+            <div class="chart-bars">
+              <span style="--h: 42%"></span><span style="--h: 58%"></span><span style="--h: 50%"></span><span style="--h: 68%"></span><span style="--h: 76%"></span><span style="--h: 62%"></span><span style="--h: 84%"></span><span style="--h: 70%"></span>
+            </div>
+          </article>
+          <aside class="panel">
+            <div class="panel-header"><div><h2>Dataset health</h2><p>Provider sync and quality checks</p></div></div>
+            <div class="condition-list">
+              <div><span>OpenMeteo weather</span><strong class="success">Healthy</strong></div>
+              <div><span>Air quality feed</span><strong class="warning">Lagging</strong></div>
+              <div><span>Water bodies</span><strong>Static</strong></div>
+              <div><span>Species catalog</span><strong class="success">Current</strong></div>
+            </div>
+          </aside>
+        </section>
+        <section class="panel">
+            <div class="panel-header"><div><h2>Catalog</h2><p>Public summaries are open; download, export, and contribution are login-gated.</p></div></div>
+          <div class="table">
+            <div class="table-row table-head"><span>Name</span><span>Category</span><span>Status</span><span>Source</span></div>
+            <div class="table-row"><span>OpenMeteo current weather</span><span>Weather</span><span><mark class="tag success">Public preview</mark></span><span>Login to download</span></div>
+            <div class="table-row"><span>District air quality summary</span><span>Air</span><span><mark class="tag warning">Advanced gated</mark></span><span>Request access</span></div>
+            <div class="table-row"><span>Water body registry</span><span>Water</span><span><mark class="tag success">Public preview</mark></span><span>Role-gated contribution</span></div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>

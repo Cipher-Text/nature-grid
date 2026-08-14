@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "resolveJsonModule": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@nature-grid/ui": ["packages/ui/src/index.ts"],
+      "@nature-grid/contracts": ["packages/contracts/src/index.ts"],
+      "@nature-grid/database": ["packages/database/src/index.ts"],
+      "@nature-grid/config": ["packages/config/src/index.ts"],
+      "@nature-grid/shared": ["packages/shared/src/index.ts"]
+    }
+  }
+}
+
