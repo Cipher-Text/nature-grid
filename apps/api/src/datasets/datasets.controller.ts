@@ -1,13 +1,26 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
+import { DatasetCategory, DatasetAccessPolicy } from '@prisma/client';
 import { DatasetsService } from './datasets.service';
+import { Public } from '../common/decorators/roles.decorator';
 
 @Controller('datasets')
+@Public()
 export class DatasetsController {
   constructor(private readonly datasetsService: DatasetsService) {}
 
   @Get()
-  list() {
-    return this.datasetsService.list();
+  list(
+    @Query('category') category?: string,
+    @Query('accessPolicy') accessPolicy?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
+    return this.datasetsService.list(
+      category as DatasetCategory | undefined,
+      accessPolicy as DatasetAccessPolicy | undefined,
+      Number(page ?? 1),
+      Number(pageSize ?? 20),
+    );
   }
 
   @Get('weather/current')
@@ -25,4 +38,3 @@ export class DatasetsController {
     return this.datasetsService.getById(id);
   }
 }
-

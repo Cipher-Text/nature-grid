@@ -20,24 +20,31 @@ Nature Grid is a modular environmental platform. It starts as a monorepo with in
 | Redis | Job queues, rate limiting, and short-lived cache |
 | BullMQ | Background job orchestration for Node/Nest workflows |
 
-## Initial API Shape
+## API Module Layout
 
-The API begins as a modular monolith. Modules own their routes, services, persistence access, and contracts.
+The API is a modular NestJS monolith. Modules own their routes, services, persistence access, and contracts.
 
 ```text
 apps/api/src/
-├── auth/
-├── users/
-├── biodiversity/
-├── locations/
-├── observations/
-├── datasets/
-├── organizations/
-├── reports/
-├── alerts/
-├── media/
-└── ingestion/
+├── common/
+│   ├── decorators/        # @CurrentUser, @Roles, @Public
+│   └── guards/            # JwtAuthGuard, RolesGuard
+├── database/              # PrismaService (global module)
+├── auth/                  # ✓ register, login, profile, JWT strategy
+├── users/                 # ✓ list, get, role update (admin-only)
+├── organizations/         # ✓ list, get
+├── locations/             # ✓ divisions, districts, upazilas, unions + auto-seed
+├── providers/             # ✓ list, get
+├── datasets/              # ✓ catalog + access policy, auto-seed
+├── reports/               # ✓ submit, list (public), status workflow + audit
+├── alerts/                # ✓ list (public), create, update + audit
+├── observations/          # ~ stub
+├── biodiversity/          # ~ stub
+├── media/                 # ~ stub
+└── ingestion/             # ~ stub
 ```
+
+Legend: ✓ Implemented | ~ Stub only
 
 ## Open Nature Feature Carryover
 

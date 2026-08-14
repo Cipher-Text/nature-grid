@@ -1,33 +1,28 @@
 import { Body, Controller, Get, Post } from '@nestjs/common';
 import { AuthService } from './auth.service';
+import { RegisterDto } from './dto/register.dto';
+import { LoginDto } from './dto/login.dto';
+import { CurrentUser, JwtPayload } from '../common/decorators/current-user.decorator';
+import { Public } from '../common/decorators/roles.decorator';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  @Public()
   @Post('register')
-  register(@Body() body: unknown) {
-    return this.authService.register(body);
+  register(@Body() dto: RegisterDto) {
+    return this.authService.register(dto);
   }
 
+  @Public()
   @Post('login')
-  login(@Body() body: unknown) {
-    return this.authService.login(body);
-  }
-
-  @Post('refresh')
-  refresh(@Body() body: unknown) {
-    return this.authService.refresh(body);
-  }
-
-  @Post('logout')
-  logout() {
-    return this.authService.logout();
+  login(@Body() dto: LoginDto) {
+    return this.authService.login(dto);
   }
 
   @Get('profile')
-  profile() {
-    return this.authService.profile();
+  profile(@CurrentUser() user: JwtPayload) {
+    return this.authService.getProfile(user.sub);
   }
 }
-

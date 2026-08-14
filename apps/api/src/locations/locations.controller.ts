@@ -1,7 +1,9 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import { LocationsService } from './locations.service';
+import { Public } from '../common/decorators/roles.decorator';
 
 @Controller('locations')
+@Public()
 export class LocationsController {
   constructor(private readonly locationsService: LocationsService) {}
 
@@ -11,8 +13,8 @@ export class LocationsController {
   }
 
   @Get('districts')
-  getDistricts() {
-    return this.locationsService.getDistricts();
+  getDistricts(@Query('divisionId') divisionId?: string) {
+    return this.locationsService.getDistricts(divisionId);
   }
 
   @Get('districts/:id')
@@ -21,13 +23,12 @@ export class LocationsController {
   }
 
   @Get('upazilas')
-  getUpazilas() {
-    return this.locationsService.getUpazilas();
+  getUpazilas(@Query('districtId') districtId?: string) {
+    return this.locationsService.getUpazilas(districtId);
   }
 
   @Get('unions')
-  getUnions() {
-    return this.locationsService.getUnions();
+  getUnions(@Query('upazilaId') upazilaId?: string) {
+    return this.locationsService.getUnions(upazilaId);
   }
 }
-

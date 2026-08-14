@@ -1,1 +1,26 @@
-export const databasePackageName = '@nature-grid/database';
+export { PrismaClient } from '@prisma/client';
+export type {
+  User,
+  Organization,
+  Provider,
+  Division,
+  District,
+  Upazila,
+  Union,
+  Dataset,
+  CitizenReport,
+  ReportStatusEvent,
+  Alert,
+  IngestionJob,
+  AuditEvent,
+  UserRole,
+  AlertSeverity,
+  AlertStatus,
+  ReportStatus,
+  ReportCategory,
+  DatasetCategory,
+  DatasetAccessPolicy,
+  ProviderType,
+  IngestionStatus,
+  AuditAction,
+} from '@prisma/client';

@@ -1,0 +1,34 @@
+import { Body, Controller, Get, Param, Patch, Query, UseGuards } from '@nestjs/common';
+import { UsersService } from './users.service';
+import { UpdateRoleDto } from './dto/update-role.dto';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
+import { UserRole } from '@prisma/client';
+
+@Controller('users')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('admin')
+export class UsersController {
+  constructor(private readonly usersService: UsersService) {}
+
+  @Get()
+  list(@Query('page') page?: string, @Query('pageSize') pageSize?: string) {
+    return this.usersService.list(Number(page ?? 1), Number(pageSize ?? 20));
+  }
+
+  @Get(':id')
+  getById(@Param('id') id: string) {
+    return this.usersService.getById(id);
+  }
+
+  @Patch(':id/role')
+  updateRole(@Param('id') id: string, @Body() dto: UpdateRoleDto) {
+    return this.usersService.updateRole(id, dto.role as UserRole);
+  }
+
+  @Patch(':id/deactivate')
+  deactivate(@Param('id') id: string) {
+    return this.usersService.deactivate(id);
+  }
+}

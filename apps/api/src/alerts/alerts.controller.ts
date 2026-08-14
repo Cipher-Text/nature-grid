@@ -1,28 +1,55 @@
-import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { AlertStatus, AlertSeverity } from '@prisma/client';
 import { AlertsService } from './alerts.service';
+import { CreateAlertDto } from './dto/create-alert.dto';
+import { UpdateAlertDto } from './dto/update-alert.dto';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { CurrentUser, JwtPayload } from '../common/decorators/current-user.decorator';
+import { Public, Roles } from '../common/decorators/roles.decorator';
 
 @Controller('alerts')
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class AlertsController {
   constructor(private readonly alertsService: AlertsService) {}
 
+  @Public()
   @Get()
-  list() {
-    return this.alertsService.list();
+  list(
+    @Query('status') status?: string,
+    @Query('severity') severity?: string,
+    @Query('districtId') districtId?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
+    return this.alertsService.list(
+      status as AlertStatus | undefined,
+      severity as AlertSeverity | undefined,
+      districtId,
+      Number(page ?? 1),
+      Number(pageSize ?? 20),
+    );
   }
 
+  @Public()
   @Get(':id')
   getById(@Param('id') id: string) {
     return this.alertsService.getById(id);
   }
 
+  @Roles('government', 'moderator', 'admin')
   @Post()
-  create(@Body() body: unknown) {
-    return this.alertsService.create(body);
+  create(@Body() dto: CreateAlertDto, @CurrentUser() user: JwtPayload) {
+    return this.alertsService.create(dto, user);
   }
 
+  @Roles('government', 'moderator', 'admin')
   @Patch(':id')
-  update(@Param('id') id: string, @Body() body: unknown) {
-    return this.alertsService.update(id, body);
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateAlertDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.alertsService.update(id, dto, user);
   }
 }
-

@@ -7,12 +7,29 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
 enum UserRole {
   CITIZEN
   RESEARCHER
   ORGANIZATION_ADMIN
   GOVERNMENT
+  MODERATOR
   ADMIN
+}
+
+enum AlertSeverity {
+  INFO
+  WATCH
+  WARNING
+  EMERGENCY
+}
+
+enum AlertStatus {
+  DRAFT
+  ACTIVE
+  EXPIRED
+  CANCELLED
 }
 
 enum ReportStatus {
@@ -23,11 +40,42 @@ enum ReportStatus {
   RESOLVED
 }
 
-enum AlertStatus {
-  DRAFT
-  ACTIVE
-  EXPIRED
-  CANCELLED
+enum ReportCategory {
+  WATER_POLLUTION
+  ILLEGAL_DUMPING
+  DEFORESTATION
+  WILDLIFE_INCIDENT
+  FLOODING
+  AIR_POLLUTION
+  OTHER
+}
+
+enum DatasetCategory {
+  WEATHER
+  AIR_QUALITY
+  WATER
+  BIODIVERSITY
+  REPORTS
+  MONITORING
+  GEOSPATIAL
+}
+
+enum DatasetAccessPolicy {
+  PUBLIC
+  LOGIN_REQUIRED
+  RESEARCHER
+  APPROVED
+  GOVERNMENT
+}
+
+enum ProviderType {
+  GOVERNMENT_AGENCY
+  RESEARCH_INSTITUTION
+  NGO
+  INTERNATIONAL_ORG
+  CITIZEN_SCIENCE
+  SATELLITE
+  IOT_SENSOR
 }
 
 enum IngestionStatus {
@@ -38,80 +86,230 @@ enum IngestionStatus {
   CANCELLED
 }
 
-model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String
-  role      UserRole @default(CITIZEN)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  reports CitizenReport[]
+enum AuditAction {
+  USER_REGISTER
+  USER_LOGIN
+  USER_LOGOUT
+  USER_ROLE_CHANGE
+  REPORT_SUBMIT
+  REPORT_STATUS_CHANGE
+  ALERT_CREATE
+  ALERT_STATUS_CHANGE
+  DATASET_ACCESS
+  DATASET_DOWNLOAD
+  OBSERVATION_SUBMIT
 }
+
+// ─── Users & Auth ─────────────────────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  displayName  String
+  passwordHash String
+  role         UserRole @default(CITIZEN)
+  isActive     Boolean  @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  reports    CitizenReport[]
+  auditEvents AuditEvent[]
+
+  @@index([email])
+  @@index([role])
+}
+
+// ─── Organizations ────────────────────────────────────────────────────────────
 
 model Organization {
-  id        String   @id @default(cuid())
-  name      String
-  type      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String       @id @default(cuid())
+  name        String
+  type        ProviderType
+  description String?
+  website     String?
+  country     String       @default("Bangladesh")
+  isVerified  Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  providers Provider[]
 }
+
+// ─── Providers ────────────────────────────────────────────────────────────────
+
+model Provider {
+  id             String       @id @default(cuid())
+  name           String
+  type           ProviderType
+  country        String       @default("Bangladesh")
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  datasets       Dataset[]
+  ingestionJobs  IngestionJob[]
+}
+
+// ─── Geography ────────────────────────────────────────────────────────────────
 
 model Division {
   id        String     @id @default(cuid())
-  name      String
+  name      String     @unique
+  bnName    String?
   districts District[]
 }
 
 model District {
   id         String   @id @default(cuid())
   name       String
+  bnName     String?
   divisionId String
   division   Division @relation(fields: [divisionId], references: [id])
 
-  reports CitizenReport[]
+  upazilas Upazila[]
+  reports  CitizenReport[]
+  alerts   Alert[]
+
+  @@unique([name, divisionId])
+  @@index([divisionId])
 }
+
+model Upazila {
+  id         String   @id @default(cuid())
+  name       String
+  bnName     String?
+  districtId String
+  district   District @relation(fields: [districtId], references: [id])
+
+  unions Union[]
+
+  @@unique([name, districtId])
+  @@index([districtId])
+}
+
+model Union {
+  id        String  @id @default(cuid())
+  name      String
+  bnName    String?
+  upazilaId String
+  upazila   Upazila @relation(fields: [upazilaId], references: [id])
+
+  @@unique([name, upazilaId])
+  @@index([upazilaId])
+}
+
+// ─── Datasets ─────────────────────────────────────────────────────────────────
 
 model Dataset {
-  id          String   @id @default(cuid())
-  name        String
-  category    String
-  source      String
-  description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String              @id @default(cuid())
+  name         String
+  category     DatasetCategory
+  accessPolicy DatasetAccessPolicy @default(PUBLIC)
+  source       String
+  providerId   String?
+  provider     Provider?           @relation(fields: [providerId], references: [id])
+  description  String?
+  recordCount  Int?
+  lastSyncedAt DateTime?
+  isPublished  Boolean             @default(true)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  @@index([category])
+  @@index([accessPolicy])
 }
+
+// ─── Reports ──────────────────────────────────────────────────────────────────
 
 model CitizenReport {
-  id          String       @id @default(cuid())
+  id          String         @id @default(cuid())
   title       String
   description String
-  status      ReportStatus @default(SUBMITTED)
+  category    ReportCategory @default(OTHER)
+  status      ReportStatus   @default(SUBMITTED)
+  summary     String?
   reporterId  String?
-  reporter    User?        @relation(fields: [reporterId], references: [id])
+  reporter    User?          @relation(fields: [reporterId], references: [id])
   districtId  String?
-  district    District?    @relation(fields: [districtId], references: [id])
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  district    District?      @relation(fields: [districtId], references: [id])
+  lat         Float?
+  lng         Float?
+  resolvedAt  DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  statusHistory ReportStatusEvent[]
+
+  @@index([status])
+  @@index([category])
+  @@index([districtId])
 }
+
+model ReportStatusEvent {
+  id        String       @id @default(cuid())
+  reportId  String
+  report    CitizenReport @relation(fields: [reportId], references: [id])
+  status    ReportStatus
+  note      String?
+  createdAt DateTime     @default(now())
+
+  @@index([reportId])
+}
+
+// ─── Alerts ───────────────────────────────────────────────────────────────────
 
 model Alert {
-  id          String      @id @default(cuid())
-  title       String
-  description String
-  severity    String
-  status      AlertStatus @default(DRAFT)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id           String        @id @default(cuid())
+  title        String
+  description  String
+  severity     AlertSeverity @default(INFO)
+  status       AlertStatus   @default(DRAFT)
+  instructions String?
+  districtId   String?
+  district     District?     @relation(fields: [districtId], references: [id])
+  issuedAt     DateTime      @default(now())
+  expiresAt    DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([status])
+  @@index([severity])
 }
+
+// ─── Ingestion ────────────────────────────────────────────────────────────────
 
 model IngestionJob {
-  id        String          @id @default(cuid())
-  provider  String
-  status    IngestionStatus @default(QUEUED)
-  startedAt DateTime?
-  endedAt   DateTime?
-  createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
+  id         String          @id @default(cuid())
+  providerId String
+  provider   Provider        @relation(fields: [providerId], references: [id])
+  status     IngestionStatus @default(QUEUED)
+  startedAt  DateTime?
+  endedAt    DateTime?
+  errorMsg   String?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  @@index([providerId])
+  @@index([status])
 }
 
+// ─── Audit ────────────────────────────────────────────────────────────────────
+
+model AuditEvent {
+  id         String      @id @default(cuid())
+  action     AuditAction
+  userId     String?
+  user       User?       @relation(fields: [userId], references: [id])
+  entityType String?
+  entityId   String?
+  meta       Json?
+  ipAddress  String?
+  createdAt  DateTime    @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([entityType, entityId])
+}

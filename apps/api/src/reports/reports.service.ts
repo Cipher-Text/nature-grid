@@ -1,31 +1,120 @@
-import { Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { ReportStatus, ReportCategory } from '@prisma/client';
+import { PrismaService } from '../database/prisma.service';
+import { CreateReportDto } from './dto/create-report.dto';
+import { UpdateReportStatusDto } from './dto/update-status.dto';
+import type { JwtPayload } from '../common/decorators/current-user.decorator';
+
+/** Allowed status transitions per role. */
+const STATUS_TRANSITIONS: Record<ReportStatus, ReportStatus[]> = {
+  SUBMITTED:    ['UNDER_REVIEW'],
+  UNDER_REVIEW: ['VERIFIED', 'REJECTED'],
+  VERIFIED:     ['RESOLVED'],
+  REJECTED:     [],
+  RESOLVED:     [],
+};
+
+const REPORT_SELECT = {
+  id: true,
+  title: true,
+  category: true,
+  status: true,
+  summary: true,
+  districtId: true,
+  lat: true,
+  lng: true,
+  createdAt: true,
+  updatedAt: true,
+  reporter: { select: { id: true, displayName: true } },
+  district: { select: { id: true, name: true, division: { select: { id: true, name: true } } } },
+} as const;
 
 @Injectable()
 export class ReportsService {
-  create(payload: unknown) {
-    return {
-      id: 'development-report',
-      status: 'submitted',
-      payload,
-    };
+  constructor(private readonly prisma: PrismaService) {}
+
+  async create(dto: CreateReportDto, user: JwtPayload) {
+    return this.prisma.citizenReport.create({
+      data: {
+        title: dto.title,
+        category: dto.category,
+        description: dto.description,
+        districtId: dto.districtId,
+        lat: dto.lat,
+        lng: dto.lng,
+        reporterId: user.sub,
+        statusHistory: {
+          create: { status: ReportStatus.SUBMITTED },
+        },
+      },
+      select: REPORT_SELECT,
+    });
   }
 
-  list() {
-    return [];
+  list(status?: ReportStatus, category?: ReportCategory, districtId?: string, page = 1, pageSize = 20) {
+    const skip = (page - 1) * pageSize;
+    // Public view: only verified/resolved reports
+    const where = {
+      ...(status ? { status } : { status: { in: [ReportStatus.VERIFIED, ReportStatus.RESOLVED] } }),
+      ...(category ? { category } : {}),
+      ...(districtId ? { districtId } : {}),
+    };
+    return Promise.all([
+      this.prisma.citizenReport.findMany({
+        where,
+        skip,
+        take: pageSize,
+        orderBy: { createdAt: 'desc' },
+        select: REPORT_SELECT,
+      }),
+      this.prisma.citizenReport.count({ where }),
+    ]).then(([data, total]) => ({ data, total, page, pageSize }));
   }
 
-  getById(id: string) {
-    return {
-      id,
-      status: 'submitted',
-    };
+  async getById(id: string) {
+    const report = await this.prisma.citizenReport.findUnique({
+      where: { id },
+      include: {
+        reporter: { select: { id: true, displayName: true } },
+        district: { select: { id: true, name: true, division: { select: { id: true, name: true } } } },
+        statusHistory: { orderBy: { createdAt: 'desc' } },
+      },
+    });
+    if (!report) throw new NotFoundException('Report not found');
+    return report;
   }
 
-  updateStatus(id: string, payload: unknown) {
-    return {
-      id,
-      payload,
-    };
+  async updateStatus(id: string, dto: UpdateReportStatusDto, actor: JwtPayload) {
+    const report = await this.getById(id);
+    const allowed = STATUS_TRANSITIONS[report.status];
+    if (!allowed.includes(dto.status)) {
+      throw new ForbiddenException(
+        `Cannot transition from ${report.status} to ${dto.status}`,
+      );
+    }
+
+    const [updated] = await this.prisma.$transaction([
+      this.prisma.citizenReport.update({
+        where: { id },
+        data: {
+          status: dto.status,
+          ...(dto.status === ReportStatus.RESOLVED ? { resolvedAt: new Date() } : {}),
+        },
+        select: REPORT_SELECT,
+      }),
+      this.prisma.reportStatusEvent.create({
+        data: { reportId: id, status: dto.status, note: dto.note },
+      }),
+      this.prisma.auditEvent.create({
+        data: {
+          action: 'REPORT_STATUS_CHANGE',
+          userId: actor.sub,
+          entityType: 'CitizenReport',
+          entityId: id,
+          meta: { from: report.status, to: dto.status },
+        },
+      }),
+    ]);
+    return updated;
   }
 }
-
