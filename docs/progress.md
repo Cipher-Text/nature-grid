@@ -1,6 +1,6 @@
 # Progress
 
-Last updated: 2026-08-15 (database live, migration applied, API running)
+Last updated: 2026-08-15 (ingestion plan written, implementation-plan.md updated to M5–M14)
 
 ## Status Legend
 
@@ -66,6 +66,10 @@ Last updated: 2026-08-15 (database live, migration applied, API running)
 - `docs/api/initial-api.md`
 - `docs/api/backend-api-links.md`
 
+### Ingestion and planning
+
+- `docs/ingestion-plan.md` — gap analysis vs Java backends, priority APIs, NestJS ingestion design, what NOT to port
+
 ### Frontend mocks
 
 - `mocks/frontend-design/index.html`
@@ -123,6 +127,8 @@ Last updated: 2026-08-15 (database live, migration applied, API running)
 
 ## Next Work
 
+See `docs/implementation-plan.md` for the full milestone list (M5–M14).
+
 1. ~~Review and approve the public-first mock direction.~~ Done.
 2. ~~Revise mocks for production-level responsiveness and copy.~~ Done.
 3. ~~Implement public web page from approved mock.~~ Done — M1.
@@ -130,14 +136,15 @@ Last updated: 2026-08-15 (database live, migration applied, API running)
 5. ~~Implement backend foundation.~~ Done — M3.
 6. ~~Start the database and run migration.~~ Done — M4. Postgres on port 5433, Redis on 6379, API live at port 3001.
 7. ~~Seed data.~~ Done — auto-seeded on first boot (8 div / 64 dist / 5 datasets).
-8. Implement observations module (schema already in place).
-9. Implement auth refresh / logout with Redis token store.
-10. Replace `lat/lng Float` with PostGIS `geography` type — needs PostGIS extension.
+8. ~~Write ingestion plan — analyse Java backends, identify gaps, plan NestJS design.~~ Done — `docs/ingestion-plan.md`.
+9. **M5 next:** Expand Prisma schema (RefreshToken, WeatherReading, AirQualityReading, WeatherAggregate, AqiAggregate, ApiCallLog, ReportMedia, ReportComment, RestorationProject). Add district lat/lng. Implement auth refresh/logout.
+10. **M6 next:** Implement OpenMeteo ingestion module — clients, schedulers, persistence to WeatherReading/AirQualityReading.
 
 ## Open Questions
 
-- Should dataset downloads require only login, or role approval per dataset?
+- District lat/lng centroids: load from open-nature-backend2 CSVs or hardcode divisional capitals first?
+- WAQI API key: register at aqicn.org for dev/staging?
+- WeatherReading retention policy: how long to keep raw rows before pruning after aggregation?
+- ApiCallLog retention: add daily cleanup cron (open-nature purges at 2 AM)?
 - Should government users publish alerts directly, or must alerts always go through moderator/admin approval?
-- Should restoration be a standalone `projects` module now, or wait until core reports/datasets are stable?
-- Should environmental monitoring follow OGC SensorThings closely, or use a simplified internal model first?
-- Should observations and biodiversity share a single schema or be separate modules?
+- PostGIS `geography` fields: replace lat/lng Float when polygon queries needed (deferred to Phase 3).
