@@ -83,11 +83,15 @@ QUEUED → RUNNING → SUCCEEDED
 
 ## Database Setup
 
+> **Port note:** Docker Postgres is mapped to `5433` (not the default 5432) because a local Postgres instance occupies 5432 on this machine. `DATABASE_URL` in `.env` uses port 5433 accordingly.
+
 ```bash
-docker-compose up -d          # Start PostgreSQL 16 + Redis 7
-pnpm db:migrate               # Run migrations (from monorepo root)
-pnpm db:generate              # Regenerate Prisma client after schema changes
-pnpm db:studio                # Open Prisma Studio at localhost:5555
+docker-compose up -d          # Start PostgreSQL 16/PostGIS on :5433, Redis 7 on :6379
+cd packages/database && pnpm run db:migrate   # Create/update schema
+pnpm run db:generate          # Regenerate Prisma client after schema changes
+pnpm run db:studio            # Open Prisma Studio at localhost:5555
 ```
 
-The `LocationsService` and `DatasetsService` auto-seed geography and catalog data on first boot via `OnModuleInit`, so no separate seed script is required for those tables.
+**Current migration:** `20260814204043_init` — applied, all 13 tables live.
+
+The `LocationsService` and `DatasetsService` auto-seed geography and catalog data on first boot via `OnModuleInit`. No separate seed script is required for those tables.

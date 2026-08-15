@@ -1,6 +1,6 @@
 # Progress
 
-Last updated: 2026-08-15
+Last updated: 2026-08-15 (database live, migration applied, API running)
 
 ## Status Legend
 
@@ -23,8 +23,8 @@ Last updated: 2026-08-15
 | Shared types and contracts — M2 | Done | Full enums, DTOs, paginated envelopes, request/response types, route contract map |
 | Backend foundation — M3 | Done | Auth (JWT/bcrypt), users, orgs, locations (8 div/64 district auto-seed), providers, datasets (catalog seed), reports (status workflow + audit), alerts (severity + audit), global validation, guard infrastructure |
 | Prisma schema | Done | 9 enums, 13 models — all core entities implemented; client regenerated |
-| Database migration | Planned | Run `docker-compose up -d` then `pnpm db:migrate` to create the schema |
-| Prisma seed file | Planned | Bangladesh geography and sample data for local dev |
+| Database migration — M4 | Done | `20260814204043_init` applied; 13 tables live; Postgres on port 5433 (remapped — local Postgres occupies 5432) |
+| Seed data | Done | LocationsService auto-seeds 8 divisions + 64 districts on boot; DatasetsService auto-seeds 5 catalog records; no separate seed script needed |
 | Auth — refresh / logout | Planned | JWT refresh endpoint needs a token store (Redis); logout is a stub |
 | PostGIS / geospatial fields | Planned | `lat/lng` Float for now; replace with PostGIS `geography` type when ready |
 | Observations module | Planned | Schema ready; controller/service not yet implemented |
@@ -128,8 +128,8 @@ Last updated: 2026-08-15
 3. ~~Implement public web page from approved mock.~~ Done — M1.
 4. ~~Define shared enums, DTOs, and route contracts.~~ Done — M2.
 5. ~~Implement backend foundation.~~ Done — M3.
-6. Start the database: `docker-compose up -d` then `pnpm db:migrate` — M4 pre-condition.
-7. Write Prisma seed file for Bangladesh geography and sample dataset catalog — M4.
+6. ~~Start the database and run migration.~~ Done — M4. Postgres on port 5433, Redis on 6379, API live at port 3001.
+7. ~~Seed data.~~ Done — auto-seeded on first boot (8 div / 64 dist / 5 datasets).
 8. Implement observations module (schema already in place).
 9. Implement auth refresh / logout with Redis token store.
 10. Replace `lat/lng Float` with PostGIS `geography` type — needs PostGIS extension.
