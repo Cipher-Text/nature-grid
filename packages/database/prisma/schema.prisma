@@ -115,9 +115,26 @@ model User {
 
   reports    CitizenReport[]
   auditEvents AuditEvent[]
+  refreshTokens RefreshToken[]
 
   @@index([email])
   @@index([role])
+}
+
+model RefreshToken {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id])
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  deviceId   String?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 // ─── Organizations ────────────────────────────────────────────────────────────

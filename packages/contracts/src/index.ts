@@ -193,6 +193,14 @@ export interface AuthResponse {
   };
 }
 
+export interface RefreshTokenRequest {
+  refreshToken: string;
+}
+
+export interface LogoutRequest {
+  refreshToken: string;
+}
+
 // ─── Reports ──────────────────────────────────────────────────────────────────
 
 export interface CreateReportRequest {

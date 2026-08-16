@@ -30,7 +30,7 @@ Build persistence and ingestion before features. Real environmental data in the 
 
 Extend the Prisma schema with all models needed for ingestion, reports enrichment, and auth completeness. No logic yet — schema only.
 
-**Status (2026-08-16):** Only task 10 (`District.lat`/`lng`) is done — see Milestone 6, which needed it as a prerequisite and built it with real per-district coordinates rather than the divisional-capital placeholder originally scoped. `RefreshToken`, `ReportMedia`, `ReportComment`, `RestorationProject`, and auth refresh/logout are still not implemented. The ingestion-specific models below (`WeatherReading`, `AirQualityReading`, `WeatherAggregate`, `AqiAggregate`, `ApiCallLog`) were superseded by a different, smaller design — see Milestone 6.
+**Status (2026-08-16):** Task 10 (`District.lat`/`lng`, done via Milestone 6 as a prerequisite, with real per-district coordinates rather than the divisional-capital placeholder originally scoped) and the auth refresh endpoint (tasks 1, 12, 13 — done, with a different design than specified here, see below) are complete. `ReportMedia`, `ReportComment`, `RestorationProject` are still not implemented. The ingestion-specific models below (`WeatherReading`, `AirQualityReading`, `WeatherAggregate`, `AqiAggregate`, `ApiCallLog`) were superseded by a different, smaller design — see Milestone 6.
 
 **Target:** `packages/database/prisma/schema.prisma`
 
@@ -52,7 +52,7 @@ Also add to `District` model: `lat Float?` and `lng Float?` for OpenMeteo centro
 
 ### Tasks
 
-1. Add `RefreshToken` model (token, userId, expiresAt, revokedAt, deviceId, ipAddress, userAgent).
+1. ~~Add `RefreshToken` model (token, userId, expiresAt, revokedAt, deviceId, ipAddress, userAgent).~~ Done (2026-08-16), with one change: field is `tokenHash` (SHA-256 of the token), not a raw stored `token` — same reasoning as `User.passwordHash`. See task 12 below for why the token itself is opaque, not a JWT.
 2. Add `WeatherReading` model (districtId, providerId, observedAt, tempC, feelsLikeC, humidityPct, pressureHpa, windSpeedKmh, windDirDeg, precipMm, cloudCoverPct, uvIndex, weatherCode, rawJson). Composite unique on `(districtId, observedAt)`.
 3. Add `AirQualityReading` model (districtId, providerId, measuredAt, aqiEuropean, pm25, pm10, o3, no2, so2, co, dominantPollutant, rawJson). Composite unique on `(districtId, measuredAt)`.
 4. Add `WeatherAggregate` model (districtId, date, avgTempC, minTempC, maxTempC, totalPrecipMm, avgHumidityPct, avgWindSpeedKmh). Composite unique on `(districtId, date)`.
@@ -64,16 +64,18 @@ Also add to `District` model: `lat Float?` and `lng Float?` for OpenMeteo centro
 10. Add `lat Float?` and `lng Float?` to `District`.
 11. Run `prisma migrate dev --name add_ingestion_models` and regenerate client.
 
-### Auth refresh endpoint (same milestone)
+### Auth refresh endpoint (same milestone) — Done (2026-08-16)
 
-12. Add `POST /auth/refresh` — verify refresh token from `RefreshToken` table, issue new access token, rotate refresh token.
-13. Add `POST /auth/logout` — revoke refresh token (set `revokedAt`).
+12. ~~Add `POST /auth/refresh` — verify refresh token from `RefreshToken` table, issue new access token, rotate refresh token.~~ Done, exactly as specified — rotation implemented (old token revoked on use, fresh pair issued).
+13. ~~Add `POST /auth/logout` — revoke refresh token (set `revokedAt`).~~ Done, idempotent.
+
+**Design change from what's written above:** the refresh token itself is now a random opaque string (`crypto.randomBytes(48)`), not a JWT. Found while implementing this: the *existing* `register`/`login` already issued a "refresh token" that was actually a JWT signed with the same secret as the access token — meaning it could be used directly as a bearer access token, since nothing distinguished token type. Making it opaque closes that gap; it can only ever be redeemed via `/auth/refresh`. A `RefreshTokenCleanupScheduler` (`@Cron`, daily at 2 AM) also deletes tokens expired 30+ days ago — not originally scoped here, added since `@nestjs/schedule` was already available from Milestone 6.
 
 ### Definition of done
 
-- Migration applied, all new tables live.
-- `POST /auth/refresh` and `POST /auth/logout` work.
-- `District` has lat/lng columns (nullable, populated in next milestone).
+- Migration applied, all new tables live. — `RefreshToken` ✓; `ReportMedia`/`ReportComment`/`RestorationProject` still pending.
+- `POST /auth/refresh` and `POST /auth/logout` work. ✓ — verified live: register → refresh (rotates) → old token rejected → refresh token rejected as a Bearer access token → logout → refresh rejected → logout again still succeeds.
+- `District` has lat/lng columns (nullable, populated in next milestone). ✓
 
 ---
 
@@ -264,17 +266,19 @@ Basic internal console for the operational views most needed first.
 
 ---
 
-## Milestone 13: Frontend Data Integration
+## Milestone 13: Frontend Data Integration — Started
 
 Replace static seed data in `apps/web` with live API calls.
 
 **Target:** `apps/web`
 
+**Status (2026-08-16):** Task 1 and part of task 2 are done, scoped narrowly to weather — see `docs/progress.md` "Public Weather Wiring". Everything else (auth, report/observation submission, live metrics, client-side refresh library) is still static/not started.
+
 ### Tasks
 
-1. Add API client utility (typed fetch wrapper using contracts package).
-2. Replace `lib/static-data.ts` calls with `fetch('/api/v1/...')` in Server Components.
-3. Add `SWR` or React Query for client-side refreshing data (map, live alerts).
+1. ~~Add API client utility (typed fetch wrapper using contracts package).~~ Done — `apps/web/lib/api.ts`. Simpler than "typed fetch wrapper using contracts package" implies: a single `apiGet<T>(path)` helper (server-only `API_URL` env var, no `NEXT_PUBLIC_` prefix needed since nothing runs client-side yet), with route paths and response types imported from `packages/contracts` at the call site rather than baked into the helper itself.
+2. Replace `lib/static-data.ts` calls with `fetch('/api/v1/...')` in Server Components. — **Partial**: `map-section.tsx`'s "Current conditions" sidebar only (Dhaka PM2.5, Sylhet precipitation, Khulna humidity, Cox's Bazar wind, sync status), fetching `/weather/current` and `/weather/air-quality`. Falls back to the original static `CONDITIONS` array if the API is unreachable, rather than crashing the page. Every other component (`metrics-section`, `dataset-preview`, `reports-alerts-section`, `biodiversity-restoration`, `community-section`) is still fully static.
+3. Add `SWR` or React Query for client-side refreshing data (map, live alerts). — Not needed for the weather slice done so far: `map-section.tsx` is a Server Component using Next.js's built-in `fetch` cache (`revalidate: 900`, matching the current-weather cron cadence) rather than client-side polling. Revisit if a component needs to refresh without a full page reload.
 4. Wire auth — login/register flow, session persistence, role-aware nav.
 5. Wire report submission form to `POST /reports`.
 6. Wire observation submission.
@@ -282,8 +286,8 @@ Replace static seed data in `apps/web` with live API calls.
 
 ### Definition of done
 
-- Public page shows real data from the database.
-- Authenticated users can submit reports and observations.
+- Public page shows real data from the database. — **Partial**: only the weather conditions sidebar; everything else in the "Definition of done" below is still pending.
+- Authenticated users can submit reports and observations. — Not done.
 
 ---
 

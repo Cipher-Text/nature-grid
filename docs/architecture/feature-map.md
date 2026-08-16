@@ -39,7 +39,7 @@ This document translates the existing Open Nature feature logic into the Nature 
 
 | Route | App | Data Source Direction |
 | --- | --- | --- |
-| `/` | `web` | Public single-page board showing all major platform areas |
+| `/` | `web` | Public single-page board showing all major platform areas — weather/AQ sidebar now live via `weather` module (2026-08-16); rest of the page still static seed data |
 | `/data` | `web` | Public dataset summaries; login for advanced views/downloads |
 | `/observations` | `web` | Public observation explorer; login to submit |
 | `/reports` | `web` | Public verified reports; login to submit/track |
