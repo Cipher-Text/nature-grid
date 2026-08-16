@@ -31,6 +31,19 @@ GET /api/v1/datasets/weather/current
 GET /api/v1/datasets/air-quality/current
 ```
 
+## Weather
+
+```text
+GET /api/v1/weather/current
+GET /api/v1/weather/current/:districtId
+GET /api/v1/weather/hourly/:districtId
+GET /api/v1/weather/daily/:districtId
+GET /api/v1/weather/air-quality
+GET /api/v1/weather/air-quality/:districtId
+```
+
+Done — OpenMeteo current/hourly/daily/air-quality, cron-scheduled. Not part of the original "initial API" scope this doc covers, but added here since it's the first live external-data integration. See `docs/api/backend-api-links.md` for full status detail.
+
 ## Reports
 
 ```text

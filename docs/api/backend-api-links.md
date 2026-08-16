@@ -67,12 +67,25 @@ Legend: ✓ Implemented | ~ Stub / planned | ✗ Not started
 | --- | --- | --- | --- | --- |
 | GET | `/datasets` | Public | ✓ | Dataset catalog (`?category`, `?accessPolicy` filters) |
 | GET | `/datasets/:id` | Public | ✓ | Dataset detail |
-| GET | `/datasets/weather/current` | Public | ✓ | Current weather stub |
-| GET | `/datasets/air-quality/current` | Public | ✓ | Current AQI stub |
+| GET | `/datasets/weather/current` | Public | ✓ | Live current weather for all districts, via `weather` module |
+| GET | `/datasets/air-quality/current` | Public | ✓ | Live current air quality for all districts, via `weather` module |
 | GET | `/datasets/:id/download` | Role-gated | ✗ | Download dataset |
 | POST | `/datasets/:id/access-request` | Authenticated | ✗ | Request access |
 | POST | `/datasets` | Researcher / Admin | ✗ | Create dataset record |
 | PATCH | `/datasets/:id` | Owner / Admin | ✗ | Update metadata |
+
+## Weather
+
+| Method | Path | Access | Status | Purpose |
+| --- | --- | --- | --- | --- |
+| GET | `/weather/current` | Public | ✓ | Latest current-weather reading for every district |
+| GET | `/weather/current/:districtId` | Public | ✓ | Latest current-weather reading for one district |
+| GET | `/weather/hourly/:districtId` | Public | ✓ | Hourly forecast (`?from`, `?to`) |
+| GET | `/weather/daily/:districtId` | Public | ✓ | Daily forecast (`?from`, `?to`) |
+| GET | `/weather/air-quality` | Public | ✓ | Latest air quality reading for every district |
+| GET | `/weather/air-quality/:districtId` | Public | ✓ | Latest air quality reading for one district |
+
+Source: OpenMeteo, via a `@nestjs/schedule` cron scheduler (current every 15min, hourly + AQ every 2h, daily every 12h). See `docs/architecture/modules.md` "weather" for design notes.
 
 ## Reports
 
@@ -122,13 +135,15 @@ Legend: ✓ Implemented | ~ Stub / planned | ✗ Not started
 
 ## Ingestion
 
+Generic job-tracking API — none of this is implemented, and OpenMeteo sync does **not** go through it (see `## Weather` above; it runs its own cron scheduler with no job records). This table describes a future generic layer for tracking/retrying provider fetches once a second provider (WAQI, GBIF) is added.
+
 | Method | Path | Access | Status | Purpose |
 | --- | --- | --- | --- | --- |
 | GET | `/ingestion/jobs` | Admin | ✗ | List ingestion jobs |
 | POST | `/ingestion/jobs` | Admin | ✗ | Create ingestion job |
 | GET | `/ingestion/jobs/:id` | Admin | ✗ | Job detail |
 | POST | `/ingestion/jobs/:id/retry` | Admin | ✗ | Retry failed job |
-| POST | `/ingestion/providers/openmeteo/sync` | Admin | ✗ | Trigger OpenMeteo sync |
+| POST | `/ingestion/providers/openmeteo/sync` | Admin | ✗ | Trigger OpenMeteo sync — superseded by the cron scheduler in `weather`, likely unnecessary now |
 
 ## Metrics
 

@@ -41,10 +41,13 @@ apps/api/src/
 ├── observations/          # ~ stub
 ├── biodiversity/          # ~ stub
 ├── media/                 # ~ stub
-└── ingestion/             # ~ stub
+├── weather/               # ✓ OpenMeteo client, service, scheduler, current/hourly/daily/AQ
+└── ingestion/             # ~ stub — generic job tracking, unused by weather
 ```
 
 Legend: ✓ Implemented | ~ Stub only
+
+`weather` is self-contained (not built under `ingestion/`) — see `docs/ingestion-plan.md` "Implementation status" for why. `ingestion` remains a stub reserved for future generic provider job tracking (WAQI, GBIF, etc.), which weather deliberately does not use.
 
 ## Open Nature Feature Carryover
 
@@ -53,8 +56,8 @@ Open Nature had a strong environmental dashboard UI and a backend centered on au
 | Open Nature Area | Nature Grid Domain |
 | --- | --- |
 | JWT auth and user roles | `auth`, `users`, `organizations` |
-| District/division/upazila/union data | `locations` |
-| OpenMeteo ingestion | `ingestion`, `datasets`, `alerts` later |
+| District/division/upazila/union data | `locations` (now with lat/lng, backfilled from Open Nature's district registry) |
+| OpenMeteo ingestion | `weather` — done; current/hourly/daily/air-quality, also surfaced via `datasets` |
 | District weather statistics | `locations`, `datasets` |
 | Citizen reports UI | `reports`, `media`, `observations` |
 | Disaster alerts UI | `alerts` |

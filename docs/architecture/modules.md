@@ -93,8 +93,8 @@ Endpoints:
 | --- | --- | --- |
 | GET | `/datasets` | Public |
 | GET | `/datasets/:id` | Public |
-| GET | `/datasets/weather/current` | Public |
-| GET | `/datasets/air-quality/current` | Public |
+| GET | `/datasets/weather/current` | Public — live, delegates to `weather` module (was a placeholder stub, now real data) |
+| GET | `/datasets/air-quality/current` | Public — live, delegates to `weather` module (was a placeholder stub, now real data) |
 | GET | `/datasets/:id/download` | Role-gated — not yet implemented |
 | POST | `/datasets/:id/access-request` | Authenticated — not yet implemented |
 
@@ -138,6 +138,27 @@ Endpoints:
 | POST | `/alerts` | Government / Moderator / Admin |
 | PATCH | `/alerts/:id` | Government / Moderator / Admin |
 
+## weather ✓
+
+Owns OpenMeteo integration: HTTP client, fetch/persist service, cron scheduler, and read endpoints. Self-contained — not built under `ingestion/` (see `docs/ingestion-plan.md` "Implementation status" for why).
+
+Tables: `CurrentWeatherReading`, `HourlyWeatherForecast`, `DailyWeatherForecast`, `HourlyAirQuality` — all keyed by `districtId` (not raw lat/lng proximity matching), unique on `(districtId, time)`.
+
+Scheduler cadence: current every 15 min, hourly + air quality every 2h, daily every 12h. Per-district fetch failures are caught and logged (NestJS `Logger`) without stopping the run for other districts — no job queue, retry tracking, or audit trail (see `ingestion` module below).
+
+Endpoints:
+
+| Method | Path | Access |
+| --- | --- | --- |
+| GET | `/weather/current` | Public — latest reading for every district |
+| GET | `/weather/current/:districtId` | Public |
+| GET | `/weather/hourly/:districtId` | Public (`?from`, `?to`) |
+| GET | `/weather/daily/:districtId` | Public (`?from`, `?to`) |
+| GET | `/weather/air-quality` | Public — latest reading for every district |
+| GET | `/weather/air-quality/:districtId` | Public |
+
+Also consumed by `DatasetsModule` to serve `/datasets/weather/current` and `/datasets/air-quality/current`, and by `apps/web`'s `map-section.tsx` (public homepage "Current conditions" sidebar, with fallback to static data if the API is unreachable).
+
 ## observations ~
 
 Owns environmental observations submitted by users, researchers, or ingestion systems.
@@ -162,11 +183,11 @@ Status: Module stub only. No schema model. Implement in Phase 3.
 
 ## ingestion ~
 
-Owns provider integrations, ingestion job lifecycle, and retry logic.
+Intended to own generic provider job lifecycle and retry logic — queueing, tracking, and auditing external data fetches across providers.
 
 Uses `IngestionJob` model in Prisma (`QUEUED | RUNNING | SUCCEEDED | FAILED | CANCELLED`).
 
-Status: Module stub only. No service implementation. Implement in Phase 4.
+Status: Module stub only. No service implementation. **Not used by the `weather` module** — OpenMeteo ingestion was built directly in `weather` with per-request try/catch logging instead of job tracking, since only one provider existed. Revisit before adding a second provider (WAQI, GBIF) so failures across providers stay visible.
 
 ## audit (embedded)
 

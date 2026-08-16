@@ -21,8 +21,9 @@ This document translates the existing Open Nature feature logic into the Nature 
 | --- | --- | --- |
 | Observations | `observations` | Public verified explorer; login-gated contribution |
 | Citizen reports | `reports`, `media`, `locations` | Public verified list; login-gated submission and tracking |
-| Datasets | `datasets`, `ingestion` | Public summaries; login-gated advanced access/download/contribution |
-| Ingestion jobs | `ingestion`, `data-worker` | OpenMeteo first; other providers later |
+| Datasets | `datasets`, `weather` | Public summaries; login-gated advanced access/download/contribution. Weather/AQ summaries are now live, not stubs. |
+| Weather + air quality ingestion | `weather` | Done — OpenMeteo current/hourly/daily/AQ, self-contained module (not built under `ingestion`) |
+| Ingestion job lifecycle | `ingestion`, `data-worker` | Still a stub — no job tracking/audit trail exists yet, deliberately skipped for weather. Needed before adding a 2nd provider (WAQI, GBIF). |
 | Alerts | `alerts` | Disaster and environmental warnings |
 
 ## Phase 3: Advanced Domains
