@@ -272,14 +272,14 @@ Replace static seed data in `apps/web` with live API calls.
 
 **Target:** `apps/web`
 
-**Status (2026-08-16):** Tasks 1, 2 (partial), and 4 are done — see `docs/progress.md` "Public Weather Wiring" and "Public Auth Flow Wiring". Report/observation submission, live metrics, and the client-side refresh library question are still not started.
+**Status (2026-08-17):** Tasks 1, 2 (partial), and 4 are done — see `docs/progress.md` "Public Weather Wiring" and "Public Auth Flow Wiring". `/profile` was also rebuilt (2026-08-17) to match its mockup rather than being an ad hoc card — see `docs/progress.md` "Profile Page Mockup Fidelity" — which introduced a reusable sidebar "app shell" (`components/app-sidebar.tsx`). Every mocked `apps/web` page except the homepage (`data`, `observations`, `reports`, `alerts`, `biodiversity`, `restoration`, `community`) shares that same layout; building them is now tracked as **Milestone 15** below (added 2026-08-17 — none of M7–M12 actually covered this: M7–M11 are backend-only, M12 targets the separate `apps/admin` app). Report/observation submission, live metrics, and the client-side refresh library question are still not started.
 
 ### Tasks
 
 1. ~~Add API client utility (typed fetch wrapper using contracts package).~~ Done — `apps/web/lib/api.ts`. Simpler than "typed fetch wrapper using contracts package" implies: a single `apiGet<T>(path)` helper (server-only `API_URL` env var, no `NEXT_PUBLIC_` prefix needed since nothing runs client-side yet), with route paths and response types imported from `packages/contracts` at the call site rather than baked into the helper itself.
 2. Replace `lib/static-data.ts` calls with `fetch('/api/v1/...')` in Server Components. — **Partial**: `map-section.tsx`'s "Current conditions" sidebar only (Dhaka PM2.5, Sylhet precipitation, Khulna humidity, Cox's Bazar wind, sync status), fetching `/weather/current` and `/weather/air-quality`. Falls back to the original static `CONDITIONS` array if the API is unreachable, rather than crashing the page. Every other component (`metrics-section`, `dataset-preview`, `reports-alerts-section`, `biodiversity-restoration`, `community-section`) is still fully static.
 3. Add `SWR` or React Query for client-side refreshing data (map, live alerts). — Not needed for the weather slice done so far: `map-section.tsx` is a Server Component using Next.js's built-in `fetch` cache (`revalidate: 900`, matching the current-weather cron cadence) rather than client-side polling. Revisit if a component needs to refresh without a full page reload.
-4. ~~Wire auth — login/register flow, session persistence, role-aware nav.~~ Done (2026-08-16), with one scope note: "role-aware nav" only distinguishes guest vs. any logged-in user, not per-role nav (moderator/admin nav is a Phase 3+ concern). Session persistence is httpOnly cookies rather than a client-side store — the natural fit given every existing component was already a Server Component. See `docs/progress.md` "Public Auth Flow Wiring" for the full design (middleware-based token refresh, Server Actions for login/register/logout, new `/login`/`/register`/`/profile` routes).
+4. ~~Wire auth — login/register flow, session persistence, role-aware nav.~~ Done (2026-08-16), with one scope note: "role-aware nav" only distinguishes guest vs. any logged-in user, not per-role nav (moderator/admin nav is a Phase 3+ concern). Session persistence is httpOnly cookies rather than a client-side store — the natural fit given every existing component was already a Server Component. See `docs/progress.md` "Public Auth Flow Wiring" for the full design (middleware-based token refresh, Server Actions for login/register/logout, new `/login`/`/register`/`/profile` routes). `/profile` itself shipped as a bare account card in that pass — rebuilt 2026-08-17 to match `mocks/frontend-design/profile.html`'s actual sidebar app-shell design; see `docs/progress.md` "Profile Page Mockup Fidelity".
 5. Wire report submission form to `POST /reports`.
 6. Wire observation submission.
 7. Show live metrics from `GET /metrics` on the public homepage.
@@ -308,6 +308,45 @@ Add urban AQI data from WAQI (World Air Quality Index) for station-level granula
 
 - WAQI data complements OpenMeteo AQ in `HourlyAirQuality` (schema change needed first — see task 4).
 - Station-level readings visible per district.
+
+---
+
+## Milestone 15: App-Shell Pages (Data Hub, Reports, Alerts, Observations, Biodiversity, Restoration, Community)
+
+Build the remaining `apps/web` routes that the nav (`public-nav.tsx`, `app-sidebar.tsx`) already links to but that don't exist yet — currently all 404. Reuse the sidebar `AppSidebar` shell established for `/profile` (M13), not a new layout per page.
+
+**Target:** `apps/web/app/{data,observations,reports,alerts,biodiversity,restoration,community}/`
+
+**Reference:** `mocks/frontend-design/{data,observations,reports,alerts,biodiversity,restoration,community}.html` for per-page layout; `docs/progress.md` "Profile Page Mockup Fidelity" for the app-shell pattern and the honest-empty-state precedent.
+
+**Backend readiness varies per page** — some already have working APIs, some have no backend at all:
+
+| Page | Backend | Status |
+| --- | --- | --- |
+| `/data` | `GET /datasets` | Real (M3) |
+| `/reports` | `GET /reports` | Real (M3) — public list is verified/resolved only |
+| `/alerts` | `GET /alerts` | Real (M3) |
+| `/observations` | — | Not built (M9) — module stub, no `Observation` model |
+| `/biodiversity` | — | Not built (M10) — module stub, no `Species`/`Occurrence` models |
+| `/restoration` | — | Not built (M11) — no `RestorationProject` model |
+| `/community` | — | Not planned as an API module at all yet (see `docs/architecture/feature-map.md`) |
+
+### Tasks
+
+1. `/data` — wire to `GET /datasets`, using the `AppSidebar` shell. Category/access-policy filters can reuse the mock's `.filter-bar`/`.select-field` CSS (in `styles.css`, not yet ported into `globals.css`).
+2. `/reports` — wire to `GET /reports`. Public list only, matching what's already enforced server-side.
+3. `/alerts` — wire to `GET /alerts`.
+4. `/observations` — no backend yet: honest "not available yet" empty state (same pattern as `/profile`'s activity feed), not fabricated records. Revisit once M9 ships.
+5. `/biodiversity` — same honest-empty-state treatment; revisit once M10 ships.
+6. `/restoration` — same honest-empty-state treatment; revisit once M11 ships.
+7. `/community` — same honest-empty-state treatment, or keep the existing static `COMMUNITY_FEED` mock data clearly labeled as illustrative, since `feature-map.md` already says to keep this out of core until a real content workflow exists — decide which when this task starts.
+8. Confirm `AppSidebar`'s active-link highlighting is correct for each new route.
+
+### Definition of done
+
+- All 7 routes render instead of 404ing (nav links already point to them).
+- `/data`, `/reports`, `/alerts` show real backend data through the sidebar shell.
+- `/observations`, `/biodiversity`, `/restoration`, `/community` show an honest empty/coming-soon state — no fabricated records, consistent with the `/profile` precedent.
 
 ---
 

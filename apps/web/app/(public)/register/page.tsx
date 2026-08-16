@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { registerAction } from '../../lib/auth-actions';
+import { registerAction } from '../../../lib/auth-actions';
 
 export default function RegisterPage({
   searchParams,

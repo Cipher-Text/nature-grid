@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { loginAction } from '../../lib/auth-actions';
+import { loginAction } from '../../../lib/auth-actions';
 
 export default function LoginPage({
   searchParams,

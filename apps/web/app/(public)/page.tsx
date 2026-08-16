@@ -1,11 +1,11 @@
-import HeroSection from '../components/hero-section';
-import MetricsSection from '../components/metrics-section';
-import MapSection from '../components/map-section';
-import DatasetPreview from '../components/dataset-preview';
-import ReportsAlertsSection from '../components/reports-alerts-section';
-import BiodiversityRestoration from '../components/biodiversity-restoration';
-import CommunitySection from '../components/community-section';
-import PublicFooter from '../components/public-footer';
+import HeroSection from '../../components/hero-section';
+import MetricsSection from '../../components/metrics-section';
+import MapSection from '../../components/map-section';
+import DatasetPreview from '../../components/dataset-preview';
+import ReportsAlertsSection from '../../components/reports-alerts-section';
+import BiodiversityRestoration from '../../components/biodiversity-restoration';
+import CommunitySection from '../../components/community-section';
+import PublicFooter from '../../components/public-footer';
 
 /**
  * Public board — accessible without login.

@@ -91,7 +91,7 @@ Deliverables:
 - Biodiversity records
 - Dataset download and access-request endpoints
 - Connect public web page to live API (replace static seed data) — partially done: the homepage's "Current conditions" sidebar now fetches live weather/AQ data (2026-08-16), with fallback to static data if the API is unreachable; the nav is now session-aware (real login state, 2026-08-16). Everything else on the public page (metrics, reports/alerts previews, biodiversity/restoration/community) is still static.
-- ~~Auth refresh / logout with Redis token store~~ Done (2026-08-16) — Postgres-backed, not Redis (see Phase 2 note above). Frontend login/register/logout flow also wired (2026-08-16): httpOnly cookie sessions, middleware-based route protection + token refresh, new `/login`/`/register`/`/profile` routes.
+- ~~Auth refresh / logout with Redis token store~~ Done (2026-08-16) — Postgres-backed, not Redis (see Phase 2 note above). Frontend login/register/logout flow also wired (2026-08-16): httpOnly cookie sessions, middleware-based route protection + token refresh, new `/login`/`/register`/`/profile` routes. `/profile` rebuilt (2026-08-17) to match its mockup's sidebar app-shell design, with honest empty states instead of the mock's fabricated eco score/badges/activity feed — this also established a reusable sidebar shell (`AppSidebar`) that `/data`, `/observations`, `/reports`, `/alerts`, `/biodiversity`, `/restoration`, `/community` will need too — building those is now tracked as Milestone 15 in `implementation-plan.md`.
 - PostGIS geography fields (requires PostGIS extension + migration)
 
 Exit criteria:
