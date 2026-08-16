@@ -111,6 +111,15 @@ export const routes = {
     detail: (id: string) => `${apiPrefix}/providers/${id}`,
   },
 
+  weather: {
+    current: `${apiPrefix}/weather/current`,
+    currentByDistrict: (districtId: string) => `${apiPrefix}/weather/current/${districtId}`,
+    hourly: (districtId: string) => `${apiPrefix}/weather/hourly/${districtId}`,
+    daily: (districtId: string) => `${apiPrefix}/weather/daily/${districtId}`,
+    airQuality: `${apiPrefix}/weather/air-quality`,
+    airQualityByDistrict: (districtId: string) => `${apiPrefix}/weather/air-quality/${districtId}`,
+  },
+
   users: {
     list: `${apiPrefix}/users`,
     detail: (id: string) => `${apiPrefix}/users/${id}`,
@@ -253,4 +262,40 @@ export interface DatasetListParams extends PaginationParams {
 
 export interface RestorationProjectListParams extends PaginationParams, LocationFilterParams {
   status?: ProjectStatus;
+}
+
+// ─── Weather ──────────────────────────────────────────────────────────────────
+
+export interface CurrentWeatherReading {
+  id: string;
+  districtId: string;
+  lat: number;
+  lng: number;
+  readingTime: string;
+  temperature2m: number | null;
+  relativeHumidity2m: number | null;
+  apparentTemperature: number | null;
+  windSpeed10m: number | null;
+  windDirection10m: number | null;
+  precipitation: number | null;
+  weatherCode: number | null;
+  cloudCover: number | null;
+  isDay: boolean | null;
+  district?: { id: string; name: string };
+}
+
+export interface HourlyAirQualityReading {
+  id: string;
+  districtId: string;
+  lat: number;
+  lng: number;
+  forecastTime: string;
+  pm10: number | null;
+  pm25: number | null;
+  carbonMonoxide: number | null;
+  nitrogenDioxide: number | null;
+  sulphurDioxide: number | null;
+  ozone: number | null;
+  uvIndex: number | null;
+  district?: { id: string; name: string };
 }
