@@ -4,6 +4,25 @@ Source analysis: `open-nature/apps/backend` (partial implementation, Spring Boot
 
 ---
 
+## Implementation status (2026-08-16)
+
+OpenMeteo weather + air quality ingestion is **done**, but with a smaller, redesigned scope than this document originally planned. Read this before treating the sections below as current:
+
+| Planned (this doc) | Actually built | Why |
+| --- | --- | --- |
+| Module at `apps/api/src/ingestion/` with `clients/`, `schedulers/`, `services/` subfolders | Self-contained `apps/api/src/weather/` module (client, service, scheduler, controller — 4 files, no subfolders) | Only one provider (OpenMeteo) was in scope; the split wasn't earning its keep yet. `ingestion/` stays for future generic job bookkeeping. |
+| `WeatherReading` / `AirQualityReading` (one wide table each, `rawJson` column) | `CurrentWeatherReading`, `HourlyWeatherForecast`, `DailyWeatherForecast`, `HourlyAirQuality` (4 tables, trimmed fields, no raw JSON) | Current/hourly/daily have different fetch cadences and shapes; splitting them avoids one table with mostly-null columns depending on reading type. |
+| `WeatherAggregate` / `AqiAggregate` daily rollups | Not built | No consumer needed rollups yet; raw hourly/daily rows are queried directly. Revisit if retention or dashboard needs arise. |
+| `ApiCallLog` — every external HTTP call logged | Not built | Deliberately skipped for this pass — failures are logged via NestJS `Logger` only. `AuditEvent` exists generically if this is wanted later. |
+| Proximity/radius-based location matching (`WeatherDataAccessServiceImpl` pattern from `open-nature`) | Direct `districtId` foreign key on every weather row | Every fetch already targets a known district, so matching by FK is simpler and exact — no haversine distance queries needed. |
+| District lat/lng: "hardcode divisional capitals first" (open question) | All 64 districts backfilled with real coordinates from `open-nature`'s `district.csv` | The source data was already available and reusable — no need for a placeholder step. |
+| Resilience4j-equivalent circuit breaker | Manual 3-attempt retry with fixed backoff, no circuit breaker | Trimmed for MVP; per-district failures are caught and logged without tripping the whole scheduler run. |
+| Read endpoints at `/ingestion/weather/latest` | `/weather/current`, `/weather/hourly/:districtId`, `/weather/daily/:districtId`, `/weather/air-quality` | Endpoints live under the module that owns the data. |
+
+The gap analysis, API research, and "what NOT to port" sections below are still accurate background — only the concrete implementation plan (models, module structure, tasks) has been superseded for OpenMeteo. It remains a reasonable template for the next provider (WAQI, GBIF).
+
+---
+
 ## What the Java backends established
 
 ### open-nature (partially implemented)
@@ -220,7 +239,7 @@ Fetch weather for all 64 districts using their lat/lng centroid. The `District` 
 
 ## Open questions before implementing ingestion
 
-1. **District lat/lng centroids** — need coordinates for all 64 districts to call OpenMeteo. These exist in open-nature-backend2 CSVs. Should they be added to the Upazila/Union seed migration?
+1. ~~**District lat/lng centroids**~~ — Resolved (2026-08-16): added directly to `District` (not Upazila/Union), backfilled from `open-nature`'s `district.csv` for all 64 districts.
 2. **WAQI API key** — a free account is needed at `aqicn.org/data-platform/token/`. Should we register one for dev?
-3. **Weather data retention** — how long to keep raw `WeatherReading` rows? OpenMeteo hourly data generates 64 × 24 = 1536 rows/day. After aggregation, raw rows can be pruned.
-4. **ApiCallLog retention** — open-nature runs daily cleanup at 2 AM. Same pattern needed here.
+3. **Weather data retention** — how long to keep raw hourly/daily rows? OpenMeteo hourly data generates 64 × ~12/day ≈ 768 rows/day per table. No aggregation tables were built, so raw rows accumulate indefinitely until a retention policy is decided.
+4. **External-call audit trail** — no `ApiCallLog` was built (see "Implementation status" above). Revisit if debugging OpenMeteo schema drift or rate-limit issues becomes hard without one.

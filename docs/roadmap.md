@@ -103,24 +103,24 @@ Exit criteria:
 
 ## Phase 4: Data and Ingestion
 
-Status: Planned
+Status: In Progress
 
 Goal: Bring real environmental data into the platform.
 
 Deliverables:
 
-- OpenMeteo ingestion job
-- Ingestion job lifecycle (queue, track, retry, audit)
-- Provider response logging
+- OpenMeteo ingestion job ✓ (2026-08-16 — weather + air quality, see `docs/progress.md` "Weather Ingestion"; scope was redesigned from the original ingestion-plan, notably without job lifecycle or response logging — see below)
+- Ingestion job lifecycle (queue, track, retry, audit) — not done; deliberately skipped for the weather module, `IngestionJob` model remains unused
+- Provider response logging — not done; deliberately skipped, no `ApiCallLog` model was built
 - Dataset version/distribution records
-- Weather and air quality summaries populated from ingestion
+- Weather and air quality summaries populated from ingestion ✓ (`GET /datasets/weather/current`, `GET /datasets/air-quality/current` now return live data)
 - Python data-worker baseline for GIS/scientific processing
 
 Exit criteria:
 
-- Ingestion jobs can be queued, tracked, retried, and audited.
-- Public dataset summaries use real backend records.
-- Data lineage is stored for imported/derived datasets.
+- Ingestion jobs can be queued, tracked, retried, and audited. — **Not met.** Weather ingestion runs on a cron scheduler with per-district try/catch logging, but there is no job queue, retry tracking, or audit trail.
+- Public dataset summaries use real backend records. ✓ — weather/AQ summaries are live; other dataset categories still static.
+- Data lineage is stored for imported/derived datasets. — Not yet; would need the response-logging deliverable above.
 
 ## Phase 5: Advanced Domains
 

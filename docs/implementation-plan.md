@@ -26,9 +26,11 @@ Build persistence and ingestion before features. Real environmental data in the 
 
 ---
 
-## Milestone 5: Schema Expansion + Auth Refresh
+## Milestone 5: Schema Expansion + Auth Refresh — Partial
 
 Extend the Prisma schema with all models needed for ingestion, reports enrichment, and auth completeness. No logic yet — schema only.
+
+**Status (2026-08-16):** Only task 10 (`District.lat`/`lng`) is done — see Milestone 6, which needed it as a prerequisite and built it with real per-district coordinates rather than the divisional-capital placeholder originally scoped. `RefreshToken`, `ReportMedia`, `ReportComment`, `RestorationProject`, and auth refresh/logout are still not implemented. The ingestion-specific models below (`WeatherReading`, `AirQualityReading`, `WeatherAggregate`, `AqiAggregate`, `ApiCallLog`) were superseded by a different, smaller design — see Milestone 6.
 
 **Target:** `packages/database/prisma/schema.prisma`
 
@@ -75,56 +77,47 @@ Also add to `District` model: `lat Float?` and `lng Float?` for OpenMeteo centro
 
 ---
 
-## Milestone 6: OpenMeteo Ingestion
+## ~~Milestone 6: OpenMeteo Ingestion~~ — Done (redesigned)
 
-Implement the ingestion module: HTTP clients, scheduler, persistence. Priority 1 API — free, no key, already has working Java reference implementation in open-nature (client + scheduler done; persistence was a TODO there — fill it here).
+Implemented 2026-08-16, with a smaller scope than originally planned here. Full rationale for each deviation: `docs/ingestion-plan.md` → "Implementation status".
 
-**Target:** `apps/api/src/ingestion/`
+**Target (actual):** `apps/api/src/weather/` — a self-contained module, not `apps/api/src/ingestion/` as originally scoped. `IngestionModule` remains a stub for future generic job bookkeeping.
 
-**Reference:** `docs/ingestion-plan.md` — full parameter list, scheduler design, client pattern, retry utility.
-
-### Directory structure
+### Directory structure (actual)
 
 ```
-apps/api/src/ingestion/
-  clients/
-    openmeteo-weather.client.ts
-    openmeteo-airquality.client.ts
-  schedulers/
-    weather.scheduler.ts       ← @Cron every 1h
-    air-quality.scheduler.ts   ← @Cron every 2h
-  services/
-    weather-ingestion.service.ts
-    air-quality-ingestion.service.ts
-    ingestion-job.service.ts
-    api-call-log.service.ts
-  util/
-    retry.ts
-  ingestion.module.ts
+apps/api/src/weather/
+  dto/
+    open-meteo-response.dto.ts
+  weather-openmeteo.client.ts   ← native fetch, manual 3-attempt retry, no circuit breaker
+  weather.service.ts            ← fetch/map/upsert + read methods
+  weather.scheduler.ts           ← @Cron: current 15min, hourly+AQ 2h, daily 12h
+  weather.controller.ts          ← GET /weather/{current,hourly,daily,air-quality}[/:districtId]
+  weather.module.ts
 ```
 
-### Tasks
+### Tasks — what was actually done
 
-1. Install `@nestjs/schedule` — add to api package.json and AppModule.
-2. Write `retry.ts` — `withRetry<T>(fn, maxAttempts=3, baseDelayMs=2000)` with exponential backoff.
-3. Write `api-call-log.service.ts` — `logCall(dto)` writes an `ApiCallLog` row.
-4. Seed district centroids — hardcode lat/lng for all 64 districts and run a one-time update via `LocationsService.onModuleInit`. (Centroid data available from open-nature-backend2 CSVs.)
-5. Write `openmeteo-weather.client.ts` — fetches current + hourly + daily for a given lat/lng. Calls `logCall` after every request. Parameters per `docs/ingestion-plan.md`.
-6. Write `openmeteo-airquality.client.ts` — fetches hourly AQ. Same logging pattern.
-7. Write `weather-ingestion.service.ts` — loops all active districts, calls weather client, upserts `WeatherReading` rows, records `IngestionJob` start/end.
-8. Write `air-quality-ingestion.service.ts` — same pattern for `AirQualityReading`.
-9. Write `weather.scheduler.ts` — `@Cron(CronExpression.EVERY_HOUR)` triggers `WeatherIngestionService.runAll()`.
-10. Write `air-quality.scheduler.ts` — `@Cron('0 */2 * * *')` triggers `AirQualityIngestionService.runAll()`.
-11. Write `ingestion-job.service.ts` — manages `IngestionJob` record lifecycle (QUEUED → RUNNING → SUCCEEDED/FAILED).
-12. Wire `IngestionModule` and import into `AppModule`.
-13. Expose read endpoints: `GET /ingestion/weather/latest?districtId=` and `GET /ingestion/air-quality/latest?districtId=`.
+1. Installed `@nestjs/schedule`; registered `ScheduleModule.forRoot()` in `AppModule`.
+2. Retry is inlined in `weather-openmeteo.client.ts` (no separate `util/retry.ts`) — 3 attempts, fixed backoff.
+3. No `ApiCallLog`/`logCall` — failures logged via NestJS `Logger` only.
+4. District coordinates: all 64 districts backfilled with real lat/lng from `open-nature`'s `district.csv` (not hardcoded divisional capitals), via `LocationsService.onModuleInit`.
+5. `weather-openmeteo.client.ts` has one method per fetch type (current/hourly/daily/air-quality) against OpenMeteo's forecast + air-quality endpoints, with a trimmed parameter set (see `docs/ingestion-plan.md`).
+6. Air quality fetch lives in the same client, not a separate `openmeteo-airquality.client.ts`.
+7. `weather.service.ts` loops fetchable districts (`lat`/`lng` not null), calls the client, upserts into `CurrentWeatherReading` / `HourlyWeatherForecast` / `DailyWeatherForecast` / `HourlyAirQuality` — one row per `(districtId, time)`, no `IngestionJob` start/end tracking.
+8. Air quality persistence is part of the same service, not a separate ingestion service.
+9. `weather.scheduler.ts` — `@Cron('0 */15 * * * *')` for current weather.
+10. Same scheduler — `@Cron('0 0 */2 * * *')` for hourly weather + air quality; `@Cron('0 0 */12 * * *')` for daily.
+11. No `ingestion-job.service.ts` — `IngestionJob` model is unused by weather.
+12. `WeatherModule` wired into `AppModule`; also imported by `DatasetsModule` so the pre-existing `GET /datasets/weather/current` and `GET /datasets/air-quality/current` placeholders now return real data instead of their "Connect OpenMeteo ingestion worker" stub text.
+13. Read endpoints live at `/weather/*`, not `/ingestion/*`: `GET /weather/current[/:districtId]`, `GET /weather/hourly/:districtId`, `GET /weather/daily/:districtId`, `GET /weather/air-quality[/:districtId]`.
 
-### Definition of done
+### Definition of done — actual
 
-- On scheduler tick, weather and AQ data is fetched for all 64 districts and saved to `WeatherReading`/`AirQualityReading`.
-- Every HTTP call writes an `ApiCallLog` row.
-- `IngestionJob` records track run lifecycle.
-- Latest readings queryable via API.
+- On scheduler tick, weather and air quality data is fetched for all 64 districts and saved to their typed tables. ✓
+- Every HTTP call writes an `ApiCallLog` row. — **Not done**, deliberately skipped (see deviations above).
+- `IngestionJob` records track run lifecycle. — **Not done**, deliberately skipped.
+- Latest readings queryable via API. ✓ — verified live against the real OpenMeteo API and local Postgres.
 
 ---
 
@@ -303,13 +296,13 @@ Add urban AQI data from WAQI (World Air Quality Index) for station-level granula
 ### Tasks
 
 1. Register WAQI API token, add to `.env` as `WAQI_API_KEY`.
-2. Write `waqi.client.ts`.
-3. Write `waqi.scheduler.ts` — `@Cron(CronExpression.EVERY_HOUR)`.
-4. Persist results into `AirQualityReading` (same table as OpenMeteo AQ, different `providerId`).
+2. Write `waqi.client.ts` (in `apps/api/src/weather/`, following the pattern `weather-openmeteo.client.ts` established).
+3. Add a `@Cron(CronExpression.EVERY_HOUR)` job, either on `WeatherScheduler` or a new one.
+4. Persist results into `HourlyAirQuality` (the table `weather` module M6 actually built — needs a `providerId` or `source` column added if WAQI and OpenMeteo readings must coexist per district/time; currently the table has no such column since it only ever stored OpenMeteo data).
 
 ### Definition of done
 
-- WAQI data complements OpenMeteo AQ in the same `AirQualityReading` table.
+- WAQI data complements OpenMeteo AQ in `HourlyAirQuality` (schema change needed first — see task 4).
 - Station-level readings visible per district.
 
 ---

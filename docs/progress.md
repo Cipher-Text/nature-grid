@@ -1,6 +1,6 @@
 # Progress
 
-Last updated: 2026-08-15 (ingestion plan written, implementation-plan.md updated to M5–M14)
+Last updated: 2026-08-16 (OpenMeteo weather ingestion built — District lat/lng backfilled, `weather` module live, datasets weather/AQ placeholders wired to real data)
 
 ## Status Legend
 
@@ -22,21 +22,35 @@ Last updated: 2026-08-15 (ingestion plan written, implementation-plan.md updated
 | Public frontend — M1 | Done | 8 React components, full CSS design system, static seed data, runs at port 3000 |
 | Shared types and contracts — M2 | Done | Full enums, DTOs, paginated envelopes, request/response types, route contract map |
 | Backend foundation — M3 | Done | Auth (JWT/bcrypt), users, orgs, locations (8 div/64 district auto-seed), providers, datasets (catalog seed), reports (status workflow + audit), alerts (severity + audit), global validation, guard infrastructure |
-| Prisma schema | Done | 9 enums, 13 models — all core entities implemented; client regenerated |
+| Prisma schema | Done | 9 enums, 17 models — core entities + 4 weather tables; client regenerated |
 | Database migration — M4 | Done | `20260814204043_init` applied; 13 tables live; Postgres on port 5433 (remapped — local Postgres occupies 5432) |
-| Seed data | Done | LocationsService auto-seeds 8 divisions + 64 districts on boot; DatasetsService auto-seeds 5 catalog records; no separate seed script needed |
+| District coordinates | Done | Migration `add_district_coordinates`; all 64 districts backfilled with real lat/lng sourced from `open-nature`'s district registry (`LocationsService.onModuleInit` backfills on boot if missing) |
+| Seed data | Done | LocationsService auto-seeds 8 divisions + 64 districts (with coordinates) on boot; DatasetsService auto-seeds 5 catalog records; ProvidersService auto-seeds the `OpenMeteo` provider; no separate seed script needed |
 | Auth — refresh / logout | Planned | JWT refresh endpoint needs a token store (Redis); logout is a stub |
-| PostGIS / geospatial fields | Planned | `lat/lng` Float for now; replace with PostGIS `geography` type when ready |
+| PostGIS / geospatial fields | Planned | `lat/lng` Float on `District` (populated) and `CitizenReport`; replace with PostGIS `geography` type when ready |
 | Observations module | Planned | Schema ready; controller/service not yet implemented |
 | Biodiversity module | Planned | Module stub only; no schema model yet |
 | Media module | Planned | Module stub only; no schema model yet |
-| Ingestion module | Planned | Module stub only; no ingestion job service yet |
+| Weather ingestion (OpenMeteo) | Done | Live `weather` module — see "Weather ingestion" below |
+| Ingestion module (generic) | Planned | `IngestionJob` model exists but unused by weather; module stub only, no job lifecycle wiring, no `ApiCallLog`/audit trail (deliberately skipped for weather — see `docs/ingestion-plan.md`) |
 | Environmental monitoring model | Planned | OGC SensorThings-style or simplified internal model — decision pending |
 | Dataset downloads / access requests | Planned | Routes defined in contracts; endpoint not implemented |
 | Restoration / projects | Planned | Not started; waiting on core reports/datasets stability |
 | Community module | Planned | Static mock only; no API module |
 | Admin frontend | Planned | Shell only at port 3002 |
 | Data worker | Planned | Python skeleton; no active jobs |
+
+## Weather Ingestion (built 2026-08-16)
+
+Self-contained `apps/api/src/weather` module — not the generic `apps/api/src/ingestion` module described in `docs/ingestion-plan.md`/`docs/implementation-plan.md` M6. See those docs' "Implementation status" notes for the design deviations (no `ApiCallLog`, no `IngestionJob` wiring, trimmed field set, `districtId` FK instead of proximity search).
+
+- `weather-openmeteo.client.ts` — native `fetch` + manual 3-attempt retry against OpenMeteo forecast + air-quality APIs
+- `weather.service.ts` — fetch/map/upsert into 4 tables; read methods for controller and cross-module use
+- `weather.scheduler.ts` — `@Cron`: current every 15 min, hourly + air quality every 2h, daily every 12h
+- `weather.controller.ts` — public `GET /weather/{current,hourly,daily,air-quality}[/:districtId]`
+- `DatasetsService.currentWeather()` / `currentAirQuality()` — previously placeholder stubs, now wired to real `WeatherService` data
+
+Verified live against the real OpenMeteo API and local Postgres.
 
 ## Completed Files
 
@@ -91,7 +105,7 @@ Last updated: 2026-08-15 (ingestion plan written, implementation-plan.md updated
 
 ### Database
 
-- `packages/database/prisma/schema.prisma` — full domain schema (9 enums, 13 models)
+- `packages/database/prisma/schema.prisma` — full domain schema (9 enums, 17 models)
 
 ### API (`apps/api/src/`)
 
@@ -103,11 +117,12 @@ Last updated: 2026-08-15 (ingestion plan written, implementation-plan.md updated
 - `auth/` — register, login, profile, JWT strategy, DTOs
 - `users/` — list, get, update role, deactivate, DTOs
 - `organizations/` — list, get
-- `locations/` — all 5 endpoints, Bangladesh seed (8 div / 64 districts)
-- `providers/` — list, get
-- `datasets/` — list, get, weather/current, air-quality/current, catalog seed
+- `locations/` — all 5 endpoints, Bangladesh seed (8 div / 64 districts, with lat/lng)
+- `providers/` — list, get, OpenMeteo provider auto-seed
+- `datasets/` — list, get, weather/current, air-quality/current (live via `weather` module), catalog seed
 - `reports/` — list (public), get, create, status workflow, audit log, DTOs
 - `alerts/` — list (public), get, create, update, audit log, DTOs
+- `weather/` — OpenMeteo client, service, scheduler, controller (current/hourly/daily/air-quality)
 
 ### Web frontend (`apps/web/`)
 
@@ -137,14 +152,15 @@ See `docs/implementation-plan.md` for the full milestone list (M5–M14).
 6. ~~Start the database and run migration.~~ Done — M4. Postgres on port 5433, Redis on 6379, API live at port 3001.
 7. ~~Seed data.~~ Done — auto-seeded on first boot (8 div / 64 dist / 5 datasets).
 8. ~~Write ingestion plan — analyse Java backends, identify gaps, plan NestJS design.~~ Done — `docs/ingestion-plan.md`.
-9. **M5 next:** Expand Prisma schema (RefreshToken, WeatherReading, AirQualityReading, WeatherAggregate, AqiAggregate, ApiCallLog, ReportMedia, ReportComment, RestorationProject). Add district lat/lng. Implement auth refresh/logout.
-10. **M6 next:** Implement OpenMeteo ingestion module — clients, schedulers, persistence to WeatherReading/AirQualityReading.
+9. **M5 partial:** District lat/lng added and backfilled (2026-08-16). Still pending: `RefreshToken`, `ReportMedia`, `ReportComment`, `RestorationProject` models; auth refresh/logout.
+10. ~~**M6:** Implement OpenMeteo ingestion — weather + air quality.~~ Done (2026-08-16), with a redesigned scope: self-contained `weather` module (not the generic `ingestion` module originally planned), no `ApiCallLog`/`IngestionJob` wiring. See `docs/ingestion-plan.md` and `docs/implementation-plan.md` for the design-deviation notes.
+11. **Next up:** WAQI integration (M14) for station-level AQI, or resume M5's remaining schema items (RefreshToken, ReportMedia/Comment, RestorationProject).
 
 ## Open Questions
 
-- District lat/lng centroids: load from open-nature-backend2 CSVs or hardcode divisional capitals first?
+- ~~District lat/lng centroids: load from open-nature-backend2 CSVs or hardcode divisional capitals first?~~ Resolved — loaded from `open-nature`'s district CSV (all 64 districts, not just divisional capitals).
 - WAQI API key: register at aqicn.org for dev/staging?
-- WeatherReading retention policy: how long to keep raw rows before pruning after aggregation?
-- ApiCallLog retention: add daily cleanup cron (open-nature purges at 2 AM)?
+- Weather data retention policy: how long to keep raw hourly/daily rows? No aggregation tables were built, so this is now more pressing than originally scoped.
+- Should a generic `ApiCallLog`/audit trail be added for external ingestion calls, or is per-request logging via the NestJS `Logger` sufficient? Currently skipped by deliberate decision for the weather module.
 - Should government users publish alerts directly, or must alerts always go through moderator/admin approval?
 - PostGIS `geography` fields: replace lat/lng Float when polygon queries needed (deferred to Phase 3).

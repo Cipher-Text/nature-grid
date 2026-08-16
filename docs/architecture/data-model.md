@@ -25,7 +25,7 @@ Nature Grid uses PostgreSQL as the primary database. The Prisma schema lives at 
 | `Organization` | `id`, `name`, `type ProviderType`, `description`, `website`, `country`, `isVerified` | → `Provider[]` |
 | `Provider` | `id`, `name`, `type ProviderType`, `country`, `isActive` | → `Organization?`, `Dataset[]`, `IngestionJob[]` |
 | `Division` | `id`, `name unique`, `bnName` | → `District[]` |
-| `District` | `id`, `name`, `bnName`, `divisionId` | → `Division`, `Upazila[]`, `CitizenReport[]`, `Alert[]` |
+| `District` | `id`, `name`, `bnName`, `lat?`, `lng?`, `divisionId` | → `Division`, `Upazila[]`, `CitizenReport[]`, `Alert[]`, `CurrentWeatherReading[]`, `HourlyWeatherForecast[]`, `DailyWeatherForecast[]`, `HourlyAirQuality[]` |
 | `Upazila` | `id`, `name`, `bnName`, `districtId` | → `District`, `Union[]` |
 | `Union` | `id`, `name`, `bnName`, `upazilaId` | → `Upazila` |
 | `Dataset` | `id`, `name`, `category DatasetCategory`, `accessPolicy DatasetAccessPolicy`, `source`, `providerId?`, `description`, `recordCount`, `lastSyncedAt`, `isPublished` | → `Provider?` |
@@ -34,10 +34,18 @@ Nature Grid uses PostgreSQL as the primary database. The Prisma schema lives at 
 | `Alert` | `id`, `title`, `description`, `severity AlertSeverity`, `status AlertStatus`, `instructions?`, `districtId?`, `issuedAt`, `expiresAt?` | → `District?` |
 | `IngestionJob` | `id`, `providerId`, `status IngestionStatus`, `startedAt?`, `endedAt?`, `errorMsg?` | → `Provider` |
 | `AuditEvent` | `id`, `action AuditAction`, `userId?`, `entityType?`, `entityId?`, `meta Json?`, `ipAddress?` | → `User?` |
+| `CurrentWeatherReading` | `id`, `districtId`, `lat`, `lng`, `readingTime`, `temperature2m?`, `relativeHumidity2m?`, `apparentTemperature?`, `windSpeed10m?`, `windDirection10m?`, `precipitation?`, `weatherCode?`, `cloudCover?`, `isDay?` | → `District`; unique `(districtId, readingTime)` |
+| `HourlyWeatherForecast` | `id`, `districtId`, `lat`, `lng`, `forecastTime`, `temperature2m?`, `relativeHumidity2m?`, `apparentTemperature?`, `precipitationProbability?`, `precipitation?`, `weatherCode?`, `windSpeed10m?`, `windDirection10m?`, `cloudCover?` | → `District`; unique `(districtId, forecastTime)` |
+| `DailyWeatherForecast` | `id`, `districtId`, `lat`, `lng`, `forecastDate`, `weatherCode?`, `temperature2mMax?`, `temperature2mMin?`, `apparentTemperatureMax?`, `apparentTemperatureMin?`, `precipitationSum?`, `precipitationProbabilityMax?`, `windSpeed10mMax?`, `uvIndexMax?`, `sunrise?`, `sunset?` | → `District`; unique `(districtId, forecastDate)` |
+| `HourlyAirQuality` | `id`, `districtId`, `lat`, `lng`, `forecastTime`, `pm10?`, `pm25?`, `carbonMonoxide?`, `nitrogenDioxide?`, `sulphurDioxide?`, `ozone?`, `uvIndex?` | → `District`; unique `(districtId, forecastTime)` |
+
+## Weather Models
+
+The 4 weather tables (`CurrentWeatherReading`, `HourlyWeatherForecast`, `DailyWeatherForecast`, `HourlyAirQuality`) are keyed by `districtId`, not raw `lat`/`lng` proximity matching — every fetch already targets a known district's coordinates, so a direct FK is simpler and exact. `lat`/`lng` are still stored on each row for provenance, duplicating the district's coordinates at fetch time. Field sets are trimmed relative to the OpenMeteo API's full parameter list (see `docs/ingestion-plan.md` for the parameters actually requested) — no soil temperature/moisture or multi-height wind data. Populated by the `weather` module (`apps/api/src/weather/`); see `docs/progress.md` "Weather Ingestion" for details.
 
 ## Geospatial
 
-Currently using `lat Float?` and `lng Float?` on `CitizenReport`. Replace with PostGIS `geography(Point, 4326)` in Phase 3 when the PostGIS extension is enabled. Future candidates for proper geometry fields:
+Currently using `lat Float?` and `lng Float?` on `District` (populated for all 64 districts) and `CitizenReport`. Replace with PostGIS `geography(Point, 4326)` in Phase 3 when the PostGIS extension is enabled. Future candidates for proper geometry fields:
 
 - `Alert` — affected zone polygon
 - `District` — administrative boundary polygon
@@ -92,6 +100,6 @@ pnpm run db:generate          # Regenerate Prisma client after schema changes
 pnpm run db:studio            # Open Prisma Studio at localhost:5555
 ```
 
-**Current migration:** `20260814204043_init` — applied, all 13 tables live.
+**Migrations applied:** `20260814204043_init` (13 tables) → `add_district_coordinates` (District lat/lng) → `add_weather_tables` (4 weather tables). 17 tables live.
 
-The `LocationsService` and `DatasetsService` auto-seed geography and catalog data on first boot via `OnModuleInit`. No separate seed script is required for those tables.
+The `LocationsService`, `DatasetsService`, and `ProvidersService` auto-seed geography, catalog, and provider data on first boot via `OnModuleInit`. No separate seed script is required for those tables.
