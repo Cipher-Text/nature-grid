@@ -141,17 +141,17 @@ export const ALERTS: AlertPreview[] = [
   {
     title: 'Flood warning — Sylhet low-lying zones',
     meta: 'Emergency severity · active since 06:00',
-    severity: 'emergency',
+    severity: 'EMERGENCY',
   },
   {
     title: 'Heat stress watch — Dhaka division',
     meta: 'Watch severity · next 48 hours',
-    severity: 'warning',
+    severity: 'WARNING',
   },
   {
     title: 'Air quality advisory — Narayanganj',
     meta: 'PM2.5 elevated near industrial zone',
-    severity: 'info',
+    severity: 'INFO',
   },
 ];
 

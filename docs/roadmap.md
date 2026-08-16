@@ -63,23 +63,24 @@ Deliverables:
 - Dataset catalog with access policy ✓
 - Evidence and audit primitives (AuditEvent on all write flows) ✓
 - Shared type contracts (`packages/shared`, `packages/contracts`) ✓
-- Global validation pipe and guard infrastructure ✓
+- Global validation pipe and guard infrastructure ✓ — shipped with a casing bug that made role checks always fail; fixed 2026-08-17, see below.
 
 Exit criteria met:
 
 - Public read APIs exist for locations, dataset summaries, verified reports, and active alerts.
 - Authenticated APIs exist for report and alert contribution.
-- Moderator/admin permissions are enforced for status change flows.
+- ~~Moderator/admin permissions are enforced for status change flows.~~ This was **not actually true** until 2026-08-17 — a `@nature-grid/shared` enum-casing bug made every role check fail, so moderator/admin permissions rejected everyone rather than enforcing anything. Genuinely true now; see `docs/progress.md` "Critical RBAC Fix".
 
 Remaining gaps (carry into Phase 3):
 
 - ~~Auth refresh/logout needs Redis token store~~ Done (2026-08-16) — Postgres-backed `RefreshToken` model with rotation, not Redis; see `docs/progress.md` "Auth Refresh/Logout".
 - `lat/lng Float` should be replaced with PostGIS `geography` type
 - ~~Prisma migration and seed not yet run (no live database)~~ Stale — migrations have run and the database has been live since M4.
+- ~~Role-gated endpoints reject every user due to an enum-casing bug~~ Done (2026-08-17) — see `docs/progress.md` "Critical RBAC Fix". Open follow-up: no automated regression test guards against this recurring.
 
 ## Phase 3: Environmental Core
 
-Status: In Progress — auth refresh/logout done (backend + frontend); frontend live-data wiring started (weather sidebar)
+Status: In Progress — auth refresh/logout done (backend + frontend); `/data`, `/reports`, `/alerts` live on the app-shell; 4 of 7 app-shell pages still pending (Milestone 15)
 
 Goal: Add the primary environmental workflows and connect the frontend to real backend data.
 
@@ -91,14 +92,14 @@ Deliverables:
 - Biodiversity records
 - Dataset download and access-request endpoints
 - Connect public web page to live API (replace static seed data) — partially done: the homepage's "Current conditions" sidebar now fetches live weather/AQ data (2026-08-16), with fallback to static data if the API is unreachable; the nav is now session-aware (real login state, 2026-08-16). Everything else on the public page (metrics, reports/alerts previews, biodiversity/restoration/community) is still static.
-- ~~Auth refresh / logout with Redis token store~~ Done (2026-08-16) — Postgres-backed, not Redis (see Phase 2 note above). Frontend login/register/logout flow also wired (2026-08-16): httpOnly cookie sessions, middleware-based route protection + token refresh, new `/login`/`/register`/`/profile` routes. `/profile` rebuilt (2026-08-17) to match its mockup's sidebar app-shell design, with honest empty states instead of the mock's fabricated eco score/badges/activity feed — this also established a reusable sidebar shell (`AppSidebar`) that `/data`, `/observations`, `/reports`, `/alerts`, `/biodiversity`, `/restoration`, `/community` will need too — building those is now tracked as Milestone 15 in `implementation-plan.md`.
+- ~~Auth refresh / logout with Redis token store~~ Done (2026-08-16) — Postgres-backed, not Redis (see Phase 2 note above). Frontend login/register/logout flow also wired (2026-08-16): httpOnly cookie sessions, middleware-based route protection + token refresh, new `/login`/`/register`/`/profile` routes. `/profile` rebuilt (2026-08-17) to match its mockup's sidebar app-shell design, with honest empty states instead of the mock's fabricated eco score/badges/activity feed — this also established a reusable sidebar shell (`AppSidebar`), now also powering `/data`, `/reports`, `/alerts` (2026-08-17, real backend data, see `docs/progress.md` "App-Shell Pages: Data, Reports, Alerts"). `/observations`, `/biodiversity`, `/restoration`, `/community` still pending — tracked as Milestone 15 in `implementation-plan.md`.
 - PostGIS geography fields (requires PostGIS extension + migration)
 
 Exit criteria:
 
 - Citizens can submit reports and observations after login. — Login itself now works end to end (2026-08-16); the submission forms themselves are not yet built.
 - Public users see only verified/publishable data from the live API.
-- Moderators/admins can review and update status.
+- Moderators/admins can review and update status. — Also **not actually true** until 2026-08-17 for the same RBAC casing bug (see Phase 2 note); confirmed genuinely working now via `PATCH /reports/:id/status` and `PATCH /alerts/:id`.
 - Advanced dataset access is gated correctly.
 
 ## Phase 4: Data and Ingestion

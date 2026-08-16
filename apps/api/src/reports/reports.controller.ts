@@ -43,7 +43,7 @@ export class ReportsController {
     return this.reportsService.create(dto, user);
   }
 
-  @Roles('moderator', 'admin')
+  @Roles('MODERATOR', 'ADMIN')
   @Patch(':id/status')
   updateStatus(
     @Param('id') id: string,

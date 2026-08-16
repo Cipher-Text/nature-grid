@@ -2,9 +2,9 @@ import Link from 'next/link';
 import { REPORTS, ALERTS } from '../lib/static-data';
 
 const SEVERITY_CLASS: Record<string, string> = {
-  emergency: 'danger',
-  warning: 'warning',
-  info: 'info',
+  EMERGENCY: 'danger',
+  WARNING: 'warning',
+  INFO: 'info',
 };
 
 export default function ReportsAlertsSection() {
@@ -34,7 +34,7 @@ export default function ReportsAlertsSection() {
           ))}
         </div>
 
-        <Link className="button ghost gated-action" href="/profile">
+        <Link className="button ghost gated-action" href="/login">
           Sign in to submit a report
         </Link>
       </article>

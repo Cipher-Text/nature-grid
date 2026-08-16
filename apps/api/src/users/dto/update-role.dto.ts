@@ -2,11 +2,11 @@ import { IsIn } from 'class-validator';
 import type { UserRole } from '@nature-grid/shared';
 
 const ASSIGNABLE_ROLES: UserRole[] = [
-  'citizen',
-  'researcher',
-  'organization_admin',
-  'government',
-  'moderator',
+  'CITIZEN',
+  'RESEARCHER',
+  'ORGANIZATION_ADMIN',
+  'GOVERNMENT',
+  'MODERATOR',
 ];
 
 export class UpdateRoleDto {

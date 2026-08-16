@@ -9,6 +9,7 @@ import type {
   ObservationCategory,
   ObservationTrustLevel,
   ProjectStatus,
+  ProviderType,
 } from '@nature-grid/shared';
 
 // Re-export shared types that callers expect to find here
@@ -23,6 +24,7 @@ export type {
   ObservationCategory,
   ObservationTrustLevel,
   ProjectStatus,
+  ProviderType,
 } from '@nature-grid/shared';
 
 // ─── API Prefix ───────────────────────────────────────────────────────────────
@@ -203,6 +205,27 @@ export interface LogoutRequest {
 
 // ─── Reports ──────────────────────────────────────────────────────────────────
 
+export interface DistrictSummary {
+  id: string;
+  name: string;
+  division: { id: string; name: string };
+}
+
+export interface CitizenReport {
+  id: string;
+  title: string;
+  category: ReportCategory;
+  status: ReportStatus;
+  summary: string | null;
+  districtId: string | null;
+  lat: number | null;
+  lng: number | null;
+  createdAt: string;
+  updatedAt: string;
+  reporter: { id: string; displayName: string } | null;
+  district: DistrictSummary | null;
+}
+
 export interface CreateReportRequest {
   title: string;
   category: ReportCategory;
@@ -222,6 +245,19 @@ export interface ReportListParams extends PaginationParams, LocationFilterParams
 }
 
 // ─── Alerts ───────────────────────────────────────────────────────────────────
+
+export interface Alert {
+  id: string;
+  title: string;
+  description: string;
+  severity: AlertSeverity;
+  status: AlertStatus;
+  instructions: string | null;
+  issuedAt: string;
+  expiresAt: string | null;
+  createdAt: string;
+  district: DistrictSummary | null;
+}
 
 export interface CreateAlertRequest {
   title: string;
@@ -260,6 +296,31 @@ export interface ObservationListParams extends PaginationParams, LocationFilterP
 }
 
 // ─── Datasets ─────────────────────────────────────────────────────────────────
+
+export interface Provider {
+  id: string;
+  name: string;
+  type: ProviderType;
+  country: string;
+  isActive: boolean;
+  organization: { id: string; name: string } | null;
+}
+
+export interface Dataset {
+  id: string;
+  name: string;
+  category: DatasetCategory;
+  accessPolicy: DatasetAccessPolicy;
+  source: string;
+  providerId: string | null;
+  provider: { id: string; name: string; type: string } | null;
+  description: string | null;
+  recordCount: number | null;
+  lastSyncedAt: string | null;
+  isPublished: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface DatasetListParams extends PaginationParams {
   category?: DatasetCategory;

@@ -1038,3 +1038,192 @@ a {
   color: var(--muted);
   font-size: 0.9rem;
 }
+
+/* ── App-shell page toolbar/table/chip (data, reports, alerts) ── */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 24px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  padding: 0.55rem 0.75rem;
+  font-size: 0.86rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.chip.active {
+  border-color: transparent;
+  background: var(--primary);
+  color: #fff;
+}
+
+.select-field {
+  appearance: none;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--foreground);
+  padding: 0.67rem 2.2rem 0.67rem 0.85rem;
+  font: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2365736b' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+
+.table {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-top: 16px;
+}
+
+.table-row {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 0.8fr 0.8fr;
+  gap: 12px;
+  border-top: 1px solid var(--border);
+  padding: 12px;
+  font-size: 0.9rem;
+}
+
+.table-row:first-child {
+  border-top: 0;
+}
+
+.table-head {
+  background: var(--surface-2);
+  color: var(--muted);
+  font-weight: 800;
+}
+
+/* ── Alert cards / strip / status steps ── */
+.alert-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.alert-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  padding: 18px;
+}
+
+.alert-card span {
+  display: inline-block;
+  margin-bottom: 12px;
+  border-radius: 999px;
+  padding: 5px 9px;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.alert-card h2 {
+  font-size: 1.2rem;
+}
+
+.alert-card p {
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.danger-card {
+  border-color: #fecaca;
+  background: linear-gradient(180deg, #fff, var(--danger-soft));
+}
+
+.danger-card span {
+  background: var(--danger);
+  color: white;
+}
+
+.warning-card {
+  border-color: #fde68a;
+  background: linear-gradient(180deg, #fff, var(--warning-soft));
+}
+
+.warning-card span {
+  background: var(--warning);
+  color: white;
+}
+
+.info-card {
+  border-color: #bce5e0;
+  background: linear-gradient(180deg, #fff, var(--data-soft));
+}
+
+.info-card span {
+  background: var(--data);
+  color: white;
+}
+
+.alert-strip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.alert-strip.danger {
+  background: var(--danger-soft);
+  border: 1px solid #fecaca;
+  color: var(--danger);
+}
+
+.steps {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.steps li {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 14px 14px 42px;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.steps li::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 14px;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border);
+  border-radius: 999px;
+  transform: translateY(-50%);
+}
+
+.steps li.done {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.steps li.done::before {
+  border-color: var(--success);
+  background: var(--success);
+}

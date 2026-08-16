@@ -20,6 +20,8 @@ Build persistence and ingestion before features. Real environmental data in the 
 
 `apps/api` — Auth (JWT/bcrypt), users, organizations, locations (8 div / 64 district auto-seed), providers, datasets (catalog seed), reports (status workflow + audit), alerts (severity + audit), global validation, guard infrastructure.
 
+**Caveat found 2026-08-17:** the guard infrastructure shipped with a casing bug — `@Roles(...)` call sites used lowercase role strings while Prisma/JWT values are uppercase, so every role-gated endpoint rejected every user (including admins) until fixed. See `docs/progress.md` "Critical RBAC Fix".
+
 ## ~~Milestone 4: Database Foundation~~ — Done
 
 `packages/database` — Migration `20260814204043_init` applied. 9 enums, 13 models. PostgreSQL 16 on port 5433 (remapped — local Postgres occupies 5432). Auto-seed on boot via OnModuleInit.
@@ -311,9 +313,11 @@ Add urban AQI data from WAQI (World Air Quality Index) for station-level granula
 
 ---
 
-## Milestone 15: App-Shell Pages (Data Hub, Reports, Alerts, Observations, Biodiversity, Restoration, Community)
+## Milestone 15: App-Shell Pages (Data Hub, Reports, Alerts, Observations, Biodiversity, Restoration, Community) — In Progress
 
 Build the remaining `apps/web` routes that the nav (`public-nav.tsx`, `app-sidebar.tsx`) already links to but that don't exist yet — currently all 404. Reuse the sidebar `AppSidebar` shell established for `/profile` (M13), not a new layout per page.
+
+**Status (2026-08-17):** Tasks 1–3 done (`/data`, `/reports`, `/alerts`) — see `docs/progress.md` "App-Shell Pages: Data, Reports, Alerts". Building `/alerts`'s role-conditional CTA also surfaced and fixed a critical, unrelated bug: every role-gated endpoint in the API was rejecting all users due to an enum-casing mismatch between `@nature-grid/shared` (lowercase) and Prisma (uppercase) — see `docs/progress.md` "Critical RBAC Fix". Tasks 4–8 (`/observations`, `/biodiversity`, `/restoration`, `/community`, active-link check) still pending.
 
 **Target:** `apps/web/app/{data,observations,reports,alerts,biodiversity,restoration,community}/`
 
@@ -333,9 +337,9 @@ Build the remaining `apps/web` routes that the nav (`public-nav.tsx`, `app-sideb
 
 ### Tasks
 
-1. `/data` — wire to `GET /datasets`, using the `AppSidebar` shell. Category/access-policy filters can reuse the mock's `.filter-bar`/`.select-field` CSS (in `styles.css`, not yet ported into `globals.css`).
-2. `/reports` — wire to `GET /reports`. Public list only, matching what's already enforced server-side.
-3. `/alerts` — wire to `GET /alerts`.
+1. ~~`/data` — wire to `GET /datasets`, using the `AppSidebar` shell.~~ Done — category filter is query-string driven (real, not decorative); mock's fake "Provider health" panel replaced with a real `GET /providers` panel; mock's chart omitted (no data to back it); gated downloads shown as a tag only, no working button (download endpoint doesn't exist).
+2. ~~`/reports` — wire to `GET /reports`. Public list only, matching what's already enforced server-side.~~ Done — metric cards deliberately show only Verified/Resolved counts, not the mock's Under-review/Submitted-today (those would leak status info the public API intentionally hides); submission form replaced with a sign-in CTA.
+3. ~~`/alerts` — wire to `GET /alerts`.~~ Done — required a small backend fix first (`ALERT_SELECT` wasn't projecting `description`); role-conditional "Issue alert" badge added (real role check, but reads "coming soon" since no creation page exists); "Warning zones" reuses the homepage's existing decorative map placeholder.
 4. `/observations` — no backend yet: honest "not available yet" empty state (same pattern as `/profile`'s activity feed), not fabricated records. Revisit once M9 ships.
 5. `/biodiversity` — same honest-empty-state treatment; revisit once M10 ships.
 6. `/restoration` — same honest-empty-state treatment; revisit once M11 ships.
@@ -344,9 +348,9 @@ Build the remaining `apps/web` routes that the nav (`public-nav.tsx`, `app-sideb
 
 ### Definition of done
 
-- All 7 routes render instead of 404ing (nav links already point to them).
-- `/data`, `/reports`, `/alerts` show real backend data through the sidebar shell.
-- `/observations`, `/biodiversity`, `/restoration`, `/community` show an honest empty/coming-soon state — no fabricated records, consistent with the `/profile` precedent.
+- All 7 routes render instead of 404ing (nav links already point to them). — 3 of 7 done.
+- `/data`, `/reports`, `/alerts` show real backend data through the sidebar shell. — Done, verified live with seeded real reports/alerts.
+- `/observations`, `/biodiversity`, `/restoration`, `/community` show an honest empty/coming-soon state — no fabricated records, consistent with the `/profile` precedent. — Not started.
 
 ---
 

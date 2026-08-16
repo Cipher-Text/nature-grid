@@ -1,6 +1,6 @@
 # Progress
 
-Last updated: 2026-08-17 (`/profile` rebuilt to match its mockup — sidebar app-shell layout, honest empty states instead of fabricated activity/badges/eco-score)
+Last updated: 2026-08-17 (`/data`, `/reports`, `/alerts` built on the app-shell; critical RBAC bug found and fixed — every role-gated endpoint was rejecting all users, including admins)
 
 ## Status Legend
 
@@ -21,14 +21,15 @@ Last updated: 2026-08-17 (`/profile` rebuilt to match its mockup — sidebar app
 | Public-first product model | Done | Public `/`, login-gated contribution/download/advanced access |
 | Public frontend — M1 | Done | 8 React components, full CSS design system, static seed data, runs at port 3000 |
 | Frontend live data — M13 | In Progress | Weather sidebar + full auth flow (login/register/logout, protected `/profile` now matching its mockup) live — see "Public Weather Wiring", "Public Auth Flow Wiring", and "Profile Page Mockup Fidelity" below. Report/observation submission, live metrics, and every other homepage component are still static/not started. |
-| Frontend "app shell" layout (sidebar pages) | In Progress | Established via `/profile` (2026-08-17) — `components/app-sidebar.tsx` + `.app-shell`/`.sidebar`/`.profile-hero`/`.tab-nav` CSS, ported from the mock. Every mocked `apps/web` page except the public homepage (`data`, `observations`, `reports`, `alerts`, `biodiversity`, `restoration`, `community`) uses this same shell. Building them is tracked as **Milestone 15** (added 2026-08-17) in `implementation-plan.md`. |
+| Frontend "app shell" layout (sidebar pages) — M15 | In Progress | Established via `/profile`, now also powers `/data`, `/reports`, `/alerts` (all 2026-08-17) — see "App-Shell Pages: Data, Reports, Alerts" below. 3 of 7 remaining app-shell pages done (`/observations`, `/biodiversity`, `/restoration`, `/community` still pending, per **Milestone 15** in `implementation-plan.md`). |
 | Shared types and contracts — M2 | Done | Full enums, DTOs, paginated envelopes, request/response types, route contract map |
-| Backend foundation — M3 | Done | Auth (JWT/bcrypt), users, orgs, locations (8 div/64 district auto-seed), providers, datasets (catalog seed), reports (status workflow + audit), alerts (severity + audit), global validation, guard infrastructure |
+| Backend foundation — M3 | Done | Auth (JWT/bcrypt), users, orgs, locations (8 div/64 district auto-seed), providers, datasets (catalog seed), reports (status workflow + audit), alerts (severity + audit), global validation, guard infrastructure. **Caveat:** role-gated endpoints shipped with a casing bug that rejected every user until 2026-08-17 — see "Critical RBAC Fix" below. |
 | Prisma schema | Done | 9 enums, 18 models — core entities + 4 weather tables + `RefreshToken`; client regenerated |
 | Database migration — M4 | Done | `20260814204043_init` applied; 13 tables live; Postgres on port 5433 (remapped — local Postgres occupies 5432) |
 | District coordinates | Done | Migration `add_district_coordinates`; all 64 districts backfilled with real lat/lng sourced from `open-nature`'s district registry (`LocationsService.onModuleInit` backfills on boot if missing) |
 | Seed data | Done | LocationsService auto-seeds 8 divisions + 64 districts (with coordinates) on boot; DatasetsService auto-seeds 5 catalog records; ProvidersService auto-seeds the `OpenMeteo` provider; no separate seed script needed |
 | Auth — refresh / logout | Done | Postgres-backed `RefreshToken` model (not Redis — see "Auth Refresh/Logout" below), opaque tokens with rotation, daily cleanup cron |
+| RBAC / role guard casing bug | Done | Fixed 2026-08-17 — see "Critical RBAC Fix" below. Every role-gated endpoint (`POST /alerts`, `PATCH /alerts/:id`, `PATCH /reports/:id/status`, `PATCH /users/:id/role`, `PATCH /users/:id/deactivate`) previously rejected all users, including admins. |
 | PostGIS / geospatial fields | Planned | `lat/lng` Float on `District` (populated) and `CitizenReport`; replace with PostGIS `geography` type when ready |
 | Observations module | Planned | Schema ready; controller/service not yet implemented |
 | Biodiversity module | Planned | Module stub only; no schema model yet |
@@ -106,6 +107,35 @@ Verified live in a real browser (not just curl, since Next.js Server Actions bou
 
 Verified live in a real browser: homepage unaffected (still top-nav, still live weather data) → register → `/profile` renders the sidebar shell with real data, matching the mock's layout → sign-out (moved to match the mock's hero position) still works and redirects to `/` with guest state restored.
 
+## Critical RBAC Fix (found + fixed 2026-08-17)
+
+Discovered while wiring `/alerts`'s role-conditional "Issue alert" badge — checking enum casing for filter chips surfaced a severe, already-shipped bug unrelated to the page-building task at hand.
+
+**The bug:** `packages/shared/src/index.ts` defined `UserRole`, `AlertSeverity`, `ReportCategory`, `ReportStatus`, `DatasetCategory`, `DatasetAccessPolicy`, and `ProviderType` as **lowercase** string literals (`'admin'`, `'moderator'`, `'government'`, ...), but the real Prisma enums — what the database and JWT payload actually contain — are **uppercase** (`ADMIN`, `MODERATOR`, `GOVERNMENT`, ...). Every `@Roles(...)` call site was written against the lowercase shared type, e.g. `@Roles('government', 'moderator', 'admin')`, but `RolesGuard` compares that array against `request.user.role`, which is always uppercase at runtime. `['government','moderator','admin'].includes('ADMIN')` is `false` — always. **Every role-gated endpoint rejected every user, including legitimate admins, with no role able to pass**: `POST /alerts`, `PATCH /alerts/:id`, `PATCH /reports/:id/status`, `PATCH /users/:id/role`, `PATCH /users/:id/deactivate`.
+
+This had been latent because nothing in `apps/web` consumed real API enum values through `@nature-grid/shared` until this session's work — the only prior consumer was `lib/static-data.ts`'s fully-static mock data, which never touched the real API.
+
+**The fix:**
+- `packages/shared/src/index.ts` — uppercased every enum to match Prisma exactly. `ObservationTrustLevel`/`ObservationCategory`/`ProjectStatus` (no Prisma model exists yet — Observations/Restoration modules are stubs) were uppercased too, on the same convention, to avoid repeating this bug when those modules ship.
+- Every `@Roles(...)` call site fixed: `alerts.controller.ts` (×2), `reports.controller.ts`, `users.controller.ts` (class-level, gates the whole controller).
+- `apps/api/src/users/dto/update-role.dto.ts`'s `@IsIn(ASSIGNABLE_ROLES)` validator list — same bug, a second and independent instance TypeScript caught immediately after the first fix (compiling `@nature-grid/api` failed with 5 real type errors here).
+- `apps/web/lib/static-data.ts` and `components/reports-alerts-section.tsx` — the mock `ALERTS` array and its `SEVERITY_CLASS` lookup map used the same lowercase convention; fixed to match, otherwise alert severity coloring on the homepage would have silently broken the moment the shared type was corrected.
+- `UserRole` keeps a `'guest'` variant not present in Prisma at all (unauthenticated requests have no role) — documented as never a real runtime value, kept only for the permission-matrix documentation use in `roles-and-permissions.md`.
+
+**Verified live**, both directions: registered a citizen, bootstrapped them to `ADMIN` directly in Postgres (no admin existed yet to do it via the API), then confirmed `POST /alerts` → 201 (previously would have been 403 for every role) and `PATCH /users/:id/role` → 200 promoting a second test user. Re-confirmed a plain `CITIZEN` user is still correctly rejected (403) — the fix restores correct behavior in both directions, not just "allow everyone." Test users/data cleaned up afterward.
+
+## App-Shell Pages: Data, Reports, Alerts (built 2026-08-17)
+
+First 3 of Milestone 15's 7 pages — same honesty principle applied throughout: real data or an explicit "not available" state, never fabricated content.
+
+- `packages/contracts/src/index.ts` — added `Dataset`, `CitizenReport`, `Alert`, `Provider`, `DistrictSummary` response types (none existed before; only request-param types did) and re-exported `ProviderType` from `@nature-grid/shared` (wasn't re-exported previously).
+- `apps/web/lib/format.ts` — new `titleCase()`/`relativeTime()` helpers shared across the three pages.
+- **`/data`** — real dataset catalog (`GET /datasets`) with a working category filter (query-string driven, no client JS). Mock's fabricated "Provider health" panel replaced with a real **Providers** panel (`GET /providers`). Mock's temperature/rainfall chart omitted entirely — no historical weather trend data exists to back it. Gated downloads shown as an honest access-policy tag, not a working button (`GET /datasets/:id/download` doesn't exist — M7).
+- **`/reports`** — real report list (`GET /reports`, already correctly verified/resolved-only by default) with a working category filter. Metric cards show **only** Verified and Resolved counts (two real `?status=X` calls reading `.total`) — mock's "Under review"/"Submitted today" counts omitted, since the public API deliberately hides non-verified reports and showing those counts even in aggregate would undermine that access rule. Mock's elaborate disabled submission form replaced with a plain "Sign in to submit" CTA — the real form is separately sequenced (M13 task 5).
+- **`/alerts`** — real alert cards + emergency banner (`GET /alerts`, ACTIVE by default) with a working severity filter, plus a real history table (`GET /alerts?status=EXPIRED`). Small backend fix needed first: `ALERT_SELECT` only projected `instructions`, not `description` — alert cards would've had no body text. "Warning zones" map reuses the homepage's existing decorative placeholder pattern (already documented as "replace with real map library in Phase 4"), not a new fabrication. "Issue alert" is a real role-conditional badge (`GOVERNMENT`/`MODERATOR`/`ADMIN` only, read from `getCurrentUser()`) — but since no alert-creation page exists yet, it reads "Issue alert — coming soon" rather than linking somewhere non-functional. Notification toggles replaced with a plain "coming soon" note.
+
+Verified live: seeded a real verified report and two real alerts (one `EMERGENCY`, one `WARNING`) via the now-fixed role-gated endpoints, confirmed all three pages render them correctly, confirmed the category/severity filters actually refetch (not decorative), confirmed the "Issue alert" badge is invisible for guests/citizens and appears correctly once logged in as the bootstrapped admin. Test data and dev servers cleaned up afterward.
+
 ## Completed Files
 
 ### Project docs
@@ -154,8 +184,8 @@ Verified live in a real browser: homepage unaffected (still top-nav, still live 
 
 ### Shared packages
 
-- `packages/shared/src/index.ts` — 28 exported types and interfaces
-- `packages/contracts/src/index.ts` — route map (incl. `weather`), request/response types (incl. weather, refresh/logout), envelopes
+- `packages/shared/src/index.ts` — 28 exported types and interfaces. Enum values corrected to uppercase 2026-08-17 to match Prisma (see "Critical RBAC Fix" above) — this file is the source of the casing that must always match the database.
+- `packages/contracts/src/index.ts` — route map (incl. `weather`), response entity types (`Dataset`, `CitizenReport`, `Alert`, `Provider`, `CurrentWeatherReading`, `HourlyAirQualityReading`), request types (incl. refresh/logout), envelopes
 
 ### Database
 
@@ -169,13 +199,13 @@ Verified live in a real browser: homepage unaffected (still top-nav, still live 
 - `common/guards/jwt-auth.guard.ts`
 - `common/guards/roles.guard.ts`
 - `auth/` — register, login, profile, refresh (rotating), logout, JWT strategy, refresh-token utils, daily cleanup cron, DTOs
-- `users/` — list, get, update role, deactivate, DTOs
+- `users/` — list, get, update role, deactivate, DTOs (role-gating fixed 2026-08-17, see "Critical RBAC Fix")
 - `organizations/` — list, get
 - `locations/` — all 5 endpoints, Bangladesh seed (8 div / 64 districts, with lat/lng)
 - `providers/` — list, get, OpenMeteo provider auto-seed
 - `datasets/` — list, get, weather/current, air-quality/current (live via `weather` module), catalog seed
-- `reports/` — list (public), get, create, status workflow, audit log, DTOs
-- `alerts/` — list (public), get, create, update, audit log, DTOs
+- `reports/` — list (public), get, create, status workflow, audit log, DTOs (role-gating fixed 2026-08-17)
+- `alerts/` — list (public), get, create, update, audit log, DTOs (role-gating fixed 2026-08-17; `description` now selected in list/detail)
 - `weather/` — OpenMeteo client, service, scheduler, controller (current/hourly/daily/air-quality)
 
 ### Web frontend (`apps/web/`)
@@ -186,19 +216,21 @@ Verified live in a real browser: homepage unaffected (still top-nav, still live 
 - `app/(public)/page.tsx` — composes all 8 public sections (route group; still resolves to `/`)
 - `app/(public)/login/page.tsx`, `app/(public)/register/page.tsx` — Server Action forms, no client JS
 - `app/profile/page.tsx` — protected route, outside the `(public)` group so it doesn't get the top nav; sidebar app-shell + real user data + honest empty-state activity feed (see "Profile Page Mockup Fidelity" above)
-- `lib/static-data.ts` — typed seed data with migration guide (still used as-is by every component except `map-section.tsx`, which now uses it only as a fallback)
+- `app/data/page.tsx`, `app/reports/page.tsx`, `app/alerts/page.tsx` — real data on the sidebar app-shell (see "App-Shell Pages: Data, Reports, Alerts" above); `/observations`, `/biodiversity`, `/restoration`, `/community` still pending (Milestone 15)
+- `lib/static-data.ts` — typed seed data with migration guide (still used as-is by every component except `map-section.tsx`, which now uses it only as a fallback); `ALERTS`' severity values corrected to uppercase 2026-08-17
 - `lib/api.ts` — server-side fetch helpers: `apiGet` (cached, weather), `apiGetAuthed`/`apiPost` (never cached, auth)
+- `lib/format.ts` — `titleCase()`/`relativeTime()` display helpers, shared by the new app-shell pages
 - `lib/session-constants.ts`, `lib/session.ts`, `lib/current-user.ts` — cookie names, cookie set/clear, `getCurrentUser()`
 - `lib/auth-actions.ts` — `loginAction`, `registerAction`, `logoutAction`
 - `middleware.ts` — route protection (`/profile`) + proactive access-token refresh at the edge
 - `.env.example` / `.env.local` — `API_URL` for the backend
 - `components/public-nav.tsx` — async and session-aware (see "Public Auth Flow Wiring" above)
-- `components/app-sidebar.tsx` — reusable sidebar shell for `/profile` and future M7–M12 pages (see "Profile Page Mockup Fidelity" above)
+- `components/app-sidebar.tsx` — reusable sidebar shell, now used by `/profile`, `/data`, `/reports`, `/alerts`
 - `components/hero-section.tsx`
 - `components/metrics-section.tsx`
 - `components/map-section.tsx` — "Current conditions" sidebar now live (see "Public Weather Wiring" above); map canvas panel still static
 - `components/dataset-preview.tsx`
-- `components/reports-alerts-section.tsx`
+- `components/reports-alerts-section.tsx` — severity-to-CSS-class lookup fixed 2026-08-17 (same casing bug, see "Critical RBAC Fix"); dead `/profile` CTA fixed to `/login`
 - `components/biodiversity-restoration.tsx`
 - `components/community-section.tsx`
 - `components/public-footer.tsx`
@@ -218,7 +250,8 @@ See `docs/implementation-plan.md` for the full milestone list (M5–M14).
 9. **M5 partial:** District lat/lng ✓ and auth refresh/logout ✓ (2026-08-16, Postgres-backed, not Redis — see "Auth Refresh/Logout" above). Still pending: `ReportMedia`, `ReportComment`, `RestorationProject` models.
 10. ~~**M6:** Implement OpenMeteo ingestion — weather + air quality.~~ Done (2026-08-16), with a redesigned scope: self-contained `weather` module (not the generic `ingestion` module originally planned), no `ApiCallLog`/`IngestionJob` wiring. See `docs/ingestion-plan.md` and `docs/implementation-plan.md` for the design-deviation notes.
 11. **M13 in progress:** Homepage weather sidebar (2026-08-16), full auth flow (2026-08-16), and `/profile` rebuilt to match its mockup with a reusable sidebar app-shell (2026-08-17) — see "Public Weather Wiring", "Public Auth Flow Wiring", and "Profile Page Mockup Fidelity" above. Still not started: report/observation submission forms, live platform metrics, every other homepage component still static.
-12. **Next up:** Build out one of `/data`, `/reports`, `/alerts` (M15 — real backends already exist), `/observations`/`/biodiversity`/`/restoration`/`/community` (M15 — honest empty states, no backend yet), report/observation submission forms (rest of M13, now unblocked by real auth), WAQI integration (M14) for station-level AQI, ingestion observability (job tracking before a 2nd provider), or resume M5's remaining schema items (ReportMedia/Comment, RestorationProject).
+12. **M15 in progress:** `/data`, `/reports`, `/alerts` built on the app-shell with real backend data (2026-08-17) — see "App-Shell Pages: Data, Reports, Alerts" above. Also fixed in the same pass: a critical RBAC casing bug that had every role-gated endpoint rejecting all users — see "Critical RBAC Fix" above. Still pending: `/observations`, `/biodiversity`, `/restoration`, `/community` (all need honest empty states, no backend yet).
+13. **Next up:** The remaining 4 M15 pages (`/observations`/`/biodiversity`/`/restoration`/`/community`), report/observation submission forms (rest of M13, now unblocked by real auth), WAQI integration (M14) for station-level AQI, ingestion observability (job tracking before a 2nd provider), or resume M5's remaining schema items (ReportMedia/Comment, RestorationProject).
 
 ## Open Questions
 
@@ -230,5 +263,6 @@ See `docs/implementation-plan.md` for the full milestone list (M5–M14).
 - Role-aware nav beyond guest-vs-logged-in (moderator/admin nav, role-specific CTAs) — deliberately out of scope for the frontend auth wiring pass; current nav only distinguishes guest from any authenticated user.
 - Eco score, badges, and a user-facing activity feed (all shown in the `profile.html` mock) have no backing data model at all — is this product direction still wanted? If so it needs real scoping (a badge/achievement system, an activity log exposed per-user, a scoring formula), not just a UI pass. Currently omitted from `/profile` rather than faked.
 - ~~No milestone currently covers building `/data`, `/observations`, `/reports`, `/alerts`, `/biodiversity`, `/restoration`, `/community` as real `apps/web` routes.~~ Resolved (2026-08-17) — added as **Milestone 15** in `implementation-plan.md`. `/data`, `/reports`, `/alerts` can wire to real backends immediately; `/observations`, `/biodiversity`, `/restoration`, `/community` still need honest empty states until their respective backend milestones ship.
+- No automated test currently guards against the RBAC casing bug recurring (e.g. a future `@Roles(...)` call site or a new shared enum drifting back to lowercase). Worth an integration test that actually logs in per role and hits each role-gated endpoint, rather than relying on TypeScript to catch it by luck the way it did this time.
 - Should government users publish alerts directly, or must alerts always go through moderator/admin approval?
 - PostGIS `geography` fields: replace lat/lng Float when polygon queries needed (deferred to Phase 3).

@@ -37,13 +37,13 @@ export class AlertsController {
     return this.alertsService.getById(id);
   }
 
-  @Roles('government', 'moderator', 'admin')
+  @Roles('GOVERNMENT', 'MODERATOR', 'ADMIN')
   @Post()
   create(@Body() dto: CreateAlertDto, @CurrentUser() user: JwtPayload) {
     return this.alertsService.create(dto, user);
   }
 
-  @Roles('government', 'moderator', 'admin')
+  @Roles('GOVERNMENT', 'MODERATOR', 'ADMIN')
   @Patch(':id')
   update(
     @Param('id') id: string,

@@ -1,97 +1,110 @@
 // ─── Roles ────────────────────────────────────────────────────────────────────
 
-/** All user roles in Nature Grid, from least to most privileged. */
+/**
+ * All user roles in Nature Grid, from least to most privileged.
+ * Matches the Prisma `UserRole` enum exactly — these values are what
+ * `request.user.role` actually contains at runtime, so casing must match.
+ * `guest` isn't a real Prisma value (unauthenticated requests have no role
+ * at all) — it exists here only for documentation/permission-matrix purposes
+ * and should never be passed to `@Roles(...)`.
+ */
 export type UserRole =
-  | 'guest'              // unauthenticated public visitor
-  | 'citizen'            // individual contributor
-  | 'researcher'         // scientific contributor
-  | 'organization_admin' // NGO / institution manager
-  | 'government'         // public agency user
-  | 'moderator'          // content reviewer
-  | 'admin';             // platform administrator
+  | 'guest'              // unauthenticated public visitor (not a real DB value)
+  | 'CITIZEN'
+  | 'RESEARCHER'
+  | 'ORGANIZATION_ADMIN'
+  | 'GOVERNMENT'
+  | 'MODERATOR'
+  | 'ADMIN';
 
 // ─── Alert / Event Enums ──────────────────────────────────────────────────────
+// All enums below match their Prisma counterparts exactly (packages/database/prisma/schema.prisma).
 
-export type AlertSeverity = 'info' | 'watch' | 'warning' | 'emergency';
+export type AlertSeverity = 'INFO' | 'WATCH' | 'WARNING' | 'EMERGENCY';
 
-export type AlertStatus = 'draft' | 'active' | 'expired' | 'cancelled';
+export type AlertStatus = 'DRAFT' | 'ACTIVE' | 'EXPIRED' | 'CANCELLED';
 
 // ─── Report Enums ─────────────────────────────────────────────────────────────
 
 export type ReportStatus =
-  | 'submitted'
-  | 'under_review'
-  | 'verified'
-  | 'rejected'
-  | 'resolved';
+  | 'SUBMITTED'
+  | 'UNDER_REVIEW'
+  | 'VERIFIED'
+  | 'REJECTED'
+  | 'RESOLVED';
 
 export type ReportCategory =
-  | 'water_pollution'
-  | 'illegal_dumping'
-  | 'deforestation'
-  | 'wildlife_incident'
-  | 'flooding'
-  | 'air_pollution'
-  | 'other';
+  | 'WATER_POLLUTION'
+  | 'ILLEGAL_DUMPING'
+  | 'DEFORESTATION'
+  | 'WILDLIFE_INCIDENT'
+  | 'FLOODING'
+  | 'AIR_POLLUTION'
+  | 'OTHER';
 
 // ─── Dataset / Provider Enums ─────────────────────────────────────────────────
 
 export type DatasetCategory =
-  | 'weather'
-  | 'air_quality'
-  | 'water'
-  | 'biodiversity'
-  | 'reports'
-  | 'monitoring'
-  | 'geospatial';
+  | 'WEATHER'
+  | 'AIR_QUALITY'
+  | 'WATER'
+  | 'BIODIVERSITY'
+  | 'REPORTS'
+  | 'MONITORING'
+  | 'GEOSPATIAL';
 
 /**
  * Access policy ladder — each level is a superset of the one above it.
- * `public` → `login_required` → `researcher` → `approved` → `government`
+ * `PUBLIC` → `LOGIN_REQUIRED` → `RESEARCHER` → `APPROVED` → `GOVERNMENT`
  */
 export type DatasetAccessPolicy =
-  | 'public'           // any visitor can download
-  | 'login_required'   // any authenticated user
-  | 'researcher'       // researcher role or above
-  | 'approved'         // explicit per-dataset approval required
-  | 'government';      // government or admin only
+  | 'PUBLIC'           // any visitor can download
+  | 'LOGIN_REQUIRED'   // any authenticated user
+  | 'RESEARCHER'       // researcher role or above
+  | 'APPROVED'         // explicit per-dataset approval required
+  | 'GOVERNMENT';      // government or admin only
 
 export type ProviderType =
-  | 'government_agency'
-  | 'research_institution'
-  | 'ngo'
-  | 'international_org'
-  | 'citizen_science'
-  | 'satellite'
-  | 'iot_sensor';
+  | 'GOVERNMENT_AGENCY'
+  | 'RESEARCH_INSTITUTION'
+  | 'NGO'
+  | 'INTERNATIONAL_ORG'
+  | 'CITIZEN_SCIENCE'
+  | 'SATELLITE'
+  | 'IOT_SENSOR';
 
 // ─── Observation Enums ────────────────────────────────────────────────────────
+// No Prisma model exists yet (Observations module is a stub) — uppercased now
+// to follow the same convention as every other enum, avoiding this same bug
+// when that module ships.
 
 export type ObservationTrustLevel =
-  | 'research_grade'  // validated by researcher
-  | 'community'       // community-submitted, not yet validated
-  | 'unverified'      // newly submitted
-  | 'flagged';        // needs review
+  | 'RESEARCH_GRADE'  // validated by researcher
+  | 'COMMUNITY'       // community-submitted, not yet validated
+  | 'UNVERIFIED'      // newly submitted
+  | 'FLAGGED';        // needs review
 
 export type ObservationCategory =
-  | 'biodiversity'
-  | 'water_quality'
-  | 'air_quality'
-  | 'land_use'
-  | 'restoration';
+  | 'BIODIVERSITY'
+  | 'WATER_QUALITY'
+  | 'AIR_QUALITY'
+  | 'LAND_USE'
+  | 'RESTORATION';
 
 // ─── Ingestion Enum ───────────────────────────────────────────────────────────
 
 export type IngestionStatus =
-  | 'queued'
-  | 'running'
-  | 'succeeded'
-  | 'failed'
-  | 'cancelled';
+  | 'QUEUED'
+  | 'RUNNING'
+  | 'SUCCEEDED'
+  | 'FAILED'
+  | 'CANCELLED';
 
 // ─── Restoration / Projects ───────────────────────────────────────────────────
+// No Prisma model exists yet (RestorationProject not built) — uppercased for
+// the same reason as the Observation enums above.
 
-export type ProjectStatus = 'planned' | 'active' | 'completed' | 'paused';
+export type ProjectStatus = 'PLANNED' | 'ACTIVE' | 'COMPLETED' | 'PAUSED';
 
 // ─── Location Types ───────────────────────────────────────────────────────────
 

@@ -8,6 +8,7 @@ import type { JwtPayload } from '../common/decorators/current-user.decorator';
 const ALERT_SELECT = {
   id: true,
   title: true,
+  description: true,
   severity: true,
   status: true,
   instructions: true,
