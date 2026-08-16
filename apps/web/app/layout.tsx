@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
+import PublicNav from '../components/public-nav';
 import './globals.css';
 
 const inter = Inter({
@@ -19,7 +20,12 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={inter.variable}>
-      <body>{children}</body>
+      <body>
+        <div className="public-shell">
+          <PublicNav />
+          {children}
+        </div>
+      </body>
     </html>
   );
 }

@@ -266,28 +266,28 @@ Basic internal console for the operational views most needed first.
 
 ---
 
-## Milestone 13: Frontend Data Integration — Started
+## Milestone 13: Frontend Data Integration — In Progress
 
 Replace static seed data in `apps/web` with live API calls.
 
 **Target:** `apps/web`
 
-**Status (2026-08-16):** Task 1 and part of task 2 are done, scoped narrowly to weather — see `docs/progress.md` "Public Weather Wiring". Everything else (auth, report/observation submission, live metrics, client-side refresh library) is still static/not started.
+**Status (2026-08-16):** Tasks 1, 2 (partial), and 4 are done — see `docs/progress.md` "Public Weather Wiring" and "Public Auth Flow Wiring". Report/observation submission, live metrics, and the client-side refresh library question are still not started.
 
 ### Tasks
 
 1. ~~Add API client utility (typed fetch wrapper using contracts package).~~ Done — `apps/web/lib/api.ts`. Simpler than "typed fetch wrapper using contracts package" implies: a single `apiGet<T>(path)` helper (server-only `API_URL` env var, no `NEXT_PUBLIC_` prefix needed since nothing runs client-side yet), with route paths and response types imported from `packages/contracts` at the call site rather than baked into the helper itself.
 2. Replace `lib/static-data.ts` calls with `fetch('/api/v1/...')` in Server Components. — **Partial**: `map-section.tsx`'s "Current conditions" sidebar only (Dhaka PM2.5, Sylhet precipitation, Khulna humidity, Cox's Bazar wind, sync status), fetching `/weather/current` and `/weather/air-quality`. Falls back to the original static `CONDITIONS` array if the API is unreachable, rather than crashing the page. Every other component (`metrics-section`, `dataset-preview`, `reports-alerts-section`, `biodiversity-restoration`, `community-section`) is still fully static.
 3. Add `SWR` or React Query for client-side refreshing data (map, live alerts). — Not needed for the weather slice done so far: `map-section.tsx` is a Server Component using Next.js's built-in `fetch` cache (`revalidate: 900`, matching the current-weather cron cadence) rather than client-side polling. Revisit if a component needs to refresh without a full page reload.
-4. Wire auth — login/register flow, session persistence, role-aware nav.
+4. ~~Wire auth — login/register flow, session persistence, role-aware nav.~~ Done (2026-08-16), with one scope note: "role-aware nav" only distinguishes guest vs. any logged-in user, not per-role nav (moderator/admin nav is a Phase 3+ concern). Session persistence is httpOnly cookies rather than a client-side store — the natural fit given every existing component was already a Server Component. See `docs/progress.md` "Public Auth Flow Wiring" for the full design (middleware-based token refresh, Server Actions for login/register/logout, new `/login`/`/register`/`/profile` routes).
 5. Wire report submission form to `POST /reports`.
 6. Wire observation submission.
 7. Show live metrics from `GET /metrics` on the public homepage.
 
 ### Definition of done
 
-- Public page shows real data from the database. — **Partial**: only the weather conditions sidebar; everything else in the "Definition of done" below is still pending.
-- Authenticated users can submit reports and observations. — Not done.
+- Public page shows real data from the database. — **Partial**: the weather conditions sidebar and the nav's session state; everything else below is still pending.
+- Authenticated users can submit reports and observations. — Users can now authenticate (register/login/logout, session persists) ✓; actually submitting reports/observations (tasks 5–6) is not done.
 
 ---
 

@@ -14,7 +14,7 @@ export default function PublicFooter() {
           download datasets, and track your environmental impact across Bangladesh.
         </p>
       </div>
-      <Link className="button" href="/profile">
+      <Link className="button" href="/register">
         Create a free account
       </Link>
     </div>

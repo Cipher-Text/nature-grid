@@ -1,4 +1,3 @@
-import PublicNav from '../components/public-nav';
 import HeroSection from '../components/hero-section';
 import MetricsSection from '../components/metrics-section';
 import MapSection from '../components/map-section';
@@ -17,18 +16,15 @@ import PublicFooter from '../components/public-footer';
  */
 export default function HomePage() {
   return (
-    <div className="public-shell">
-      <PublicNav />
-      <main>
-        <HeroSection />
-        <MetricsSection />
-        <MapSection />
-        <DatasetPreview />
-        <ReportsAlertsSection />
-        <BiodiversityRestoration />
-        <CommunitySection />
-        <PublicFooter />
-      </main>
-    </div>
+    <main>
+      <HeroSection />
+      <MetricsSection />
+      <MapSection />
+      <DatasetPreview />
+      <ReportsAlertsSection />
+      <BiodiversityRestoration />
+      <CommunitySection />
+      <PublicFooter />
+    </main>
   );
 }

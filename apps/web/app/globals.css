@@ -787,3 +787,79 @@ a {
     align-items: stretch;
   }
 }
+
+/* ── Auth pages ── */
+.auth-page {
+  display: flex;
+  justify-content: center;
+  padding-top: 48px;
+}
+
+.auth-panel {
+  width: 100%;
+  max-width: 420px;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 4px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.field input {
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 0.65rem 0.8rem;
+  font: inherit;
+  font-size: 0.92rem;
+  color: var(--foreground);
+  background: var(--surface);
+}
+
+.field input:focus {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+
+.form-error {
+  margin: 0 0 4px;
+  padding: 10px 12px;
+  border-radius: 7px;
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.auth-switch {
+  margin: 16px 0 0;
+  font-size: 0.86rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+.auth-switch a {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.nav-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.86rem;
+  font-weight: 700;
+}

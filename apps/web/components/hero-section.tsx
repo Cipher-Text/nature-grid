@@ -17,7 +17,7 @@ export default function HeroSection() {
           <a className="button" href="#dashboard">
             View dashboard
           </a>
-          <Link className="button ghost" href="/profile">
+          <Link className="button ghost" href="/login">
             Sign in to contribute
           </Link>
         </div>

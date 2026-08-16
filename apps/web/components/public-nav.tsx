@@ -1,4 +1,6 @@
 import Link from 'next/link';
+import { getCurrentUser } from '../lib/current-user';
+import { logoutAction } from '../lib/auth-actions';
 
 const NAV_LINKS = [
   { href: '/data', label: 'Data' },
@@ -10,7 +12,9 @@ const NAV_LINKS = [
   { href: '/community', label: 'Community' },
 ] as const;
 
-export default function PublicNav() {
+export default async function PublicNav() {
+  const user = await getCurrentUser();
+
   return (
     <header className="public-nav">
       <Link className="public-brand" href="/">
@@ -30,9 +34,22 @@ export default function PublicNav() {
         <Link className="text-link" href="/data">
           Explore data
         </Link>
-        <Link className="button ghost" href="/profile">
-          Sign in
-        </Link>
+        {user ? (
+          <div className="nav-user">
+            <Link className="text-link" href="/profile">
+              Hi, {user.displayName}
+            </Link>
+            <form action={logoutAction}>
+              <button className="button ghost" type="submit">
+                Sign out
+              </button>
+            </form>
+          </div>
+        ) : (
+          <Link className="button ghost" href="/login">
+            Sign in
+          </Link>
+        )}
       </div>
     </header>
   );

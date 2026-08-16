@@ -1,0 +1,30 @@
+import { cookies } from 'next/headers';
+import { routes } from '@nature-grid/contracts';
+import { apiGetAuthed } from './api';
+import { ACCESS_TOKEN_COOKIE } from './session-constants';
+
+export interface CurrentUser {
+  id: string;
+  email: string;
+  displayName: string;
+  role: string;
+  createdAt: string;
+  lastLoginAt: string | null;
+}
+
+/**
+ * Reads the (already-fresh, thanks to middleware) access-token cookie and
+ * fetches the current user. Returns null for guests or on any failure —
+ * Server Components can't set cookies, so there's no refresh-on-401 here;
+ * middleware.ts is what keeps the access token from going stale.
+ */
+export async function getCurrentUser(): Promise<CurrentUser | null> {
+  const accessToken = cookies().get(ACCESS_TOKEN_COOKIE)?.value;
+  if (!accessToken) return null;
+
+  try {
+    return await apiGetAuthed<CurrentUser>(routes.auth.profile, accessToken);
+  } catch {
+    return null;
+  }
+}

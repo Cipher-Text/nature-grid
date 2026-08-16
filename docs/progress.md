@@ -1,6 +1,6 @@
 # Progress
 
-Last updated: 2026-08-16 (auth refresh/logout with rotation built — RefreshToken model, opaque tokens, daily cleanup cron; public homepage's weather sidebar wired to live data)
+Last updated: 2026-08-16 (frontend auth flow wired — login/register/logout, httpOnly cookie sessions, middleware route protection + token refresh, session-aware nav)
 
 ## Status Legend
 
@@ -20,7 +20,7 @@ Last updated: 2026-08-16 (auth refresh/logout with rotation built — RefreshTok
 | Frontend mocks | Done | All 11 pages — nav linking, sidebar, design system, trust levels, feed, admin console, theme reference |
 | Public-first product model | Done | Public `/`, login-gated contribution/download/advanced access |
 | Public frontend — M1 | Done | 8 React components, full CSS design system, static seed data, runs at port 3000 |
-| Frontend live data — M13 | In Progress | Only the homepage's "Current conditions" sidebar (`map-section.tsx`) fetches live data so far — see "Public Weather Wiring" below. Every other component is still static. |
+| Frontend live data — M13 | In Progress | Weather sidebar + full auth flow (login/register/logout, protected `/profile`) now live — see "Public Weather Wiring" and "Public Auth Flow Wiring" below. Report/observation submission, live metrics, and every other component are still static/not started. |
 | Shared types and contracts — M2 | Done | Full enums, DTOs, paginated envelopes, request/response types, route contract map |
 | Backend foundation — M3 | Done | Auth (JWT/bcrypt), users, orgs, locations (8 div/64 district auto-seed), providers, datasets (catalog seed), reports (status workflow + audit), alerts (severity + audit), global validation, guard infrastructure |
 | Prisma schema | Done | 9 enums, 18 models — core entities + 4 weather tables + `RefreshToken`; client regenerated |
@@ -76,6 +76,21 @@ First slice of M13 (Frontend Data Integration) — `apps/web`'s homepage still r
 - Sync-status row now reflects real data freshness ("Live" / "Delayed (Xm ago)") instead of a hardcoded "Healthy" string
 
 Verified live end-to-end: seeded real OpenMeteo data → homepage rendered it → killed the API + cleared the Next.js fetch cache → homepage fell back cleanly to static values, no crash → restarted the API → live data resumed automatically. Test data and dev servers cleaned up afterward.
+
+## Public Auth Flow Wiring (built 2026-08-16)
+
+Second slice of M13 — login/register/logout are now fully wired end to end, not just the backend endpoints. This was a greenfield build on the frontend side: no routes, no middleware, no cookie handling, no auth deps existed in `apps/web` before this.
+
+- Session storage is httpOnly cookies (not `localStorage`) — the only sane choice given every existing component in `apps/web` is a Server Component; Server Components can't read `localStorage` anyway, and cookies keep tokens inaccessible to any XSS payload.
+- `middleware.ts` — runs on every request (Edge runtime). Decodes the access-token JWT's `exp` claim (no signature verification needed, just an expiry check) and, if it's missing/expired but a refresh-token cookie exists, calls `/auth/refresh` and rewrites both cookies **before** any Server Component renders. Protects `/profile` — redirects guests to `/login`.
+- `lib/session.ts` / `lib/current-user.ts` — cookie set/clear (Server Actions only — Next.js forbids setting cookies during Server Component rendering) and `getCurrentUser()` (reads the now-fresh access token, calls `/auth/profile`, returns `null` for guests).
+- `lib/auth-actions.ts` — `loginAction`/`registerAction`/`logoutAction` as Server Actions bound directly to `<form action={...}>` — zero client components, zero new client-side state library. Register auto-logs-in (the backend already returns tokens on register). Errors surface via a redirect + `?error=` query param rather than `useActionState`, trading a full-page reload on error for not introducing the first client component in the codebase.
+- `app/login`, `app/register`, `app/profile` — new routes.
+- `public-nav.tsx` moved from `page.tsx` into `layout.tsx` so it's shared shell across all routes, and made session-aware: "Sign in" for guests, "Hi, {displayName}" + sign-out for logged-in users.
+- Fixed a pre-existing gap while here: `public-nav.tsx`/`public-footer.tsx`/`hero-section.tsx` all had "Sign in"/"Create account" CTAs pointing at `/profile`, which didn't distinguish login from registration and didn't exist as a route at all before this. Now point at real `/login`/`/register`.
+- One bug caught before shipping: the middleware's JWT-decode initially used Node's `Buffer`, which doesn't exist in the Edge runtime middleware runs on — switched to the Web-standard `atob`.
+
+Verified live in a real browser (not just curl, since Next.js Server Actions bound to `<form>` don't map to plain REST calls): guest nav state → `/profile` redirects to `/login` when logged out → register (auto-login) → real user data rendered on `/profile` → nav shows "Hi, {name}" → session persists across page navigation → logout reverts nav to guest and re-protects `/profile` → login with correct credentials works → login with wrong password shows the real backend "Invalid credentials" message. Not independently re-verified: the middleware's silent-refresh-on-expiry path (would require waiting out the 15-minute access token), though it calls the same `/auth/refresh` endpoint already proven correct in the backend auth work above.
 
 ## Completed Files
 
@@ -151,13 +166,18 @@ Verified live end-to-end: seeded real OpenMeteo data → homepage rendered it �
 
 ### Web frontend (`apps/web/`)
 
-- `app/globals.css` — full public-page CSS design system
-- `app/layout.tsx` — Inter font via next/font/google
-- `app/page.tsx` — composes all 8 public sections
+- `app/globals.css` — full public-page CSS design system + auth form styles
+- `app/layout.tsx` — Inter font via next/font/google; now also owns the shared `<PublicNav />` shell for every route
+- `app/page.tsx` — composes all 8 public sections (nav moved to layout)
+- `app/login/page.tsx`, `app/register/page.tsx` — Server Action forms, no client JS
+- `app/profile/page.tsx` — protected route, real user data + sign-out
 - `lib/static-data.ts` — typed seed data with migration guide (still used as-is by every component except `map-section.tsx`, which now uses it only as a fallback)
-- `lib/api.ts` — server-side fetch helper for the live weather slice
+- `lib/api.ts` — server-side fetch helpers: `apiGet` (cached, weather), `apiGetAuthed`/`apiPost` (never cached, auth)
+- `lib/session-constants.ts`, `lib/session.ts`, `lib/current-user.ts` — cookie names, cookie set/clear, `getCurrentUser()`
+- `lib/auth-actions.ts` — `loginAction`, `registerAction`, `logoutAction`
+- `middleware.ts` — route protection (`/profile`) + proactive access-token refresh at the edge
 - `.env.example` / `.env.local` — `API_URL` for the backend
-- `components/public-nav.tsx`
+- `components/public-nav.tsx` — now async and session-aware (see "Public Auth Flow Wiring" above)
 - `components/hero-section.tsx`
 - `components/metrics-section.tsx`
 - `components/map-section.tsx` — "Current conditions" sidebar now live (see "Public Weather Wiring" above); map canvas panel still static
@@ -181,8 +201,8 @@ See `docs/implementation-plan.md` for the full milestone list (M5–M14).
 8. ~~Write ingestion plan — analyse Java backends, identify gaps, plan NestJS design.~~ Done — `docs/ingestion-plan.md`.
 9. **M5 partial:** District lat/lng ✓ and auth refresh/logout ✓ (2026-08-16, Postgres-backed, not Redis — see "Auth Refresh/Logout" above). Still pending: `ReportMedia`, `ReportComment`, `RestorationProject` models.
 10. ~~**M6:** Implement OpenMeteo ingestion — weather + air quality.~~ Done (2026-08-16), with a redesigned scope: self-contained `weather` module (not the generic `ingestion` module originally planned), no `ApiCallLog`/`IngestionJob` wiring. See `docs/ingestion-plan.md` and `docs/implementation-plan.md` for the design-deviation notes.
-11. **M13 started:** Homepage weather sidebar wired to live data (2026-08-16) — see "Public Weather Wiring" above. Everything else in M13 (auth flow, report/observation submission, live metrics, every other component) is still static/not started.
-12. **Next up:** WAQI integration (M14) for station-level AQI, ingestion observability (job tracking before a 2nd provider), rest of M13 (auth wiring, report/observation submission), or resume M5's remaining schema items (ReportMedia/Comment, RestorationProject).
+11. **M13 in progress:** Homepage weather sidebar (2026-08-16) and full auth flow — login/register/logout, session-aware nav, protected `/profile` (2026-08-16) — see "Public Weather Wiring" and "Public Auth Flow Wiring" above. Still not started: report/observation submission forms, live platform metrics, every other homepage component still static.
+12. **Next up:** Report/observation submission forms (rest of M13, now unblocked by real auth), WAQI integration (M14) for station-level AQI, ingestion observability (job tracking before a 2nd provider), or resume M5's remaining schema items (ReportMedia/Comment, RestorationProject).
 
 ## Open Questions
 
@@ -191,5 +211,6 @@ See `docs/implementation-plan.md` for the full milestone list (M5–M14).
 - Weather data retention policy: how long to keep raw hourly/daily rows? No aggregation tables were built, so this is now more pressing than originally scoped.
 - Should a generic `ApiCallLog`/audit trail be added for external ingestion calls, or is per-request logging via the NestJS `Logger` sufficient? Currently skipped by deliberate decision for the weather module.
 - "Log out all devices" / view active sessions — `RefreshToken` has `deviceId`, so a per-device session list and bulk-revoke endpoint are straightforward to add later; deliberately out of scope for the initial refresh/logout pass.
+- Role-aware nav beyond guest-vs-logged-in (moderator/admin nav, role-specific CTAs) — deliberately out of scope for the frontend auth wiring pass; current nav only distinguishes guest from any authenticated user.
 - Should government users publish alerts directly, or must alerts always go through moderator/admin approval?
 - PostGIS `geography` fields: replace lat/lng Float when polygon queries needed (deferred to Phase 3).
