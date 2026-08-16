@@ -8,11 +8,13 @@ export class LocationsService implements OnModuleInit {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  /** Seed geography on first boot if the table is empty. */
+  /** Seed geography on first boot, and backfill district coordinates if missing. */
   async onModuleInit() {
     const count = await this.prisma.division.count();
     if (count === 0) {
       await this.seed();
+    } else {
+      await this.backfillCoordinates();
     }
   }
 
@@ -28,12 +30,34 @@ export class LocationsService implements OnModuleInit {
       for (const dist of districts) {
         await this.prisma.district.upsert({
           where: { name_divisionId: { name: dist.name, divisionId: division.id } },
-          update: {},
-          create: { name: dist.name, bnName: dist.bnName, divisionId: division.id },
+          update: { lat: dist.lat, lng: dist.lng },
+          create: {
+            name: dist.name,
+            bnName: dist.bnName,
+            lat: dist.lat,
+            lng: dist.lng,
+            divisionId: division.id,
+          },
         });
       }
     }
     this.logger.log('Geography seeded: 8 divisions, 64 districts');
+  }
+
+  /** Backfill lat/lng on districts seeded before coordinates were added. */
+  private async backfillCoordinates() {
+    const missing = await this.prisma.district.count({ where: { lat: null } });
+    if (missing === 0) return;
+
+    this.logger.log(`Backfilling coordinates for ${missing} districts…`);
+    for (const districts of Object.values(DISTRICTS_BY_DIVISION)) {
+      for (const dist of districts) {
+        await this.prisma.district.updateMany({
+          where: { name: dist.name, lat: null },
+          data: { lat: dist.lat, lng: dist.lng },
+        });
+      }
+    }
   }
 
   getDivisions() {

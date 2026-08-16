@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, OnModuleInit, Logger } from '@nestjs/common';
 import { ProviderType } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 
@@ -11,9 +11,30 @@ const PROVIDER_SELECT = {
   organization: { select: { id: true, name: true } },
 } as const;
 
+export const OPENMETEO_PROVIDER_NAME = 'OpenMeteo';
+
 @Injectable()
-export class ProvidersService {
+export class ProvidersService implements OnModuleInit {
+  private readonly logger = new Logger(ProvidersService.name);
+
   constructor(private readonly prisma: PrismaService) {}
+
+  /** Seed well-known data providers on first boot. */
+  async onModuleInit() {
+    const existing = await this.prisma.provider.findFirst({
+      where: { name: OPENMETEO_PROVIDER_NAME },
+    });
+    if (existing) return;
+
+    await this.prisma.provider.create({
+      data: {
+        name: OPENMETEO_PROVIDER_NAME,
+        type: 'INTERNATIONAL_ORG',
+        country: 'Germany',
+      },
+    });
+    this.logger.log(`Seeded provider: ${OPENMETEO_PROVIDER_NAME}`);
+  }
 
   list(type?: ProviderType, page = 1, pageSize = 20) {
     const skip = (page - 1) * pageSize;

@@ -1,13 +1,17 @@
 import { Injectable, NotFoundException, OnModuleInit, Logger } from '@nestjs/common';
 import { DatasetCategory, DatasetAccessPolicy } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
+import { WeatherService } from '../weather/weather.service';
 import { SEED_DATASETS } from './seed/catalog';
 
 @Injectable()
 export class DatasetsService implements OnModuleInit {
   private readonly logger = new Logger(DatasetsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly weatherService: WeatherService,
+  ) {}
 
   async onModuleInit() {
     const count = await this.prisma.dataset.count();
@@ -50,21 +54,21 @@ export class DatasetsService implements OnModuleInit {
     return dataset;
   }
 
-  currentWeather() {
+  async currentWeather() {
+    const districts = await this.weatherService.getLatestCurrentForAllDistricts();
     return {
       source: 'openmeteo',
       status: 'live',
-      note: 'Connect OpenMeteo ingestion worker to populate real readings.',
-      districts: [],
+      districts,
     };
   }
 
-  currentAirQuality() {
+  async currentAirQuality() {
+    const stations = await this.weatherService.getLatestAirQualityForAllDistricts();
     return {
-      source: 'bmd',
+      source: 'openmeteo',
       status: 'live',
-      note: 'Connect BMD ingestion worker to populate real readings.',
-      stations: [],
+      stations,
     };
   }
 }

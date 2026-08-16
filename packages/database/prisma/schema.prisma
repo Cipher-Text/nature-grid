@@ -166,12 +166,19 @@ model District {
   id         String   @id @default(cuid())
   name       String
   bnName     String?
+  lat        Float?
+  lng        Float?
   divisionId String
   division   Division @relation(fields: [divisionId], references: [id])
 
   upazilas Upazila[]
   reports  CitizenReport[]
   alerts   Alert[]
+
+  currentWeatherReadings CurrentWeatherReading[]
+  hourlyWeatherForecasts HourlyWeatherForecast[]
+  dailyWeatherForecasts  DailyWeatherForecast[]
+  airQualityReadings     HourlyAirQuality[]
 
   @@unique([name, divisionId])
   @@index([divisionId])
@@ -294,6 +301,98 @@ model IngestionJob {
 
   @@index([providerId])
   @@index([status])
+}
+
+// ─── Weather ──────────────────────────────────────────────────────────────────
+// Keyed by district (not raw lat/lng) since every fetch targets a known district;
+// lat/lng are kept for provenance only.
+
+model CurrentWeatherReading {
+  id                  String   @id @default(cuid())
+  districtId          String
+  district            District @relation(fields: [districtId], references: [id])
+  lat                 Float
+  lng                 Float
+  readingTime         DateTime
+  temperature2m       Float?
+  relativeHumidity2m  Int?
+  apparentTemperature Float?
+  windSpeed10m        Float?
+  windDirection10m    Int?
+  precipitation       Float?
+  weatherCode         Int?
+  cloudCover          Int?
+  isDay               Boolean?
+  createdAt           DateTime @default(now())
+
+  @@unique([districtId, readingTime])
+  @@index([districtId])
+}
+
+model HourlyWeatherForecast {
+  id                       String   @id @default(cuid())
+  districtId               String
+  district                 District @relation(fields: [districtId], references: [id])
+  lat                      Float
+  lng                      Float
+  forecastTime             DateTime
+  temperature2m            Float?
+  relativeHumidity2m       Int?
+  apparentTemperature      Float?
+  precipitationProbability Int?
+  precipitation            Float?
+  weatherCode              Int?
+  windSpeed10m             Float?
+  windDirection10m         Int?
+  cloudCover               Int?
+  createdAt                DateTime @default(now())
+
+  @@unique([districtId, forecastTime])
+  @@index([districtId])
+}
+
+model DailyWeatherForecast {
+  id                          String   @id @default(cuid())
+  districtId                  String
+  district                    District @relation(fields: [districtId], references: [id])
+  lat                         Float
+  lng                         Float
+  forecastDate                DateTime @db.Date
+  weatherCode                 Int?
+  temperature2mMax            Float?
+  temperature2mMin            Float?
+  apparentTemperatureMax      Float?
+  apparentTemperatureMin      Float?
+  precipitationSum            Float?
+  precipitationProbabilityMax Int?
+  windSpeed10mMax             Float?
+  uvIndexMax                  Float?
+  sunrise                     DateTime?
+  sunset                      DateTime?
+  createdAt                   DateTime @default(now())
+
+  @@unique([districtId, forecastDate])
+  @@index([districtId])
+}
+
+model HourlyAirQuality {
+  id               String   @id @default(cuid())
+  districtId       String
+  district         District @relation(fields: [districtId], references: [id])
+  lat              Float
+  lng              Float
+  forecastTime     DateTime
+  pm10             Float?
+  pm25             Float?
+  carbonMonoxide   Float?
+  nitrogenDioxide  Float?
+  sulphurDioxide   Float?
+  ozone            Float?
+  uvIndex          Float?
+  createdAt        DateTime @default(now())
+
+  @@unique([districtId, forecastTime])
+  @@index([districtId])
 }
 
 // ─── Audit ────────────────────────────────────────────────────────────────────

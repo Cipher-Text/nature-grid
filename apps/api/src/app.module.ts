@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
@@ -13,11 +14,13 @@ import { BiodiversityModule } from './biodiversity/biodiversity.module';
 import { ObservationsModule } from './observations/observations.module';
 import { MediaModule } from './media/media.module';
 import { IngestionModule } from './ingestion/ingestion.module';
+import { WeatherModule } from './weather/weather.module';
 import { HealthController } from './health.controller';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ScheduleModule.forRoot(),
     DatabaseModule,
     AuthModule,
     UsersModule,
@@ -31,6 +34,7 @@ import { HealthController } from './health.controller';
     ObservationsModule,
     MediaModule,
     IngestionModule,
+    WeatherModule,
   ],
   controllers: [HealthController],
 })
