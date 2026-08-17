@@ -313,11 +313,11 @@ Add urban AQI data from WAQI (World Air Quality Index) for station-level granula
 
 ---
 
-## Milestone 15: App-Shell Pages (Data Hub, Reports, Alerts, Observations, Biodiversity, Restoration, Community) — In Progress
+## ~~Milestone 15: App-Shell Pages (Data Hub, Reports, Alerts, Observations, Biodiversity, Restoration, Community)~~ — Done
 
-Build the remaining `apps/web` routes that the nav (`public-nav.tsx`, `app-sidebar.tsx`) already links to but that don't exist yet — currently all 404. Reuse the sidebar `AppSidebar` shell established for `/profile` (M13), not a new layout per page.
+Built the `apps/web` routes that the nav (`public-nav.tsx`, `app-sidebar.tsx`) already linked to but that didn't exist yet — all were 404ing. Reused the sidebar `AppSidebar` shell established for `/profile` (M13), not a new layout per page.
 
-**Status (2026-08-17):** Tasks 1–3 done (`/data`, `/reports`, `/alerts`) — see `docs/progress.md` "App-Shell Pages: Data, Reports, Alerts". Building `/alerts`'s role-conditional CTA also surfaced and fixed a critical, unrelated bug: every role-gated endpoint in the API was rejecting all users due to an enum-casing mismatch between `@nature-grid/shared` (lowercase) and Prisma (uppercase) — see `docs/progress.md` "Critical RBAC Fix". Tasks 4–8 (`/observations`, `/biodiversity`, `/restoration`, `/community`, active-link check) still pending.
+**Status (2026-08-17):** All 8 tasks done. Tasks 1–3 (`/data`, `/reports`, `/alerts`) — see `docs/progress.md` "App-Shell Pages: Data, Reports, Alerts". Building `/alerts`'s role-conditional CTA also surfaced and fixed a critical, unrelated bug: every role-gated endpoint in the API was rejecting all users due to an enum-casing mismatch between `@nature-grid/shared` (lowercase) and Prisma (uppercase) — see `docs/progress.md` "Critical RBAC Fix". Tasks 4–8 (`/observations`, `/biodiversity`, `/restoration`, `/community`, active-link check) — see `docs/progress.md` "App-Shell Pages: Observations, Biodiversity, Restoration, Community".
 
 **Target:** `apps/web/app/{data,observations,reports,alerts,biodiversity,restoration,community}/`
 
@@ -340,17 +340,17 @@ Build the remaining `apps/web` routes that the nav (`public-nav.tsx`, `app-sideb
 1. ~~`/data` — wire to `GET /datasets`, using the `AppSidebar` shell.~~ Done — category filter is query-string driven (real, not decorative); mock's fake "Provider health" panel replaced with a real `GET /providers` panel; mock's chart omitted (no data to back it); gated downloads shown as a tag only, no working button (download endpoint doesn't exist).
 2. ~~`/reports` — wire to `GET /reports`. Public list only, matching what's already enforced server-side.~~ Done — metric cards deliberately show only Verified/Resolved counts, not the mock's Under-review/Submitted-today (those would leak status info the public API intentionally hides); submission form replaced with a sign-in CTA.
 3. ~~`/alerts` — wire to `GET /alerts`.~~ Done — required a small backend fix first (`ALERT_SELECT` wasn't projecting `description`); role-conditional "Issue alert" badge added (real role check, but reads "coming soon" since no creation page exists); "Warning zones" reuses the homepage's existing decorative map placeholder.
-4. `/observations` — no backend yet: honest "not available yet" empty state (same pattern as `/profile`'s activity feed), not fabricated records. Revisit once M9 ships.
-5. `/biodiversity` — same honest-empty-state treatment; revisit once M10 ships.
-6. `/restoration` — same honest-empty-state treatment; revisit once M11 ships.
-7. `/community` — same honest-empty-state treatment, or keep the existing static `COMMUNITY_FEED` mock data clearly labeled as illustrative, since `feature-map.md` already says to keep this out of core until a real content workflow exists — decide which when this task starts.
-8. Confirm `AppSidebar`'s active-link highlighting is correct for each new route.
+4. ~~`/observations` — no backend yet: honest "not available yet" empty state (same pattern as `/profile`'s activity feed), not fabricated records. Revisit once M9 ships.~~ Done (2026-08-17) — also links to `/reports` as the nearest real thing citizens can do today.
+5. ~~`/biodiversity` — same honest-empty-state treatment; revisit once M10 ships.~~ Done (2026-08-17).
+6. ~~`/restoration` — same honest-empty-state treatment; revisit once M11 ships.~~ Done (2026-08-17).
+7. ~~`/community` — same honest-empty-state treatment, or keep the existing static `COMMUNITY_FEED` mock data clearly labeled as illustrative, since `feature-map.md` already says to keep this out of core until a real content workflow exists — decide which when this task starts.~~ Done (2026-08-17) — went with the honest empty state, consistent with the other three and with the `/profile`/`/data`/`/reports`/`/alerts` precedent, rather than keeping the mock feed. The homepage's `community-section.tsx` still shows static `COMMUNITY_FEED` data — a separate, already-documented M13 gap, untouched by this task.
+8. ~~Confirm `AppSidebar`'s active-link highlighting is correct for each new route.~~ Done — verified live for all 7 routes.
 
 ### Definition of done
 
-- All 7 routes render instead of 404ing (nav links already point to them). — 3 of 7 done.
+- All 7 routes render instead of 404ing (nav links already point to them). — Done, confirmed via browser and `curl` 200s on all 7.
 - `/data`, `/reports`, `/alerts` show real backend data through the sidebar shell. — Done, verified live with seeded real reports/alerts.
-- `/observations`, `/biodiversity`, `/restoration`, `/community` show an honest empty/coming-soon state — no fabricated records, consistent with the `/profile` precedent. — Not started.
+- `/observations`, `/biodiversity`, `/restoration`, `/community` show an honest empty/coming-soon state — no fabricated records, consistent with the `/profile` precedent. — Done (2026-08-17), verified live in a real browser; production build compiles cleanly with all four as static pages.
 
 ---
 

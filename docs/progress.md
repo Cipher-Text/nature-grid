@@ -1,6 +1,6 @@
 # Progress
 
-Last updated: 2026-08-17 (report submission form wired on `/reports`, a second critical validation bug found and fixed along the way; `/data`, `/reports`, `/alerts` built on the app-shell; critical RBAC bug found and fixed — every role-gated endpoint was rejecting all users, including admins)
+Last updated: 2026-08-17 (Milestone 15 complete — all 7 app-shell pages built; report submission form wired on `/reports`, a second critical validation bug found and fixed along the way; critical RBAC bug found and fixed — every role-gated endpoint was rejecting all users, including admins)
 
 ## Status Legend
 
@@ -21,7 +21,7 @@ Last updated: 2026-08-17 (report submission form wired on `/reports`, a second c
 | Public-first product model | Done | Public `/`, login-gated contribution/download/advanced access |
 | Public frontend — M1 | Done | 8 React components, full CSS design system, static seed data, runs at port 3000 |
 | Frontend live data — M13 | In Progress | Weather sidebar + full auth flow (login/register/logout, protected `/profile` now matching its mockup) live, and citizen report submission now wired to a real endpoint (2026-08-17) — see "Public Weather Wiring", "Public Auth Flow Wiring", "Profile Page Mockup Fidelity", and "Report Submission Form" below. Observation submission, live metrics, and every other homepage component are still static/not started. |
-| Frontend "app shell" layout (sidebar pages) — M15 | In Progress | Established via `/profile`, now also powers `/data`, `/reports`, `/alerts` (all 2026-08-17) — see "App-Shell Pages: Data, Reports, Alerts" below. 3 of 7 remaining app-shell pages done (`/observations`, `/biodiversity`, `/restoration`, `/community` still pending, per **Milestone 15** in `implementation-plan.md`). |
+| Frontend "app shell" layout (sidebar pages) — M15 | Done | Established via `/profile`, powers all 7 pages: `/data`, `/reports`, `/alerts` with real backend data, and `/observations`, `/biodiversity`, `/restoration`, `/community` with honest empty states (all 2026-08-17) — see "App-Shell Pages: Data, Reports, Alerts" and "App-Shell Pages: Observations, Biodiversity, Restoration, Community" below. |
 | Shared types and contracts — M2 | Done | Full enums, DTOs, paginated envelopes, request/response types, route contract map |
 | Backend foundation — M3 | Done | Auth (JWT/bcrypt), users, orgs, locations (8 div/64 district auto-seed), providers, datasets (catalog seed), reports (status workflow + audit), alerts (severity + audit), global validation, guard infrastructure. **Caveat:** role-gated endpoints shipped with a casing bug that rejected every user until 2026-08-17 — see "Critical RBAC Fix" below. |
 | Prisma schema | Done | 9 enums, 18 models — core entities + 4 weather tables + `RefreshToken`; client regenerated |
@@ -31,15 +31,15 @@ Last updated: 2026-08-17 (report submission form wired on `/reports`, a second c
 | Auth — refresh / logout | Done | Postgres-backed `RefreshToken` model (not Redis — see "Auth Refresh/Logout" below), opaque tokens with rotation, daily cleanup cron |
 | RBAC / role guard casing bug | Done | Fixed 2026-08-17 — see "Critical RBAC Fix" below. Every role-gated endpoint (`POST /alerts`, `PATCH /alerts/:id`, `PATCH /reports/:id/status`, `PATCH /users/:id/role`, `PATCH /users/:id/deactivate`) previously rejected all users, including admins. |
 | PostGIS / geospatial fields | Planned | `lat/lng` Float on `District` (populated) and `CitizenReport`; replace with PostGIS `geography` type when ready |
-| Observations module | Planned | Schema ready; controller/service not yet implemented |
-| Biodiversity module | Planned | Module stub only; no schema model yet |
+| Observations module | Planned | Schema ready; controller/service not yet implemented. `/observations` page exists (2026-08-17) with an honest empty state — no data to show until this ships |
+| Biodiversity module | Planned | Module stub only; no schema model yet. `/biodiversity` page exists (2026-08-17) with an honest empty state |
 | Media module | Planned | Module stub only; no schema model yet |
 | Weather ingestion (OpenMeteo) | Done | Live `weather` module — see "Weather ingestion" below |
 | Ingestion module (generic) | Planned | `IngestionJob` model exists but unused by weather; module stub only, no job lifecycle wiring, no `ApiCallLog`/audit trail (deliberately skipped for weather — see `docs/ingestion-plan.md`) |
 | Environmental monitoring model | Planned | OGC SensorThings-style or simplified internal model — decision pending |
 | Dataset downloads / access requests | Planned | Routes defined in contracts; endpoint not implemented |
-| Restoration / projects | Planned | Not started; waiting on core reports/datasets stability |
-| Community module | Planned | Static mock only; no API module |
+| Restoration / projects | Planned | Not started; waiting on core reports/datasets stability. `/restoration` page exists (2026-08-17) with an honest empty state |
+| Community module | Planned | Not planned as an API module at all yet (`docs/architecture/feature-map.md`). `/community` page exists (2026-08-17) with an honest empty state — homepage's `community-section.tsx` still shows static mock data, a separate, already-documented M13 gap |
 | Admin frontend | Planned | Shell only at port 3002 |
 | Data worker | Planned | Python skeleton; no active jobs |
 
@@ -149,6 +149,17 @@ M13 task 5 — the "Report an environmental issue" form on `/reports` was still 
 
 Verified live end-to-end in a real browser (not just curl): filled and submitted the form on `/reports` with a district selected → success banner rendered → confirmed the row landed in Postgres with `status: SUBMITTED` and the correct `districtId`. Then exercised the full review workflow with a bootstrapped admin: `PATCH /reports/:id/status` `SUBMITTED → UNDER_REVIEW → VERIFIED`, confirmed via direct API call that the report now appears in `GET /reports?status=VERIFIED`. (The public `/reports` page itself won't reflect a just-verified report until its existing 15-minute ISR cache window elapses — same `revalidate: 900` pattern already used elsewhere in `apps/web`, not a new gap.) Test report, test users (`reporttester@naturegrid.bd`, a temporary bootstrapped `admintester@naturegrid.bd`), their refresh tokens, and the associated `ReportStatusEvent` audit rows were all cleaned up afterward; dev servers stopped and `apps/web/.next` cache cleared.
 
+## App-Shell Pages: Observations, Biodiversity, Restoration, Community (built 2026-08-17)
+
+Final 4 of Milestone 15's 7 pages — completes the milestone. None of these four has any backend: no `Observation` model (M9), no `Species`/`Occurrence` models or GBIF ingestion (M10), no `RestorationProject` model (M11), and Community isn't even planned as an API module yet (`docs/architecture/feature-map.md` says keep it out of core until a real content workflow exists). Same honesty principle as every prior page this session — an explicit "not built yet" state, not the mocks' fabricated stats, species cards, project rows, or feed.
+
+- `apps/web/app/observations/page.tsx`, `apps/web/app/biodiversity/page.tsx`, `apps/web/app/restoration/page.tsx`, `apps/web/app/community/page.tsx` — all new. Each renders `<AppSidebar active="..." />` + the mock's real title/subtitle copy, then a single `panel` with an `.empty-state` message naming what's missing and which milestone unblocks it. The mocks' search bars, type filters, metric grids, species cards, habitat-pressure chart, project leaderboard, and feed items were all dropped — they're decorative controls and fabricated numbers over data that doesn't exist.
+- `/observations` additionally links to `/reports` ("In the meantime, you can file a citizen report") as the nearest real thing citizens can do today.
+- **Judgment call on `/community` specifically**: `implementation-plan.md` had left this open between an honest empty state or keeping the mock's static `COMMUNITY_FEED` data labeled as illustrative. Went with the same empty state as the other three, for consistency with the precedent set twice already (`/profile`'s eco score/badges, and `/data`/`/reports`/`/alerts`) rather than carving out an exception. Note this doesn't touch the homepage's `community-section.tsx`, which still renders that static feed data — a separate, already-documented M13 gap, not part of this page-building task.
+- No backend, CSS, or contracts changes needed — `.empty-state`/`.panel`/`.panel-header` already existed, and `AppSidebar` already had all four `NavKey` entries wired correctly.
+
+Verified live in a real browser: all four routes render (confirmed via `curl` 200s too), sidebar active-link highlighting is correct on each, no console errors, and `nx run @nature-grid/web:build` compiles cleanly with all four correctly picked up as static pages (no data dependency, unlike `/data`/`/reports`/`/alerts`'s dynamic rendering). Dev server stopped and `.next` cache cleared afterward. **Milestone 15 is now fully done — all 7 app-shell pages exist.**
+
 ## Completed Files
 
 ### Project docs
@@ -229,7 +240,8 @@ Verified live end-to-end in a real browser (not just curl): filled and submitted
 - `app/(public)/page.tsx` — composes all 8 public sections (route group; still resolves to `/`)
 - `app/(public)/login/page.tsx`, `app/(public)/register/page.tsx` — Server Action forms, no client JS
 - `app/profile/page.tsx` — protected route, outside the `(public)` group so it doesn't get the top nav; sidebar app-shell + real user data + honest empty-state activity feed (see "Profile Page Mockup Fidelity" above)
-- `app/data/page.tsx`, `app/reports/page.tsx`, `app/alerts/page.tsx` — real data on the sidebar app-shell (see "App-Shell Pages: Data, Reports, Alerts" above); `/reports` also has a real, working submission form as of 2026-08-17 (see "Report Submission Form" above); `/observations`, `/biodiversity`, `/restoration`, `/community` still pending (Milestone 15)
+- `app/data/page.tsx`, `app/reports/page.tsx`, `app/alerts/page.tsx` — real data on the sidebar app-shell (see "App-Shell Pages: Data, Reports, Alerts" above); `/reports` also has a real, working submission form as of 2026-08-17 (see "Report Submission Form" above)
+- `app/observations/page.tsx`, `app/biodiversity/page.tsx`, `app/restoration/page.tsx`, `app/community/page.tsx` — honest empty-state pages on the sidebar app-shell, no backend for any of them yet (see "App-Shell Pages: Observations, Biodiversity, Restoration, Community" above). **Milestone 15 complete — all 7 app-shell pages built.**
 - `lib/report-actions.ts` — `submitReportAction` Server Action, posts to `POST /reports` with the caller's access token
 - `lib/static-data.ts` — typed seed data with migration guide (still used as-is by every component except `map-section.tsx`, which now uses it only as a fallback); `ALERTS`' severity values corrected to uppercase 2026-08-17
 - `lib/api.ts` — server-side fetch helpers: `apiGet` (cached, weather/datasets/reports/alerts), `apiGetAuthed`/`apiPost`/`apiPostAuthed` (never cached, auth + mutations); shared `extractErrorMessage` correctly unwraps NestJS's `string[]` validation error format (fixed 2026-08-17)
@@ -239,7 +251,7 @@ Verified live end-to-end in a real browser (not just curl): filled and submitted
 - `middleware.ts` — route protection (`/profile`) + proactive access-token refresh at the edge
 - `.env.example` / `.env.local` — `API_URL` for the backend
 - `components/public-nav.tsx` — async and session-aware (see "Public Auth Flow Wiring" above)
-- `components/app-sidebar.tsx` — reusable sidebar shell, now used by `/profile`, `/data`, `/reports`, `/alerts`
+- `components/app-sidebar.tsx` — reusable sidebar shell, now used by all 8 app-shell routes: `/profile`, `/data`, `/reports`, `/alerts`, `/observations`, `/biodiversity`, `/restoration`, `/community`
 - `components/hero-section.tsx`
 - `components/metrics-section.tsx`
 - `components/map-section.tsx` — "Current conditions" sidebar now live (see "Public Weather Wiring" above); map canvas panel still static
@@ -264,8 +276,8 @@ See `docs/implementation-plan.md` for the full milestone list (M5–M14).
 9. **M5 partial:** District lat/lng ✓ and auth refresh/logout ✓ (2026-08-16, Postgres-backed, not Redis — see "Auth Refresh/Logout" above). Still pending: `ReportMedia`, `ReportComment`, `RestorationProject` models.
 10. ~~**M6:** Implement OpenMeteo ingestion — weather + air quality.~~ Done (2026-08-16), with a redesigned scope: self-contained `weather` module (not the generic `ingestion` module originally planned), no `ApiCallLog`/`IngestionJob` wiring. See `docs/ingestion-plan.md` and `docs/implementation-plan.md` for the design-deviation notes.
 11. **M13 in progress:** Homepage weather sidebar (2026-08-16), full auth flow (2026-08-16), `/profile` rebuilt to match its mockup with a reusable sidebar app-shell (2026-08-17), and citizen report submission wired to `POST /reports` (2026-08-17) — see "Public Weather Wiring", "Public Auth Flow Wiring", "Profile Page Mockup Fidelity", and "Report Submission Form" above. Still not started: observation submission, live platform metrics, every other homepage component still static.
-12. **M15 in progress:** `/data`, `/reports`, `/alerts` built on the app-shell with real backend data (2026-08-17) — see "App-Shell Pages: Data, Reports, Alerts" above. Also fixed in the same pass: a critical RBAC casing bug that had every role-gated endpoint rejecting all users — see "Critical RBAC Fix" above — and, while wiring `/reports`'s submission form, a second bug where `districtId` validators required a UUID but the schema uses CUIDs — see "Report Submission Form" above. Still pending: `/observations`, `/biodiversity`, `/restoration`, `/community` (all need honest empty states, no backend yet).
-13. **Next up:** The remaining 4 M15 pages (`/observations`/`/biodiversity`/`/restoration`/`/community`), observation submission (rest of M13, now unblocked by real auth), WAQI integration (M14) for station-level AQI, ingestion observability (job tracking before a 2nd provider), or resume M5's remaining schema items (ReportMedia/Comment, RestorationProject).
+12. ~~**M15:** Build all 7 app-shell pages.~~ Done (2026-08-17) — `/data`, `/reports`, `/alerts` with real backend data, `/observations`, `/biodiversity`, `/restoration`, `/community` with honest empty states — see "App-Shell Pages: Data, Reports, Alerts" and "App-Shell Pages: Observations, Biodiversity, Restoration, Community" above. Also fixed along the way: a critical RBAC casing bug that had every role-gated endpoint rejecting all users — see "Critical RBAC Fix" above — and a second bug where `districtId` validators required a UUID but the schema uses CUIDs — see "Report Submission Form" above.
+13. **Next up:** Observation submission (rest of M13, now unblocked by real auth, though still blocked on M9's `Observation` model), WAQI integration (M14) for station-level AQI, ingestion observability (job tracking before a 2nd provider), or resume M5's remaining schema items (ReportMedia/Comment, RestorationProject) — the last of which would also start unblocking `/restoration`.
 
 ## Open Questions
 
@@ -276,7 +288,7 @@ See `docs/implementation-plan.md` for the full milestone list (M5–M14).
 - "Log out all devices" / view active sessions — `RefreshToken` has `deviceId`, so a per-device session list and bulk-revoke endpoint are straightforward to add later; deliberately out of scope for the initial refresh/logout pass.
 - Role-aware nav beyond guest-vs-logged-in (moderator/admin nav, role-specific CTAs) — deliberately out of scope for the frontend auth wiring pass; current nav only distinguishes guest from any authenticated user.
 - Eco score, badges, and a user-facing activity feed (all shown in the `profile.html` mock) have no backing data model at all — is this product direction still wanted? If so it needs real scoping (a badge/achievement system, an activity log exposed per-user, a scoring formula), not just a UI pass. Currently omitted from `/profile` rather than faked.
-- ~~No milestone currently covers building `/data`, `/observations`, `/reports`, `/alerts`, `/biodiversity`, `/restoration`, `/community` as real `apps/web` routes.~~ Resolved (2026-08-17) — added as **Milestone 15** in `implementation-plan.md`. `/data`, `/reports`, `/alerts` can wire to real backends immediately; `/observations`, `/biodiversity`, `/restoration`, `/community` still need honest empty states until their respective backend milestones ship.
+- ~~No milestone currently covers building `/data`, `/observations`, `/reports`, `/alerts`, `/biodiversity`, `/restoration`, `/community` as real `apps/web` routes.~~ Resolved — **Milestone 15** in `implementation-plan.md`, now fully done (2026-08-17): `/data`, `/reports`, `/alerts` wired to real backends; `/observations`, `/biodiversity`, `/restoration`, `/community` shipped with honest empty states, to be revisited once their respective backend milestones (M9/M10/M11, and a not-yet-planned Community module) ship.
 - No automated test currently guards against the RBAC casing bug recurring (e.g. a future `@Roles(...)` call site or a new shared enum drifting back to lowercase). Worth an integration test that actually logs in per role and hits each role-gated endpoint, rather than relying on TypeScript to catch it by luck the way it did this time.
 - Same class of gap for the CUID/UUID bug found 2026-08-17: nothing currently guards against a future optional ID field being decorated `@IsUUID()` instead of `@IsString()`. A quick grep-based check (`@IsUUID()` should not appear anywhere in `apps/api` given this schema never generates real UUIDs) would catch it cheaply without a full integration test.
 - Should government users publish alerts directly, or must alerts always go through moderator/admin approval?
