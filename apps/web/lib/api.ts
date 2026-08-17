@@ -37,6 +37,18 @@ export async function apiGetAuthed<T>(path: string, accessToken: string): Promis
   return res.json() as Promise<T>;
 }
 
+/**
+ * class-validator/NestJS's ValidationPipe returns `message` as a string[]
+ * when a DTO fails validation (e.g. "title must be longer than or equal to
+ * 5 characters"), not a single string — extract whichever shape is present.
+ */
+function extractErrorMessage(errorBody: unknown, fallback: string): string {
+  const message = (errorBody as { message?: unknown } | null)?.message;
+  if (typeof message === 'string') return message;
+  if (Array.isArray(message) && message.length > 0) return message.join('; ');
+  return fallback;
+}
+
 /** POST for mutations — never cached. Surfaces the backend's error message when available. */
 export async function apiPost<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(`${API_BASE_URL}${path}`, {
@@ -47,10 +59,25 @@ export async function apiPost<T>(path: string, body: unknown): Promise<T> {
   });
   if (!res.ok) {
     const errorBody = await res.json().catch(() => null);
-    const message =
-      (errorBody && typeof errorBody.message === 'string' && errorBody.message) ||
-      `API request failed: ${res.status} ${path}`;
-    throw new ApiError(res.status, message);
+    throw new ApiError(res.status, extractErrorMessage(errorBody, `API request failed: ${res.status} ${path}`));
+  }
+  return res.json() as Promise<T>;
+}
+
+/** Authenticated POST for mutations that require a logged-in user. */
+export async function apiPostAuthed<T>(path: string, body: unknown, accessToken: string): Promise<T> {
+  const res = await fetch(`${API_BASE_URL}${path}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(body),
+    cache: 'no-store',
+  });
+  if (!res.ok) {
+    const errorBody = await res.json().catch(() => null);
+    throw new ApiError(res.status, extractErrorMessage(errorBody, `API request failed: ${res.status} ${path}`));
   }
   return res.json() as Promise<T>;
 }

@@ -63,7 +63,7 @@ Deliverables:
 - Dataset catalog with access policy ✓
 - Evidence and audit primitives (AuditEvent on all write flows) ✓
 - Shared type contracts (`packages/shared`, `packages/contracts`) ✓
-- Global validation pipe and guard infrastructure ✓ — shipped with a casing bug that made role checks always fail; fixed 2026-08-17, see below.
+- Global validation pipe and guard infrastructure ✓ — shipped with two bugs, both fixed 2026-08-17: a casing bug that made role checks always fail (see below), and a `districtId` validator on `CreateReportDto`/`CreateAlertDto` that required a UUID when this schema only ever generates CUIDs, rejecting any submission that specified a real district — see `docs/progress.md` "Report Submission Form".
 
 Exit criteria met:
 
@@ -80,7 +80,7 @@ Remaining gaps (carry into Phase 3):
 
 ## Phase 3: Environmental Core
 
-Status: In Progress — auth refresh/logout done (backend + frontend); `/data`, `/reports`, `/alerts` live on the app-shell; 4 of 7 app-shell pages still pending (Milestone 15)
+Status: In Progress — auth refresh/logout done (backend + frontend); `/data`, `/reports`, `/alerts` live on the app-shell; citizen report submission now works end to end; 4 of 7 app-shell pages still pending (Milestone 15)
 
 Goal: Add the primary environmental workflows and connect the frontend to real backend data.
 
@@ -92,12 +92,12 @@ Deliverables:
 - Biodiversity records
 - Dataset download and access-request endpoints
 - Connect public web page to live API (replace static seed data) — partially done: the homepage's "Current conditions" sidebar now fetches live weather/AQ data (2026-08-16), with fallback to static data if the API is unreachable; the nav is now session-aware (real login state, 2026-08-16). Everything else on the public page (metrics, reports/alerts previews, biodiversity/restoration/community) is still static.
-- ~~Auth refresh / logout with Redis token store~~ Done (2026-08-16) — Postgres-backed, not Redis (see Phase 2 note above). Frontend login/register/logout flow also wired (2026-08-16): httpOnly cookie sessions, middleware-based route protection + token refresh, new `/login`/`/register`/`/profile` routes. `/profile` rebuilt (2026-08-17) to match its mockup's sidebar app-shell design, with honest empty states instead of the mock's fabricated eco score/badges/activity feed — this also established a reusable sidebar shell (`AppSidebar`), now also powering `/data`, `/reports`, `/alerts` (2026-08-17, real backend data, see `docs/progress.md` "App-Shell Pages: Data, Reports, Alerts"). `/observations`, `/biodiversity`, `/restoration`, `/community` still pending — tracked as Milestone 15 in `implementation-plan.md`.
+- ~~Auth refresh / logout with Redis token store~~ Done (2026-08-16) — Postgres-backed, not Redis (see Phase 2 note above). Frontend login/register/logout flow also wired (2026-08-16): httpOnly cookie sessions, middleware-based route protection + token refresh, new `/login`/`/register`/`/profile` routes. `/profile` rebuilt (2026-08-17) to match its mockup's sidebar app-shell design, with honest empty states instead of the mock's fabricated eco score/badges/activity feed — this also established a reusable sidebar shell (`AppSidebar`), now also powering `/data`, `/reports`, `/alerts` (2026-08-17, real backend data, see `docs/progress.md` "App-Shell Pages: Data, Reports, Alerts"). `/reports` also gained a real, working submission form (2026-08-17) — see `docs/progress.md` "Report Submission Form". `/observations`, `/biodiversity`, `/restoration`, `/community` still pending — tracked as Milestone 15 in `implementation-plan.md`.
 - PostGIS geography fields (requires PostGIS extension + migration)
 
 Exit criteria:
 
-- Citizens can submit reports and observations after login. — Login itself now works end to end (2026-08-16); the submission forms themselves are not yet built.
+- Citizens can submit reports and observations after login. — Report submission now works end to end (2026-08-17, `POST /reports` via a real form on `/reports`); observation submission is not yet built (no `Observation` model exists — M9).
 - Public users see only verified/publishable data from the live API.
 - Moderators/admins can review and update status. — Also **not actually true** until 2026-08-17 for the same RBAC casing bug (see Phase 2 note); confirmed genuinely working now via `PATCH /reports/:id/status` and `PATCH /alerts/:id`.
 - Advanced dataset access is gated correctly.

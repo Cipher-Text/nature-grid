@@ -20,7 +20,7 @@ Build persistence and ingestion before features. Real environmental data in the 
 
 `apps/api` — Auth (JWT/bcrypt), users, organizations, locations (8 div / 64 district auto-seed), providers, datasets (catalog seed), reports (status workflow + audit), alerts (severity + audit), global validation, guard infrastructure.
 
-**Caveat found 2026-08-17:** the guard infrastructure shipped with a casing bug — `@Roles(...)` call sites used lowercase role strings while Prisma/JWT values are uppercase, so every role-gated endpoint rejected every user (including admins) until fixed. See `docs/progress.md` "Critical RBAC Fix".
+**Caveats found 2026-08-17:** the guard infrastructure shipped with a casing bug — `@Roles(...)` call sites used lowercase role strings while Prisma/JWT values are uppercase, so every role-gated endpoint rejected every user (including admins) until fixed. See `docs/progress.md` "Critical RBAC Fix". Separately, `CreateReportDto`/`CreateAlertDto` validated `districtId` with `@IsUUID()`, but this schema only ever generates CUIDs — any submission specifying a real district always failed validation until fixed. See `docs/progress.md` "Report Submission Form".
 
 ## ~~Milestone 4: Database Foundation~~ — Done
 
@@ -274,7 +274,7 @@ Replace static seed data in `apps/web` with live API calls.
 
 **Target:** `apps/web`
 
-**Status (2026-08-17):** Tasks 1, 2 (partial), and 4 are done — see `docs/progress.md` "Public Weather Wiring" and "Public Auth Flow Wiring". `/profile` was also rebuilt (2026-08-17) to match its mockup rather than being an ad hoc card — see `docs/progress.md` "Profile Page Mockup Fidelity" — which introduced a reusable sidebar "app shell" (`components/app-sidebar.tsx`). Every mocked `apps/web` page except the homepage (`data`, `observations`, `reports`, `alerts`, `biodiversity`, `restoration`, `community`) shares that same layout; building them is now tracked as **Milestone 15** below (added 2026-08-17 — none of M7–M12 actually covered this: M7–M11 are backend-only, M12 targets the separate `apps/admin` app). Report/observation submission, live metrics, and the client-side refresh library question are still not started.
+**Status (2026-08-17):** Tasks 1, 2 (partial), 4, and 5 are done — see `docs/progress.md` "Public Weather Wiring", "Public Auth Flow Wiring", and "Report Submission Form". `/profile` was also rebuilt (2026-08-17) to match its mockup rather than being an ad hoc card — see `docs/progress.md` "Profile Page Mockup Fidelity" — which introduced a reusable sidebar "app shell" (`components/app-sidebar.tsx`). Every mocked `apps/web` page except the homepage (`data`, `observations`, `reports`, `alerts`, `biodiversity`, `restoration`, `community`) shares that same layout; building them is now tracked as **Milestone 15** below (added 2026-08-17 — none of M7–M12 actually covered this: M7–M11 are backend-only, M12 targets the separate `apps/admin` app). Observation submission, live metrics, and the client-side refresh library question are still not started.
 
 ### Tasks
 
@@ -282,14 +282,14 @@ Replace static seed data in `apps/web` with live API calls.
 2. Replace `lib/static-data.ts` calls with `fetch('/api/v1/...')` in Server Components. — **Partial**: `map-section.tsx`'s "Current conditions" sidebar only (Dhaka PM2.5, Sylhet precipitation, Khulna humidity, Cox's Bazar wind, sync status), fetching `/weather/current` and `/weather/air-quality`. Falls back to the original static `CONDITIONS` array if the API is unreachable, rather than crashing the page. Every other component (`metrics-section`, `dataset-preview`, `reports-alerts-section`, `biodiversity-restoration`, `community-section`) is still fully static.
 3. Add `SWR` or React Query for client-side refreshing data (map, live alerts). — Not needed for the weather slice done so far: `map-section.tsx` is a Server Component using Next.js's built-in `fetch` cache (`revalidate: 900`, matching the current-weather cron cadence) rather than client-side polling. Revisit if a component needs to refresh without a full page reload.
 4. ~~Wire auth — login/register flow, session persistence, role-aware nav.~~ Done (2026-08-16), with one scope note: "role-aware nav" only distinguishes guest vs. any logged-in user, not per-role nav (moderator/admin nav is a Phase 3+ concern). Session persistence is httpOnly cookies rather than a client-side store — the natural fit given every existing component was already a Server Component. See `docs/progress.md` "Public Auth Flow Wiring" for the full design (middleware-based token refresh, Server Actions for login/register/logout, new `/login`/`/register`/`/profile` routes). `/profile` itself shipped as a bare account card in that pass — rebuilt 2026-08-17 to match `mocks/frontend-design/profile.html`'s actual sidebar app-shell design; see `docs/progress.md` "Profile Page Mockup Fidelity".
-5. Wire report submission form to `POST /reports`.
+5. ~~Wire report submission form to `POST /reports`.~~ Done (2026-08-17) — see `docs/progress.md` "Report Submission Form". Form fields matched to the real `CreateReportDto` rather than the mock: added a required Title field, replaced free-text location with a real District `<select>`, dropped the mock's fake "Severity estimate" field, omitted photo/video attachment (no media backend exists). Surfaced and fixed a second validation bug along the way: `districtId` was decorated `@IsUUID()` on both `CreateReportDto` and `CreateAlertDto`, but this schema only generates CUIDs — any submission specifying a real district always failed. Verified live via a full browser click-through plus the admin review workflow (`SUBMITTED → UNDER_REVIEW → VERIFIED`).
 6. Wire observation submission.
 7. Show live metrics from `GET /metrics` on the public homepage.
 
 ### Definition of done
 
 - Public page shows real data from the database. — **Partial**: the weather conditions sidebar and the nav's session state; everything else below is still pending.
-- Authenticated users can submit reports and observations. — Users can now authenticate (register/login/logout, session persists) ✓; actually submitting reports/observations (tasks 5–6) is not done.
+- Authenticated users can submit reports and observations. — Users can now authenticate (register/login/logout, session persists) ✓; report submission (task 5) is done (2026-08-17) ✓; observation submission (task 6) is not done.
 
 ---
 

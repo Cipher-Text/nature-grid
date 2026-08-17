@@ -1,4 +1,4 @@
-import { IsEnum, IsISO8601, IsOptional, IsString, IsUUID, MaxLength, MinLength } from 'class-validator';
+import { IsEnum, IsISO8601, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 import { AlertSeverity } from '@prisma/client';
 
 export class CreateAlertDto {
@@ -21,7 +21,7 @@ export class CreateAlertDto {
   instructions?: string;
 
   @IsOptional()
-  @IsUUID()
+  @IsString()
   districtId?: string;
 
   @IsOptional()

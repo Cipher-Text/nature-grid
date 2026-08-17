@@ -829,7 +829,21 @@ a {
   background: var(--surface);
 }
 
-.field input:focus {
+.field select,
+.field textarea {
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 0.65rem 0.8rem;
+  font: inherit;
+  font-size: 0.92rem;
+  color: var(--foreground);
+  background: var(--surface);
+  resize: vertical;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
   outline: 2px solid var(--primary);
   outline-offset: 1px;
 }
@@ -840,6 +854,16 @@ a {
   border-radius: 7px;
   background: var(--danger-soft);
   color: var(--danger);
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.form-success {
+  margin: 0 0 4px;
+  padding: 10px 12px;
+  border-radius: 7px;
+  background: var(--success-soft);
+  color: var(--success);
   font-size: 0.86rem;
   font-weight: 600;
 }

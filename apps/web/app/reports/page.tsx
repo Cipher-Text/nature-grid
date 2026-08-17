@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import AppSidebar from '../../components/app-sidebar';
 import { apiGet } from '../../lib/api';
+import { getCurrentUser } from '../../lib/current-user';
+import { submitReportAction } from '../../lib/report-actions';
 import { routes, type CitizenReport, type PaginatedEnvelope } from '@nature-grid/contracts';
 import { titleCase, relativeTime } from '../../lib/format';
 
@@ -20,21 +22,31 @@ const STATUS_VARIANT: Record<string, string> = {
   REJECTED: 'danger',
 };
 
+interface DistrictOption {
+  id: string;
+  name: string;
+}
+
 export default async function ReportsPage({
   searchParams,
 }: {
-  searchParams: { category?: string };
+  searchParams: { category?: string; submitted?: string; error?: string };
 }) {
   const category = searchParams.category;
   const reportsPath = category
     ? `${routes.reports.list}?category=${category}`
     : routes.reports.list;
 
-  const [reportsRes, verifiedRes, resolvedRes] = await Promise.all([
+  const [reportsRes, verifiedRes, resolvedRes, user] = await Promise.all([
     apiGet<PaginatedEnvelope<CitizenReport>>(reportsPath),
     apiGet<PaginatedEnvelope<CitizenReport>>(`${routes.reports.list}?status=VERIFIED&pageSize=1`),
     apiGet<PaginatedEnvelope<CitizenReport>>(`${routes.reports.list}?status=RESOLVED&pageSize=1`),
+    getCurrentUser(),
   ]);
+
+  const districts = user
+    ? await apiGet<DistrictOption[]>(routes.locations.districts)
+    : [];
 
   return (
     <div className="app-shell">
@@ -45,9 +57,11 @@ export default async function ReportsPage({
             <h1>Citizen Reports</h1>
             <p>Only reviewed and accepted records appear here.</p>
           </div>
-          <Link className="button ghost" href="/login">
-            Sign in to submit
-          </Link>
+          {!user && (
+            <Link className="button ghost" href="/login">
+              Sign in to submit
+            </Link>
+          )}
         </div>
 
         <div className="metric-grid">
@@ -97,6 +111,84 @@ export default async function ReportsPage({
             <div className="empty-state">No reports match this category yet.</div>
           )}
         </div>
+
+        <article className="panel" style={{ marginTop: '20px' }}>
+          <div className="panel-header">
+            <div>
+              <h2>Report an environmental issue</h2>
+              <p>
+                {user
+                  ? 'Submitted reports start as "Submitted" and go through moderator review before appearing above.'
+                  : 'Public users see the workflow — sign in to submit.'}
+              </p>
+            </div>
+          </div>
+
+          {searchParams.submitted && (
+            <p className="form-success">
+              Report submitted — it&apos;s now pending moderator review. It will appear in
+              the list above once verified.
+            </p>
+          )}
+          {searchParams.error && <p className="form-error">{searchParams.error}</p>}
+
+          {user ? (
+            <form action={submitReportAction} className="auth-form">
+              <div className="field">
+                <label htmlFor="title">Title</label>
+                <input
+                  id="title"
+                  name="title"
+                  type="text"
+                  required
+                  minLength={5}
+                  maxLength={200}
+                  placeholder="e.g. Industrial discharge near Buriganga bridge"
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="category">Issue type</label>
+                <select id="category" name="category" className="select-field" required>
+                  {CATEGORIES.map((c) => (
+                    <option key={c} value={c}>
+                      {titleCase(c)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="field">
+                <label htmlFor="districtId">District (optional)</label>
+                <select id="districtId" name="districtId" className="select-field">
+                  <option value="">Not specified</option>
+                  {districts.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="field">
+                <label htmlFor="description">Description</label>
+                <textarea
+                  id="description"
+                  name="description"
+                  required
+                  minLength={20}
+                  maxLength={5000}
+                  rows={4}
+                  placeholder="Describe what you observed, when, and any evidence (at least 20 characters)"
+                />
+              </div>
+              <button className="button" type="submit">
+                Submit report
+              </button>
+            </form>
+          ) : (
+            <Link className="button" href="/login">
+              Sign in to submit
+            </Link>
+          )}
+        </article>
 
         <article className="panel" style={{ marginTop: '20px' }}>
           <div className="panel-header">

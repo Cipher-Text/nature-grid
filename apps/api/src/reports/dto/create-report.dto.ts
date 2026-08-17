@@ -1,4 +1,4 @@
-import { IsEnum, IsOptional, IsString, IsUUID, MaxLength, MinLength, IsNumber, Min, Max } from 'class-validator';
+import { IsEnum, IsOptional, IsString, MaxLength, MinLength, IsNumber, Min, Max } from 'class-validator';
 import { ReportCategory } from '@prisma/client';
 
 export class CreateReportDto {
@@ -16,7 +16,7 @@ export class CreateReportDto {
   description!: string;
 
   @IsOptional()
-  @IsUUID()
+  @IsString()
   districtId?: string;
 
   @IsOptional()
