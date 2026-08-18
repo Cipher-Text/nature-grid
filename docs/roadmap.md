@@ -80,13 +80,13 @@ Remaining gaps (carry into Phase 3):
 
 ## Phase 3: Environmental Core
 
-Status: In Progress — auth refresh/logout done (backend + frontend); citizen report submission now works end to end; all 7 app-shell pages built (Milestone 15 complete, 2026-08-17)
+Status: In Progress — auth refresh/logout done (backend + frontend); citizen report and observation submission both now work end to end; all 7 app-shell pages built (Milestone 15 complete); Observations module (M9) done (all 2026-08-17)
 
 Goal: Add the primary environmental workflows and connect the frontend to real backend data.
 
 Deliverables:
 
-- Observations module (schema in place; service/controller needed)
+- ~~Observations module (schema in place; service/controller needed)~~ Done (2026-08-17) — full CRUD + trust-level workflow (`RESEARCHER`/`ADMIN` promote `UNVERIFIED` → `RESEARCH_GRADE`/etc.), wired to a real `/observations` page with a working submission form. See `docs/progress.md` "Observations Module".
 - Media/evidence records
 - Moderation queue
 - Biodiversity records
@@ -97,7 +97,7 @@ Deliverables:
 
 Exit criteria:
 
-- Citizens can submit reports and observations after login. — Report submission now works end to end (2026-08-17, `POST /reports` via a real form on `/reports`); observation submission is not yet built (no `Observation` model exists — M9).
+- ~~Citizens can submit reports and observations after login.~~ Done (2026-08-17) — both `POST /reports` (via `/reports`) and `POST /observations` (via `/observations`) work end to end, verified live with real submissions.
 - Public users see only verified/publishable data from the live API.
 - Moderators/admins can review and update status. — Also **not actually true** until 2026-08-17 for the same RBAC casing bug (see Phase 2 note); confirmed genuinely working now via `PATCH /reports/:id/status` and `PATCH /alerts/:id`.
 - Advanced dataset access is gated correctly.

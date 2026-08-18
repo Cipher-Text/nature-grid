@@ -98,6 +98,22 @@ enum AuditAction {
   DATASET_ACCESS
   DATASET_DOWNLOAD
   OBSERVATION_SUBMIT
+  OBSERVATION_TRUST_CHANGE
+}
+
+enum ObservationCategory {
+  BIODIVERSITY
+  WATER_QUALITY
+  AIR_QUALITY
+  LAND_USE
+  RESTORATION
+}
+
+enum ObservationTrustLevel {
+  RESEARCH_GRADE
+  COMMUNITY
+  UNVERIFIED
+  FLAGGED
 }
 
 // ─── Users & Auth ─────────────────────────────────────────────────────────────
@@ -114,6 +130,7 @@ model User {
   updatedAt    DateTime @updatedAt
 
   reports    CitizenReport[]
+  observations Observation[]
   auditEvents AuditEvent[]
   refreshTokens RefreshToken[]
 
@@ -191,6 +208,7 @@ model District {
   upazilas Upazila[]
   reports  CitizenReport[]
   alerts   Alert[]
+  observations Observation[]
 
   currentWeatherReadings CurrentWeatherReading[]
   hourlyWeatherForecasts HourlyWeatherForecast[]
@@ -281,6 +299,29 @@ model ReportStatusEvent {
   createdAt DateTime     @default(now())
 
   @@index([reportId])
+}
+
+// ─── Observations ─────────────────────────────────────────────────────────────
+
+model Observation {
+  id          String                 @id @default(cuid())
+  category    ObservationCategory
+  trustLevel  ObservationTrustLevel  @default(UNVERIFIED)
+  description String
+  observerId  String?
+  observer    User?                  @relation(fields: [observerId], references: [id])
+  districtId  String?
+  district    District?              @relation(fields: [districtId], references: [id])
+  lat         Float?
+  lng         Float?
+  species     String?
+  observedAt  DateTime               @default(now())
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+
+  @@index([category])
+  @@index([trustLevel])
+  @@index([districtId])
 }
 
 // ─── Alerts ───────────────────────────────────────────────────────────────────

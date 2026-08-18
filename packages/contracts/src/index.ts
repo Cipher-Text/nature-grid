@@ -90,6 +90,7 @@ export const routes = {
     list: `${apiPrefix}/observations`,
     detail: (id: string) => `${apiPrefix}/observations/${id}`,
     create: `${apiPrefix}/observations`,
+    updateTrust: (id: string) => `${apiPrefix}/observations/${id}/trust`,
   },
 
   biodiversity: {
@@ -281,13 +282,32 @@ export interface AlertListParams extends PaginationParams, LocationFilterParams 
 
 // ─── Observations ─────────────────────────────────────────────────────────────
 
+export interface Observation {
+  id: string;
+  category: ObservationCategory;
+  trustLevel: ObservationTrustLevel;
+  description: string;
+  districtId: string | null;
+  lat: number | null;
+  lng: number | null;
+  species: string | null;
+  observedAt: string;
+  createdAt: string;
+  updatedAt: string;
+  observer: { id: string; displayName: string } | null;
+  district: DistrictSummary | null;
+}
+
 export interface CreateObservationRequest {
   category: ObservationCategory;
   description: string;
-  locationId?: string;
-  coordinates?: { lat: number; lng: number };
-  observedAt: string;
-  species?: string;
+  districtId?: string;
+  lat?: number;
+  lng?: number;
+}
+
+export interface UpdateObservationTrustRequest {
+  trustLevel: ObservationTrustLevel;
 }
 
 export interface ObservationListParams extends PaginationParams, LocationFilterParams {
