@@ -9,6 +9,7 @@ import type {
   ObservationCategory,
   ObservationTrustLevel,
   ProjectStatus,
+  RestorationCategory,
   ProviderType,
 } from '@nature-grid/shared';
 
@@ -24,6 +25,7 @@ export type {
   ObservationCategory,
   ObservationTrustLevel,
   ProjectStatus,
+  RestorationCategory,
   ProviderType,
 } from '@nature-grid/shared';
 
@@ -102,6 +104,8 @@ export const routes = {
   restoration: {
     projects: `${apiPrefix}/restoration/projects`,
     project: (id: string) => `${apiPrefix}/restoration/projects/${id}`,
+    create: `${apiPrefix}/restoration/projects`,
+    update: (id: string) => `${apiPrefix}/restoration/projects/${id}`,
     join: (id: string) => `${apiPrefix}/restoration/projects/${id}/join`,
   },
 
@@ -349,8 +353,45 @@ export interface DatasetListParams extends PaginationParams {
 
 // ─── Restoration ──────────────────────────────────────────────────────────────
 
+export interface RestorationProject {
+  id: string;
+  title: string;
+  description: string;
+  category: RestorationCategory;
+  status: ProjectStatus;
+  organizationId: string | null;
+  districtId: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  impactSummary: string | null;
+  createdById: string;
+  createdAt: string;
+  updatedAt: string;
+  organization: { id: string; name: string } | null;
+  district: DistrictSummary | null;
+  _count: { participants: number };
+}
+
+export interface CreateRestorationProjectRequest {
+  title: string;
+  description: string;
+  category: RestorationCategory;
+  organizationId?: string;
+  districtId?: string;
+  startDate?: string;
+  endDate?: string;
+  impactSummary?: string;
+}
+
+export interface UpdateRestorationProjectRequest {
+  status?: ProjectStatus;
+  impactSummary?: string;
+  endDate?: string;
+}
+
 export interface RestorationProjectListParams extends PaginationParams, LocationFilterParams {
   status?: ProjectStatus;
+  category?: RestorationCategory;
 }
 
 // ─── Weather ──────────────────────────────────────────────────────────────────

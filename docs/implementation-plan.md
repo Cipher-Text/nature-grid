@@ -32,7 +32,7 @@ Build persistence and ingestion before features. Real environmental data in the 
 
 Extend the Prisma schema with all models needed for ingestion, reports enrichment, and auth completeness. No logic yet — schema only.
 
-**Status (2026-08-16):** Task 10 (`District.lat`/`lng`, done via Milestone 6 as a prerequisite, with real per-district coordinates rather than the divisional-capital placeholder originally scoped) and the auth refresh endpoint (tasks 1, 12, 13 — done, with a different design than specified here, see below) are complete. `ReportMedia`, `ReportComment`, `RestorationProject` are still not implemented. The ingestion-specific models below (`WeatherReading`, `AirQualityReading`, `WeatherAggregate`, `AqiAggregate`, `ApiCallLog`) were superseded by a different, smaller design — see Milestone 6.
+**Status (2026-08-19):** Task 10 (`District.lat`/`lng`, done via Milestone 6 as a prerequisite, with real per-district coordinates rather than the divisional-capital placeholder originally scoped) and the auth refresh endpoint (tasks 1, 12, 13 — done, with a different design than specified here, see below) are complete. Task 9 (`RestorationProject`) is also done — built as part of Milestone 11 (2026-08-19), with a simplified field set (see M11 below), not in the original M5 pass as scoped. `ReportMedia`, `ReportComment` are still not implemented. The ingestion-specific models below (`WeatherReading`, `AirQualityReading`, `WeatherAggregate`, `AqiAggregate`, `ApiCallLog`) were superseded by a different, smaller design — see Milestone 6.
 
 **Target:** `packages/database/prisma/schema.prisma`
 
@@ -62,7 +62,7 @@ Also add to `District` model: `lat Float?` and `lng Float?` for OpenMeteo centro
 6. Add `ApiCallLog` model (provider, endpoint, httpStatus, responseMs, responseBytes, correlationId, errorMsg, districtId?, createdAt).
 7. Add `ReportMedia` model (reportId, mediaType, url, thumbnailUrl?, caption?, metaJson?).
 8. Add `ReportComment` model (reportId, userId, body, parentCommentId?, status).
-9. Add `RestorationProject` model (title, description, category, status, organizationId?, districtId?, startDate?, endDate?, fundingGoal?, fundingRaised?, impactMetrics Json?, participantCount).
+9. ~~Add `RestorationProject` model (title, description, category, status, organizationId?, districtId?, startDate?, endDate?, fundingGoal?, fundingRaised?, impactMetrics Json?, participantCount).~~ Done — but not in this milestone's pass, and not with this exact field set. Built 2026-08-19 as part of Milestone 11, with `fundingGoal`/`fundingRaised`/`impactMetrics Json?`/`participantCount` all replaced by a single `impactSummary` text field and a `_count` computed from a `RestorationParticipant` join table — see Milestone 11 below.
 10. Add `lat Float?` and `lng Float?` to `District`.
 11. Run `prisma migrate dev --name add_ingestion_models` and regenerate client.
 
@@ -75,7 +75,7 @@ Also add to `District` model: `lat Float?` and `lng Float?` for OpenMeteo centro
 
 ### Definition of done
 
-- Migration applied, all new tables live. — `RefreshToken` ✓; `ReportMedia`/`ReportComment`/`RestorationProject` still pending.
+- Migration applied, all new tables live. — `RefreshToken` ✓; `RestorationProject`/`RestorationParticipant` ✓ (2026-08-19, via M11); `ReportMedia`/`ReportComment` still pending.
 - `POST /auth/refresh` and `POST /auth/logout` work. ✓ — verified live: register → refresh (rotates) → old token rejected → refresh token rejected as a Bearer access token → logout → refresh rejected → logout again still succeeds.
 - `District` has lat/lng columns (nullable, populated in next milestone). ✓
 
@@ -227,25 +227,31 @@ Connect to GBIF API for species occurrence data for Bangladesh.
 
 ---
 
-## Milestone 11: Restoration Projects
+## ~~Milestone 11: Restoration Projects~~ — Done
 
 Community and organization restoration/sustainability project tracking.
 
 **Target:** `apps/api/src/restoration/`
 
+**Status (2026-08-19):** All 6 tasks done, plus `apps/web/app/restoration/page.tsx` upgraded from an honest empty state (M15) to real data, a creation form, and a Join action in the same pass. See `docs/progress.md` "Restoration Projects Module" for full detail.
+
+### New Prisma models — as actually built
+
+Task 1's premise was wrong: **the `RestorationProject` model had NOT actually been added in M5** — M5's own status note says `ReportMedia`, `ReportComment`, `RestorationProject` were all still pending. Built here instead: `RestorationProject` (`title`, `description`, `category` — new `RestorationCategory` enum, `status` reusing the existing `ProjectStatus` enum, `organizationId?`/`districtId?` as real FKs, `startDate?`/`endDate?`, `impactSummary?`, `createdById`) plus a `RestorationParticipant` join model (`projectId`, `userId`, `joinedAt`, `@@unique([projectId, userId])`) for idempotent joins and an accurate, non-denormalized participant count. **Simplified from the original M5 field list**, confirmed with the user: dropped `fundingGoal`/`fundingRaised`/`impactMetrics (Json)` in favor of one `impactSummary` free-text field — no funding feature is scoped yet, and a JSON blob nothing renders specially is worse than one honest text field.
+
 ### Tasks
 
-1. Add `RestorationModule` (model already added in M5).
-2. Add `POST /restoration/projects` — ORGANIZATION_ADMIN or ADMIN.
-3. Add `GET /restoration/projects` — public, filterable by category/status/districtId.
-4. Add `GET /restoration/projects/:id`.
-5. Add `PATCH /restoration/projects/:id` — owner or ADMIN.
-6. Add `POST /restoration/projects/:id/join` — CITIZEN can register as participant.
+1. ~~Add `RestorationModule` (model already added in M5).~~ Done — model was NOT actually pre-existing (see note above); built fresh, including wiring into `AppModule` (wasn't registered at all before this, unlike the `observations`/`biodiversity` stub modules).
+2. ~~Add `POST /restoration/projects` — ORGANIZATION_ADMIN or ADMIN.~~ Done — enforced as a bare role check; there's no `Organization`-membership link in the schema, so an org-admin can attach *any* real organization to a new project, not only one they're actually affiliated with. Flagged as a known limitation rather than building a membership system out of scope for this milestone.
+3. ~~Add `GET /restoration/projects` — public, filterable by category/status/districtId.~~ Done.
+4. ~~Add `GET /restoration/projects/:id`.~~ Done.
+5. ~~Add `PATCH /restoration/projects/:id` — owner or ADMIN.~~ Done — "owner" = `createdById`, enforced in the service (not via `@Roles`, since ownership isn't a role). Confirmed live: non-owner/non-admin gets 403, the creator gets 200.
+6. ~~Add `POST /restoration/projects/:id/join` — CITIZEN can register as participant.~~ Done — open to any authenticated user, not just `CITIZEN` specifically (matches how `create()` on reports/observations isn't restricted to citizens either). Idempotent: a repeat join is a silent no-op via the unique-constraint catch, confirmed live via both curl and a browser click.
 
 ### Definition of done
 
-- Organizations can create and track restoration projects.
-- Public can browse and citizens can join.
+- Organizations can create and track restoration projects. — Done, verified live with a bootstrapped `ORGANIZATION_ADMIN` and a real `Organization` record.
+- Public can browse and citizens can join. — Done, verified live: public list/filter work unauthenticated, a citizen joined and a repeat join stayed idempotent.
 
 ---
 
@@ -332,9 +338,9 @@ Built the `apps/web` routes that the nav (`public-nav.tsx`, `app-sidebar.tsx`) a
 | `/data` | `GET /datasets` | Real (M3) |
 | `/reports` | `GET /reports` | Real (M3) — public list is verified/resolved only |
 | `/alerts` | `GET /alerts` | Real (M3) |
-| `/observations` | — | Not built (M9) — module stub, no `Observation` model |
+| `/observations` | `GET /observations` | Real (M9, 2026-08-17) |
 | `/biodiversity` | — | Not built (M10) — module stub, no `Species`/`Occurrence` models |
-| `/restoration` | — | Not built (M11) — no `RestorationProject` model |
+| `/restoration` | `GET /restoration/projects` | Real (M11, 2026-08-19) |
 | `/community` | — | Not planned as an API module at all yet (see `docs/architecture/feature-map.md`) |
 
 ### Tasks
@@ -344,7 +350,7 @@ Built the `apps/web` routes that the nav (`public-nav.tsx`, `app-sidebar.tsx`) a
 3. ~~`/alerts` — wire to `GET /alerts`.~~ Done — required a small backend fix first (`ALERT_SELECT` wasn't projecting `description`); role-conditional "Issue alert" badge added (real role check, but reads "coming soon" since no creation page exists); "Warning zones" reuses the homepage's existing decorative map placeholder.
 4. ~~`/observations` — no backend yet: honest "not available yet" empty state (same pattern as `/profile`'s activity feed), not fabricated records. Revisit once M9 ships.~~ Done (2026-08-17) — also links to `/reports` as the nearest real thing citizens can do today. **Revisited the same day once M9 shipped**: upgraded to real data + a working submission form, see Milestone 9 above.
 5. ~~`/biodiversity` — same honest-empty-state treatment; revisit once M10 ships.~~ Done (2026-08-17).
-6. ~~`/restoration` — same honest-empty-state treatment; revisit once M11 ships.~~ Done (2026-08-17).
+6. ~~`/restoration` — same honest-empty-state treatment; revisit once M11 ships.~~ Done (2026-08-17). **Revisited 2026-08-19 once M11 shipped**: upgraded to real data + a creation form (org-admins/admins) + a Join action (everyone else), see Milestone 11 above.
 7. ~~`/community` — same honest-empty-state treatment, or keep the existing static `COMMUNITY_FEED` mock data clearly labeled as illustrative, since `feature-map.md` already says to keep this out of core until a real content workflow exists — decide which when this task starts.~~ Done (2026-08-17) — went with the honest empty state, consistent with the other three and with the `/profile`/`/data`/`/reports`/`/alerts` precedent, rather than keeping the mock feed. The homepage's `community-section.tsx` still shows static `COMMUNITY_FEED` data — a separate, already-documented M13 gap, untouched by this task.
 8. ~~Confirm `AppSidebar`'s active-link highlighting is correct for each new route.~~ Done — verified live for all 7 routes.
 
@@ -352,7 +358,7 @@ Built the `apps/web` routes that the nav (`public-nav.tsx`, `app-sidebar.tsx`) a
 
 - All 7 routes render instead of 404ing (nav links already point to them). — Done, confirmed via browser and `curl` 200s on all 7.
 - `/data`, `/reports`, `/alerts` show real backend data through the sidebar shell. — Done, verified live with seeded real reports/alerts.
-- `/observations`, `/biodiversity`, `/restoration`, `/community` show an honest empty/coming-soon state — no fabricated records, consistent with the `/profile` precedent. — Done (2026-08-17), verified live in a real browser; production build compiles cleanly with all four as static pages.
+- `/observations`, `/biodiversity`, `/restoration`, `/community` show an honest empty/coming-soon state — no fabricated records, consistent with the `/profile` precedent. — Done (2026-08-17) for all four at the time, verified live in a real browser; production build compiled cleanly with all four as static pages. `/observations` (M9, 2026-08-17) and `/restoration` (M11, 2026-08-19) have since graduated to real data as their backends shipped; `/biodiversity` and `/community` remain honest empty states.
 
 ---
 

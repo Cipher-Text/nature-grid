@@ -99,6 +99,25 @@ enum AuditAction {
   DATASET_DOWNLOAD
   OBSERVATION_SUBMIT
   OBSERVATION_TRUST_CHANGE
+  RESTORATION_PROJECT_CREATE
+  RESTORATION_PROJECT_UPDATE
+  RESTORATION_PROJECT_JOIN
+}
+
+enum ProjectStatus {
+  PLANNED
+  ACTIVE
+  COMPLETED
+  PAUSED
+}
+
+enum RestorationCategory {
+  TREE_PLANTING
+  WETLAND_RESTORATION
+  RIVERBANK_PROTECTION
+  MANGROVE
+  WASTE_MANAGEMENT
+  OTHER
 }
 
 enum ObservationCategory {
@@ -133,6 +152,8 @@ model User {
   observations Observation[]
   auditEvents AuditEvent[]
   refreshTokens RefreshToken[]
+  restorationProjectsCreated RestorationProject[]
+  restorationParticipations  RestorationParticipant[]
 
   @@index([email])
   @@index([role])
@@ -168,6 +189,7 @@ model Organization {
   updatedAt   DateTime     @updatedAt
 
   providers Provider[]
+  restorationProjects RestorationProject[]
 }
 
 // ─── Providers ────────────────────────────────────────────────────────────────
@@ -209,6 +231,7 @@ model District {
   reports  CitizenReport[]
   alerts   Alert[]
   observations Observation[]
+  restorationProjects RestorationProject[]
 
   currentWeatherReadings CurrentWeatherReading[]
   hourlyWeatherForecasts HourlyWeatherForecast[]
@@ -322,6 +345,44 @@ model Observation {
   @@index([category])
   @@index([trustLevel])
   @@index([districtId])
+}
+
+// ─── Restoration Projects ──────────────────────────────────────────────────────
+
+model RestorationProject {
+  id             String               @id @default(cuid())
+  title          String
+  description    String
+  category       RestorationCategory
+  status         ProjectStatus        @default(PLANNED)
+  organizationId String?
+  organization   Organization?        @relation(fields: [organizationId], references: [id])
+  districtId     String?
+  district       District?            @relation(fields: [districtId], references: [id])
+  startDate      DateTime?
+  endDate        DateTime?
+  impactSummary  String?
+  createdById    String
+  createdBy      User                 @relation(fields: [createdById], references: [id])
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  participants RestorationParticipant[]
+
+  @@index([category])
+  @@index([status])
+  @@index([districtId])
+}
+
+model RestorationParticipant {
+  id        String             @id @default(cuid())
+  projectId String
+  project   RestorationProject @relation(fields: [projectId], references: [id])
+  userId    String
+  user      User               @relation(fields: [userId], references: [id])
+  joinedAt  DateTime           @default(now())
+
+  @@unique([projectId, userId])
 }
 
 // ─── Alerts ───────────────────────────────────────────────────────────────────

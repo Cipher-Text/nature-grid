@@ -101,10 +101,17 @@ export type IngestionStatus =
   | 'CANCELLED';
 
 // ─── Restoration / Projects ───────────────────────────────────────────────────
-// No Prisma model exists yet (RestorationProject not built) — uppercased for
-// the same reason as the Observation enums above.
+// RestorationProject shipped 2026-08-17 (M11) — matches Prisma exactly.
 
 export type ProjectStatus = 'PLANNED' | 'ACTIVE' | 'COMPLETED' | 'PAUSED';
+
+export type RestorationCategory =
+  | 'TREE_PLANTING'
+  | 'WETLAND_RESTORATION'
+  | 'RIVERBANK_PROTECTION'
+  | 'MANGROVE'
+  | 'WASTE_MANAGEMENT'
+  | 'OTHER';
 
 // ─── Location Types ───────────────────────────────────────────────────────────
 

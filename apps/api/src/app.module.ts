@@ -12,6 +12,7 @@ import { ReportsModule } from './reports/reports.module';
 import { AlertsModule } from './alerts/alerts.module';
 import { BiodiversityModule } from './biodiversity/biodiversity.module';
 import { ObservationsModule } from './observations/observations.module';
+import { RestorationModule } from './restoration/restoration.module';
 import { MediaModule } from './media/media.module';
 import { IngestionModule } from './ingestion/ingestion.module';
 import { WeatherModule } from './weather/weather.module';
@@ -32,6 +33,7 @@ import { HealthController } from './health.controller';
     AlertsModule,
     BiodiversityModule,
     ObservationsModule,
+    RestorationModule,
     MediaModule,
     IngestionModule,
     WeatherModule,
