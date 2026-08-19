@@ -67,7 +67,7 @@ Open Nature had a strong environmental dashboard UI and a backend centered on au
 | Community content and campaigns UI | future `community` module, not part of API core yet |
 | Data hub UI | `datasets`, `biodiversity`, `locations` |
 
-Features from the Open Nature repos that were **not** carried over are tracked separately in [open-nature-feature-gaps.md](open-nature-feature-gaps.md).
+Features from the Open Nature repos that were **not** carried over are scheduled in `docs/roadmap.md` Phase 6c (notification delivery) and Phase 7 (emissions, climate prediction, carbon footprint, research publications, climate surveys, satellite). Anything still deferred sits in `docs/implementation-plan.md` "Deferred / Later Phases".
 
 ## Boundary Rules
 

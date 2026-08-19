@@ -205,7 +205,7 @@ Status: Planned
 
 Goal: Absorb the environmental domains that the Open Nature repos designed but Nature Grid has not carried over, so the legacy repos can be archived without losing design intent.
 
-These were previously tracked only as an uncommitted register (`architecture/open-nature-feature-gaps.md`) and are now scheduled. Each entry names its source so the original design work can be recovered rather than redone. Order within the phase is not fixed; satellite ingestion is the largest and most infrastructure-heavy, so it is likely last.
+These were previously tracked only as an uncommitted gap register, which was retired into this roadmap on 2026-08-20 once its contents were scheduled. Each entry names its source so the original design work can be recovered rather than redone. Order within the phase is not fixed; satellite ingestion is the largest and most infrastructure-heavy, so it is likely last.
 
 | Domain | Source | What it needs |
 | --- | --- | --- |

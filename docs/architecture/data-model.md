@@ -119,7 +119,7 @@ The unique constraint on `(projectId, userId)` is what makes joining a project i
 
 All 4 weather tables are keyed by `districtId`, not raw `lat`/`lng` proximity matching — every fetch already targets a known district's coordinates, so a direct FK is simpler and exact. `lat`/`lng` are still stored on each row for provenance, duplicating the district's coordinates at fetch time. Field sets are trimmed relative to the OpenMeteo API's full parameter list (see `docs/ingestion-plan.md` for the parameters actually requested) — no soil temperature/moisture or multi-height wind data. Populated by the `weather` module (`apps/api/src/weather/`); see `docs/progress.md` "Weather Ingestion".
 
-Note `carbonMonoxide` on `HourlyAirQuality` is an OpenMeteo air-quality pollutant reading. It is unrelated to carbon accounting or footprint tracking, which Nature Grid does not model — see [open-nature-feature-gaps.md](open-nature-feature-gaps.md).
+Note `carbonMonoxide` on `HourlyAirQuality` is an OpenMeteo air-quality pollutant reading. It is unrelated to carbon accounting or footprint tracking, which Nature Grid does not model yet — that is roadmap Phase 7.
 
 ## Geospatial
 
@@ -145,7 +145,7 @@ Future candidates for proper geometry fields:
 
 `Observation`, `Species`, and `RestorationProject` were previously listed here and are now in the schema (M9, M10, M11 — all 2026-08-17 to 2026-08-19).
 
-Features from the Open Nature repos with no model planned at all — emissions, climate predictions, carbon footprint, research publications, climate surveys — are tracked in [open-nature-feature-gaps.md](open-nature-feature-gaps.md), not here.
+Features from the Open Nature repos with no model planned at all — emissions, climate predictions, carbon footprint, research publications, climate surveys — are scheduled in `docs/roadmap.md` Phase 7, and get their models when that phase starts.
 
 ## Status Workflows
 

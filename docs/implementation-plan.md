@@ -368,14 +368,16 @@ Built the `apps/web` routes that the nav (`public-nav.tsx`, `app-sidebar.tsx`) a
 
 ## Deferred / Later Phases
 
-Cross-check this table against `docs/roadmap.md` Phase 6 and Phase 7 before relying on it — several rows below were scheduled on 2026-08-20 and are annotated accordingly.
+Cross-check this table against `docs/roadmap.md` Phase 6 and Phase 7 before relying on it — several rows below were scheduled on 2026-08-20 and are annotated accordingly. This table is the single home for deferred work; the separate Open Nature gap register was retired into it and the roadmap on 2026-08-20, once its remaining items were down to these two.
 
 | Item | Why deferred |
 | --- | --- |
 | PostGIS `geography` fields | lat/lng Float is sufficient for M1–M9; PostGIS replaces when polygon queries needed |
 | BMD / FFWC integration | Requires gov approval or scraping; start after OpenMeteo/WAQI proven |
 | MinIO media storage | Use external URL reference for now; add MinIO when media upload is a real workflow |
-| Extended user profiles (CitizenProfile, ResearcherProfile, OrganizationProfile) | Add when profile UI is built — schema straightforward, not blocking. Still unscheduled; tracked as the one remaining major gap in `architecture/open-nature-feature-gaps.md`. Phase 6c's per-user contact details will be the first real pressure on the flat `User` model. |
+| Extended user profiles (CitizenProfile, ResearcherProfile, OrganizationProfile) | Add when profile UI is built — schema straightforward, not blocking. Open Nature split these per role (`citizen_profiles`/`researcher_profiles`/`organization_profiles`); Nature Grid uses a flat `User` + `UserRole`, which is likely the better default. Phase 6c's per-user contact details will be the first real pressure on the flat model. |
+| Agricultural stress monitoring | Soil moisture, crop stress indicators, farmer alerts (Open Nature `NEW_PROJECT.md` module 20). Depends on Phase 7 satellite ingestion — cannot start before it. |
+| Tree-level restoration tracking | GPS-tagged individual trees, growth photos, survival-rate analytics (Open Nature `NEW_PROJECT.md` module 22). `RestorationProject`/`RestorationParticipant` track projects and people, not individual plantings. |
 | Notification / subscription system | **No longer deferred** — the dependency is met (alerts and observations both shipped 2026-08-17 to 2026-08-19). Scheduled as roadmap Phase 6c, including delivery transport, which was never in this plan. |
 | Python data worker (apps/data-worker) | GIS processing and ML jobs — defer until API data layer is complete |
 | OGC SensorThings model | Evaluate after observations module ships; may replace or extend it |

@@ -51,4 +51,4 @@ This document translates the existing Open Nature feature logic into the Nature 
 
 ## Not Carried Over
 
-This document maps Open Nature features that Nature Grid adopted. Features with no Nature Grid counterpart are tracked in [open-nature-feature-gaps.md](open-nature-feature-gaps.md) as a gap register, separate from committed scope.
+This document maps Open Nature features that Nature Grid adopted. Features with no Nature Grid counterpart are scheduled in `docs/roadmap.md` Phase 6c and Phase 7; the rest are in `docs/implementation-plan.md` "Deferred / Later Phases".
