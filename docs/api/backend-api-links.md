@@ -20,9 +20,11 @@ Legend: ✓ Implemented | ~ Stub / planned | ✗ Not started
 | --- | --- | --- | --- | --- |
 | POST | `/auth/register` | Public | ✓ | Create account (bcrypt, JWT) |
 | POST | `/auth/login` | Public | ✓ | Login and issue token pair |
-| POST | `/auth/refresh` | Public + refresh token | ~ | Refresh access token — needs Redis |
-| POST | `/auth/logout` | Authenticated | ~ | End session — needs Redis |
+| POST | `/auth/refresh` | Public + refresh token | ✓ | Rotate token pair; old refresh token revoked |
+| POST | `/auth/logout` | Public + refresh token | ✓ | Revoke refresh token; idempotent |
 | GET  | `/auth/profile` | Authenticated | ✓ | Current user from DB |
+
+Refresh tokens are opaque, Postgres-backed, and rotated on use — not Redis, not JWTs. Register/login/logout each write an audit event with the caller's IP.
 
 ## Users
 
@@ -30,8 +32,8 @@ Legend: ✓ Implemented | ~ Stub / planned | ✗ Not started
 | --- | --- | --- | --- | --- |
 | GET | `/users` | Admin | ✓ | Paginated user list |
 | GET | `/users/:id` | Admin | ✓ | User detail |
-| PATCH | `/users/:id/role` | Admin | ✓ | Update user role |
-| PATCH | `/users/:id/deactivate` | Admin | ✓ | Deactivate user |
+| PATCH | `/users/:id/role` | Admin | ✓ | Update user role (audited, records from/to) |
+| PATCH | `/users/:id/deactivate` | Admin | ✓ | Deactivate user (audited) |
 
 ## Organizations
 
@@ -93,7 +95,7 @@ Source: OpenMeteo, via a `@nestjs/schedule` cron scheduler (current every 15min,
 | --- | --- | --- | --- | --- |
 | GET | `/reports` | Public (verified/resolved only) | ✓ | Paginated public reports |
 | GET | `/reports/:id` | Public if publishable | ✓ | Report detail + status history |
-| POST | `/reports` | Authenticated | ✓ | Submit report |
+| POST | `/reports` | Authenticated | ✓ | Submit report (audited) |
 | PATCH | `/reports/:id/status` | Moderator / Admin | ✓ | Advance status (with audit) |
 | GET | `/reports/moderation/queue` | Moderator / Admin | ✗ | Review queue (all statuses) |
 | PATCH | `/reports/:id` | Owner / Moderator | ✗ | Edit report before review |
@@ -111,10 +113,24 @@ Source: OpenMeteo, via a `@nestjs/schedule` cron scheduler (current every 15min,
 
 | Method | Path | Access | Status | Purpose |
 | --- | --- | --- | --- | --- |
-| GET | `/observations` | Public | ✗ | Verified observations |
-| POST | `/observations` | Authenticated | ✗ | Submit observation |
-| GET | `/observations/:id` | Public | ✗ | Observation detail |
-| PATCH | `/observations/:id/verification` | Researcher / Moderator / Admin | ✗ | Update trust level |
+| GET | `/observations` | Public | ✓ | Observations (`?category`, `?trustLevel`, `?districtId`); excludes `FLAGGED` by default |
+| GET | `/observations/:id` | Public | ✓ | Observation detail |
+| POST | `/observations` | Authenticated | ✓ | Submit observation (audited; always starts `UNVERIFIED`) |
+| PATCH | `/observations/:id/trust` | Researcher / Admin | ✓ | Update trust level (audited, records from/to) |
+
+Note the implemented path is `/trust`, not the `/verification` originally planned here, and moderators are **not** granted trust-level changes — only `RESEARCHER` and `ADMIN`.
+
+## Restoration
+
+| Method | Path | Access | Status | Purpose |
+| --- | --- | --- | --- | --- |
+| GET | `/restoration/projects` | Public | ✓ | Projects (`?category`, `?status`, `?districtId`) |
+| GET | `/restoration/projects/:id` | Public | ✓ | Project detail + participants |
+| POST | `/restoration/projects` | Org admin / Admin | ✓ | Create project (audited) |
+| PATCH | `/restoration/projects/:id` | Creator / Admin | ✓ | Update project (audited; ownership checked in the service, not by a route guard) |
+| POST | `/restoration/projects/:id/join` | Authenticated | ✓ | Join project (audited; idempotent) |
+
+Controller prefix is `restoration/projects`, not `restoration`.
 
 ## Media
 
@@ -128,10 +144,13 @@ Source: OpenMeteo, via a `@nestjs/schedule` cron scheduler (current every 15min,
 
 | Method | Path | Access | Status | Purpose |
 | --- | --- | --- | --- | --- |
-| GET | `/biodiversity/species` | Public | ✗ | Species catalog |
-| GET | `/biodiversity/species/:id` | Public | ✗ | Species detail |
-| GET | `/biodiversity/habitats` | Public | ✗ | Habitat catalog |
-| POST | `/biodiversity/species` | Researcher / Admin | ✗ | Create species record |
+| GET | `/biodiversity/species` | Public | ✓ | Species catalog (`?search`) |
+| GET | `/biodiversity/species/:id` | Public | ✓ | Species detail |
+| GET | `/biodiversity/occurrences` | Public | ✓ | Occurrences (`?speciesId`, `?districtId`) |
+| GET | `/biodiversity/habitats` | Public | ✗ | Habitat catalog — no `Habitat` model yet |
+| POST | `/biodiversity/species` | Researcher / Admin | ✗ | Create species record — species are GBIF-sourced only today |
+
+Populated by a daily GBIF sync (`country=BD&hasCoordinate=true`). `iucnStatus` is stored but unpopulated — GBIF's occurrence search does not return it.
 
 ## Ingestion
 
@@ -149,4 +168,4 @@ Generic job-tracking API — none of this is implemented, and OpenMeteo sync doe
 
 | Method | Path | Access | Status | Purpose |
 | --- | --- | --- | --- | --- |
-| GET | `/metrics/platform` | Public | ✗ | Platform-level summary counts |
+| GET | `/metrics/platform` | Public | ✓ | Six live counts: active/emergency alerts, verified reports, public datasets, research-grade observations, districts covered |

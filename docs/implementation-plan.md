@@ -368,12 +368,14 @@ Built the `apps/web` routes that the nav (`public-nav.tsx`, `app-sidebar.tsx`) a
 
 ## Deferred / Later Phases
 
+Cross-check this table against `docs/roadmap.md` Phase 6 and Phase 7 before relying on it — several rows below were scheduled on 2026-08-20 and are annotated accordingly.
+
 | Item | Why deferred |
 | --- | --- |
 | PostGIS `geography` fields | lat/lng Float is sufficient for M1–M9; PostGIS replaces when polygon queries needed |
 | BMD / FFWC integration | Requires gov approval or scraping; start after OpenMeteo/WAQI proven |
 | MinIO media storage | Use external URL reference for now; add MinIO when media upload is a real workflow |
-| Extended user profiles (CitizenProfile, ResearcherProfile, OrganizationProfile) | Add when profile UI is built — schema straightforward, not blocking |
-| Notification / subscription system | Depends on alert and observation modules being stable |
+| Extended user profiles (CitizenProfile, ResearcherProfile, OrganizationProfile) | Add when profile UI is built — schema straightforward, not blocking. Still unscheduled; tracked as the one remaining major gap in `architecture/open-nature-feature-gaps.md`. Phase 6c's per-user contact details will be the first real pressure on the flat `User` model. |
+| Notification / subscription system | **No longer deferred** — the dependency is met (alerts and observations both shipped 2026-08-17 to 2026-08-19). Scheduled as roadmap Phase 6c, including delivery transport, which was never in this plan. |
 | Python data worker (apps/data-worker) | GIS processing and ML jobs — defer until API data layer is complete |
 | OGC SensorThings model | Evaluate after observations module ships; may replace or extend it |

@@ -150,19 +150,73 @@ Status: Planned
 
 Goal: Prepare the system for real users and operational trust.
 
-Deliverables:
+Ordered roughly by risk: the security items are cheap and block any real deployment, the test/CI items protect the 60% already built, and notification delivery closes the one gap that undermines a shipped feature.
 
-- End-to-end tests
-- API contract tests
-- Accessibility pass
-- Observability and audit dashboards
-- Rate limiting
-- Secure file/media handling
-- Backup/restore plan
-- Deployment documentation
+### 6a. Security must-fixes
+
+- **Fail fast on a missing `JWT_SECRET`.** Both `auth.module.ts:16` and `jwt.strategy.ts:17` currently fall back to the literal `'dev-secret-change-in-production'`, and the variable is absent from `.env.example` and `.env` — so nothing prompts anyone to set it. Throw on startup instead, and add it to `.env.example`.
+- Add `helmet`.
+- Add rate limiting (`@nestjs/throttler`), at minimum on `/auth/login`, `/auth/register`, and `/auth/refresh`.
+- Audit failed logins. `AuditAction` has no `USER_LOGIN_FAILED` value, so brute-force attempts currently leave no trace. Needs an additive enum migration.
+
+### 6b. Regression safety net
+
+- First test suite covering `auth` and RBAC. These are the two surfaces that have already shipped real bugs (the role-guard casing bug that rejected every user including admins; the refresh-token-usable-as-access-token flaw) and both were caught by hand.
+- CI on pull requests. There is no `.github/` directory at all today. Start with `tsc --noEmit` across all three TS apps plus `prisma validate` — all currently pass, so it goes green immediately and stays useful.
+- Install a working lint setup. `apps/api`'s `lint` script invokes `eslint`, but no `eslint` binary is present, so `pnpm lint` cannot run there.
+- API contract tests. `apps/api` does not import `@nature-grid/contracts`, so backend routes can drift from the contract the frontend relies on with nothing to catch it.
+- End-to-end tests for the public and authenticated flows.
+- Accessibility pass.
+
+### 6c. Notification delivery
+
+Pulled into this phase rather than treated as a new domain: `Alert` already has an `EMERGENCY` severity and the subscription model is planned, but there is no way to reach anyone. An alerting platform that cannot deliver alerts is not shippable.
+
+- Per-user contact details plus verification (currently `User` holds only `email` for login).
+- Transport for at least one channel — email or SMS.
+- Delivery on `ACTIVE`/`EMERGENCY` alert transitions.
+- Delivery status recorded so a failed send is visible rather than silent.
+- The `Notification` subscription model itself (already planned in `architecture/data-model.md`).
+
+Deliberately out of scope here: government agency and emergency broadcast integration (see Phase 7 sourcing).
+
+### 6d. Operations
+
+- Dockerfile for `apps/api`, `apps/web`, `apps/admin`. None exists; `infrastructure/{docker,nginx,terraform}` hold README placeholders only.
+- Deployment documentation and a repeatable path.
+- Backup/restore plan.
+- Observability. Audit *writes* are complete as of 2026-08-20; a dashboard over `AuditEvent` is still missing.
+- Secure file/media handling — blocked on the `media` module, still an empty stub.
 
 Exit criteria:
 
-- Public and authenticated flows are tested.
-- Sensitive actions are auditable.
-- Deployment and operations are repeatable.
+- No secret falls back to a hardcoded default.
+- Auth and RBAC have automated test coverage, and CI runs on every PR.
+- An `EMERGENCY` alert reaches a subscribed user, and a failed delivery is visible.
+- Public and authenticated flows are tested. — **Not met.** No automated tests exist anywhere in the repo.
+- Sensitive actions are auditable. — **Met for everything built** (2026-08-20). 14 of 17 `AuditAction` values are written; every implemented mutating endpoint audits. The three unwritten `DATASET_*` values belong to endpoints that do not exist yet.
+- Deployment and operations are repeatable. — **Not met.** No container image or deployment path exists.
+
+---
+
+## Phase 7: Deferred Open Nature Domains
+
+Status: Planned
+
+Goal: Absorb the environmental domains that the Open Nature repos designed but Nature Grid has not carried over, so the legacy repos can be archived without losing design intent.
+
+These were previously tracked only as an uncommitted register (`architecture/open-nature-feature-gaps.md`) and are now scheduled. Each entry names its source so the original design work can be recovered rather than redone. Order within the phase is not fixed; satellite ingestion is the largest and most infrastructure-heavy, so it is likely last.
+
+| Domain | Source | What it needs |
+| --- | --- | --- |
+| Emissions data | `open-nature-backend` `emissions_data` | A measurement domain distinct from ambient air quality — emissions are measured at source. Complements the planned `PollutionSource` model, which identifies sources but stores no quantities. |
+| Climate prediction | `open-nature-backend` `climate_predictions`, `prediction_models` | Model registry, prediction storage, accuracy tracking. Nature Grid stores OpenMeteo's *provider* forecasts but has no concept of a platform-generated prediction. Prerequisite for the ML flood forecasting in `NEW_PROJECT.md` module 18. |
+| Carbon footprint | `open-nature-backend` `carbon_footprint_entries`; `NEW_PROJECT.md` module 23 | Per-user/org footprint entries, calculation method, offset accounting. Note `HourlyAirQuality.carbonMonoxide` is an air-quality pollutant and unrelated. |
+| Research publications | `open-nature-backend` `research_publications`; `NEW_PROJECT.md` module 25 | Paper records, authorship, citations, institution linkage. `RESEARCHER` is a first-class role with nowhere to put its output today. |
+| Climate surveys | `open-nature-backend/survey.md` | Structured, solicited data collection — distinct from `CitizenReport` (unsolicited) and `Observation` (measurements). A worked two-table design already exists. |
+| Satellite / remote sensing | `NEW_PROJECT.md` modules 9–11 | Imagery ingestion (NASA/Sentinel) and change detection. Today `DEFORESTATION` is only ever citizen-reported, never satellite-detected. Needs object storage, a processing runtime (`apps/data-worker`), and geometry beyond point lat/lng — so it depends on PostGIS and media storage landing first. |
+
+Exit criteria:
+
+- Each domain either ships, or is explicitly rejected and recorded in "Accepted Divergences" in the gap register.
+- The remaining register holds only smaller items, so `open-nature`, `open-nature-backend`, and `open-nature-backend2` can be archived.

@@ -2,6 +2,8 @@
 
 Nature Grid starts with seven product roles. Keep the initial permission model simple, but design it so scopes can be added later.
 
+> **Casing:** role names are written lowercase in this document as product terms. The actual runtime values are **UPPERCASE**, matching the Prisma `UserRole` enum exactly (`CITIZEN`, `RESEARCHER`, `ORGANIZATION_ADMIN`, `GOVERNMENT`, `MODERATOR`, `ADMIN`). Always pass the uppercase form to `@Roles(...)` — a case mismatch between the guard and the enum shipped a bug that rejected every user, including admins (see `docs/progress.md` "Critical RBAC Fix"). `guest` is **not** a Prisma value; unauthenticated requests carry no role at all.
+
 ## Roles
 
 | Role | Purpose |
@@ -26,7 +28,7 @@ Nature Grid starts with seven product roles. Keep the initial permission model s
 | Submit report | No | Yes | Yes | Yes | Yes | Yes | Yes |
 | Submit observation | No | Yes | Yes | Yes | Yes | Yes | Yes |
 | Upload media | No | Yes | Yes | Yes | Yes | Yes | Yes |
-| Validate research observation | No | No | Yes | Optional | Optional | Yes | Yes |
+| Validate research observation | No | No | Yes | No | No | No | Yes |
 | Manage organization profile | No | No | No | Yes | Optional | No | Yes |
 | Review reports | No | No | No | No | Optional | Yes | Yes |
 | Issue public alerts | No | No | No | No | Optional | Yes | Yes |
@@ -40,6 +42,22 @@ Nature Grid starts with seven product roles. Keep the initial permission model s
 - Dataset downloads, advanced dataset detail, exports, API keys, and dataset contribution require login and may require researcher, organization, government, moderator, or admin role depending on the dataset.
 - Moderation endpoints require `moderator` or `admin`.
 - Admin endpoints require `admin`.
+
+## Implemented Role Gates
+
+What the code actually enforces today, for cross-checking against the matrix above:
+
+| Endpoint | Roles |
+| --- | --- |
+| `POST /alerts`, `PATCH /alerts/:id` | `GOVERNMENT`, `MODERATOR`, `ADMIN` |
+| `PATCH /reports/:id/status` | `MODERATOR`, `ADMIN` |
+| `PATCH /observations/:id/trust` | `RESEARCHER`, `ADMIN` — **not** moderator |
+| `POST /restoration/projects` | `ORGANIZATION_ADMIN`, `ADMIN` |
+| `PATCH /restoration/projects/:id` | any authenticated user at the guard; creator-or-`ADMIN` enforced inside the service |
+| All `/users/*` routes | `ADMIN` (controller-level `@Roles('ADMIN')`) |
+| `POST /reports`, `POST /observations`, `POST /restoration/projects/:id/join` | any authenticated user |
+
+Everything else public-facing is `@Public()`. Dataset download/access-request gating is not implemented yet, so the "Download datasets" and "Access advanced dataset filters" rows above are still aspirational.
 - Government alert permissions should be configurable per organization or agency before production use.
 
 ## Future Scopes

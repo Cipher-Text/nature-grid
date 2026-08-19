@@ -4,6 +4,7 @@ import { UpdateRoleDto } from './dto/update-role.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
+import { CurrentUser, JwtPayload } from '../common/decorators/current-user.decorator';
 import { UserRole } from '@prisma/client';
 
 @Controller('users')
@@ -23,12 +24,16 @@ export class UsersController {
   }
 
   @Patch(':id/role')
-  updateRole(@Param('id') id: string, @Body() dto: UpdateRoleDto) {
-    return this.usersService.updateRole(id, dto.role as UserRole);
+  updateRole(
+    @Param('id') id: string,
+    @Body() dto: UpdateRoleDto,
+    @CurrentUser() actor: JwtPayload,
+  ) {
+    return this.usersService.updateRole(id, dto.role as UserRole, actor);
   }
 
   @Patch(':id/deactivate')
-  deactivate(@Param('id') id: string) {
-    return this.usersService.deactivate(id);
+  deactivate(@Param('id') id: string, @CurrentUser() actor: JwtPayload) {
+    return this.usersService.deactivate(id, actor);
   }
 }

@@ -4,6 +4,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { AuditAction } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../database/prisma.service';
 import { RegisterDto } from './dto/register.dto';
@@ -41,6 +42,8 @@ export class AuthService {
       select: { id: true, email: true, displayName: true, role: true, createdAt: true },
     });
 
+    await this.recordAuthEvent('USER_REGISTER', user.id, deviceMeta);
+
     const tokens = await this.issueTokens(
       { sub: user.id, email: user.email, role: user.role },
       deviceMeta,
@@ -59,6 +62,8 @@ export class AuthService {
       where: { id: user.id },
       data: { lastLoginAt: new Date() },
     });
+
+    await this.recordAuthEvent('USER_LOGIN', user.id, deviceMeta);
 
     const tokens = await this.issueTokens(
       { sub: user.id, email: user.email, role: user.role },
@@ -100,11 +105,42 @@ export class AuthService {
   }
 
   /** Revokes a refresh token. Idempotent — silently succeeds if already gone or revoked. */
-  async logout(refreshToken: string) {
+  async logout(refreshToken: string, deviceMeta: DeviceMeta = {}) {
     const tokenHash = hashRefreshToken(refreshToken);
-    await this.prisma.refreshToken.updateMany({
+    // Read the owning user before revoking, so the audit event is attributable.
+    const record = await this.prisma.refreshToken.findUnique({ where: { tokenHash } });
+
+    const { count } = await this.prisma.refreshToken.updateMany({
       where: { tokenHash, revokedAt: null },
       data: { revokedAt: new Date() },
+    });
+
+    // Audit a real revocation only. Repeat logouts and unknown tokens still
+    // succeed (the endpoint stays idempotent) but must not log duplicate or
+    // unattributable events.
+    if (record && count > 0) {
+      await this.recordAuthEvent('USER_LOGOUT', record.userId, deviceMeta);
+    }
+  }
+
+  /**
+   * Writes an auth-lifecycle audit event. `deviceMeta.ipAddress` is already
+   * captured for refresh-token rows, so it is recorded here too — the other
+   * services leave `AuditEvent.ipAddress` null because they never have it.
+   */
+  private async recordAuthEvent(
+    action: AuditAction,
+    userId: string,
+    deviceMeta: DeviceMeta,
+  ) {
+    await this.prisma.auditEvent.create({
+      data: {
+        action,
+        userId,
+        entityType: 'User',
+        entityId: userId,
+        ipAddress: deviceMeta.ipAddress,
+      },
     });
   }
 

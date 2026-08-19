@@ -17,8 +17,8 @@ Nature Grid is a modular environmental platform. It starts as a monorepo with in
 | --- | --- |
 | PostgreSQL | Primary relational database |
 | PostGIS | Geospatial data: points, polygons, administrative boundaries, water bodies |
-| Redis | Job queues, rate limiting, and short-lived cache |
-| BullMQ | Background job orchestration for Node/Nest workflows |
+| Redis | **Not in use.** `docker-compose.yml` starts a Redis 7 container and `.env` sets `REDIS_URL`, but no Redis client exists in any manifest or source file. Refresh tokens went to Postgres instead. |
+| BullMQ | **Not in use.** No queue library is installed; `@nestjs/schedule` cron handles all background work today. |
 
 ## API Module Layout
 
@@ -38,8 +38,10 @@ apps/api/src/
 ├── datasets/              # ✓ catalog + access policy, auto-seed
 ├── reports/               # ✓ submit, list (public), status workflow + audit
 ├── alerts/                # ✓ list (public), create, update + audit
-├── observations/          # ~ stub
-├── biodiversity/          # ~ stub
+├── observations/          # ✓ CRUD + trust-level workflow
+├── biodiversity/          # ✓ species/occurrences + daily GBIF sync
+├── restoration/           # ✓ projects + idempotent join workflow
+├── metrics/               # ✓ live platform counters
 ├── media/                 # ~ stub
 ├── weather/               # ✓ OpenMeteo client, service, scheduler, current/hourly/daily/AQ
 └── ingestion/             # ~ stub — generic job tracking, unused by weather
@@ -64,6 +66,8 @@ Open Nature had a strong environmental dashboard UI and a backend centered on au
 | Restoration projects UI | `observations`, `organizations`, future `projects` module if needed |
 | Community content and campaigns UI | future `community` module, not part of API core yet |
 | Data hub UI | `datasets`, `biodiversity`, `locations` |
+
+Features from the Open Nature repos that were **not** carried over are tracked separately in [open-nature-feature-gaps.md](open-nature-feature-gaps.md).
 
 ## Boundary Rules
 

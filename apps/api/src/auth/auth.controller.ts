@@ -38,8 +38,8 @@ export class AuthController {
 
   @Public()
   @Post('logout')
-  async logout(@Body() dto: RefreshTokenDto) {
-    await this.authService.logout(dto.refreshToken);
+  async logout(@Body() dto: RefreshTokenDto, @Req() req: Request) {
+    await this.authService.logout(dto.refreshToken, deviceMetaFrom(req));
     return { success: true };
   }
 

@@ -48,3 +48,7 @@ This document translates the existing Open Nature feature logic into the Nature 
 | `/contribute` | `web` | Login-required contribution hub |
 | `/downloads` | `web` | Login/role-gated dataset downloads |
 | `/admin` | `admin` | Separate admin app, not a route inside web |
+
+## Not Carried Over
+
+This document maps Open Nature features that Nature Grid adopted. Features with no Nature Grid counterpart are tracked in [open-nature-feature-gaps.md](open-nature-feature-gaps.md) as a gap register, separate from committed scope.

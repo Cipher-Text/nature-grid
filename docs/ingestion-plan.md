@@ -131,11 +131,11 @@ Added these well-designed entities not yet in nature-grid:
 
 ### NestJS scheduler setup
 
-Use `@nestjs/schedule` (cron-based, zero external dependency) for lightweight fetch jobs. Use BullMQ (already in tech stack) for jobs that need retry, concurrency control, or worker isolation.
+Use `@nestjs/schedule` (cron-based, zero external dependency) for lightweight fetch jobs. BullMQ is the intended choice for jobs that need retry, concurrency control, or worker isolation — but note it is **not installed**; adding it is part of this plan, not a pre-existing capability.
 
 ```
 @nestjs/schedule   → hourly/daily fetch crons (OpenMeteo, GBIF)
-BullMQ             → ingestion jobs created via API (admin-triggered, retryable)
+BullMQ (planned)   → ingestion jobs created via API (admin-triggered, retryable)
 ```
 
 ### HTTP client pattern

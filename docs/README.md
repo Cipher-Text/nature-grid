@@ -19,6 +19,7 @@
 - [Modules](architecture/modules.md)
 - [Data model direction](architecture/data-model.md)
 - [Refactor plan](architecture/refactor-plan.md)
+- [Open Nature feature gaps](architecture/open-nature-feature-gaps.md)
 
 ## API
 

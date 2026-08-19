@@ -98,7 +98,7 @@ Moderator opens admin queue
 
 ```text
 API creates ingestion/processing job
-  -> Redis/BullMQ queues work
+  -> queue dispatches work (planned; no queue exists yet — see docs/tech-stack.md)
   -> Python worker receives job or polls job table
   -> worker reads source data
   -> worker performs GIS/scientific processing

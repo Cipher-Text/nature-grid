@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
+import type { JwtPayload } from '../common/decorators/current-user.decorator';
 
 const USER_SELECT = {
   id: true,
@@ -30,13 +31,39 @@ export class UsersService {
     return user;
   }
 
-  async updateRole(id: string, role: UserRole) {
-    await this.getById(id);
-    return this.prisma.user.update({ where: { id }, data: { role }, select: USER_SELECT });
+  async updateRole(id: string, role: UserRole, actor: JwtPayload) {
+    const user = await this.getById(id);
+
+    const [updated] = await this.prisma.$transaction([
+      this.prisma.user.update({ where: { id }, data: { role }, select: USER_SELECT }),
+      this.prisma.auditEvent.create({
+        data: {
+          action: 'USER_ROLE_CHANGE',
+          userId: actor.sub,
+          entityType: 'User',
+          entityId: id,
+          meta: { from: user.role, to: role },
+        },
+      }),
+    ]);
+    return updated;
   }
 
-  async deactivate(id: string) {
-    await this.getById(id);
-    return this.prisma.user.update({ where: { id }, data: { isActive: false }, select: USER_SELECT });
+  async deactivate(id: string, actor: JwtPayload) {
+    const user = await this.getById(id);
+
+    const [updated] = await this.prisma.$transaction([
+      this.prisma.user.update({ where: { id }, data: { isActive: false }, select: USER_SELECT }),
+      this.prisma.auditEvent.create({
+        data: {
+          action: 'USER_DEACTIVATE',
+          userId: actor.sub,
+          entityType: 'User',
+          entityId: id,
+          meta: { wasActive: user.isActive },
+        },
+      }),
+    ]);
+    return updated;
   }
 }

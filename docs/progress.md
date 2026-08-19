@@ -1,6 +1,6 @@
 # Progress
 
-Last updated: 2026-08-19 (Milestone 13 fully complete — all 4 remaining static homepage components wired to live data or an honest empty state, closing out M13 task 2; a real honesty bug caught and fixed during that pass — see "Homepage Preview Sections Wired" below; live platform metrics wired earlier the same day — M13 task 7; Milestone 10 — Biodiversity + GBIF — built end to end, real species/occurrence data now live on `/biodiversity`, a real GBIF integer-overflow bug found and fixed along the way; Milestone 11 — Restoration Projects — built end to end, real data now live on `/restoration`; Milestone 9 — Observations module — built end to end, real data now live on `/observations`; Milestone 15 complete — all 7 app-shell pages built; report submission form wired on `/reports`, a second critical validation bug found and fixed along the way; critical RBAC bug found and fixed — every role-gated endpoint was rejecting all users, including admins)
+Last updated: 2026-08-20 (audit coverage completed — a real gap found and closed: 6 of the 16 declared `AuditAction` values were never written by any service, so logins, logouts, role changes, user deactivation, and report submission were all silently unaudited; see "Audit Coverage Gap" below. Also a docs-vs-code sync pass across 12 files — `architecture/`, `api/backend-api-links.md`, `tech-stack.md`, `flows.md`, `ingestion-plan.md`, `roles-and-permissions.md` — correcting stale Redis/BullMQ claims (neither is installed), stub markers for modules that shipped months ago, and an API catalog that still listed observations/biodiversity/metrics as not-started and omitted restoration entirely. New Open Nature gap register at `docs/architecture/open-nature-feature-gaps.md`; 7 of its 8 major gaps then scheduled — notification delivery into Phase 6c as a production blocker, six domains into a new Phase 7. Phase 6 expanded into 6a security / 6b tests+CI / 6c notifications / 6d operations. Previously: 2026-08-19 — Milestone 13 fully complete — all 4 remaining static homepage components wired to live data or an honest empty state, closing out M13 task 2; a real honesty bug caught and fixed during that pass — see "Homepage Preview Sections Wired" below; live platform metrics wired earlier the same day — M13 task 7; Milestone 10 — Biodiversity + GBIF — built end to end, real species/occurrence data now live on `/biodiversity`, a real GBIF integer-overflow bug found and fixed along the way; Milestone 11 — Restoration Projects — built end to end, real data now live on `/restoration`; Milestone 9 — Observations module — built end to end, real data now live on `/observations`; Milestone 15 complete — all 7 app-shell pages built; report submission form wired on `/reports`, a second critical validation bug found and fixed along the way; critical RBAC bug found and fixed — every role-gated endpoint was rejecting all users, including admins)
 
 ## Status Legend
 
@@ -24,11 +24,12 @@ Last updated: 2026-08-19 (Milestone 13 fully complete — all 4 remaining static
 | Frontend "app shell" layout (sidebar pages) — M15 | Done | Established via `/profile`, powers all 7 pages. `/data`, `/reports`, `/alerts`, `/observations`, `/restoration`, and now `/biodiversity` (all real backend data) — only `/community` still shows an honest empty state (no API module planned for it at all yet). See "App-Shell Pages: Data, Reports, Alerts", "App-Shell Pages: Observations, Biodiversity, Restoration, Community", "Observations Module", "Restoration Projects Module", and "Biodiversity + GBIF Module" below. |
 | Shared types and contracts — M2 | Done | Full enums, DTOs, paginated envelopes, request/response types, route contract map |
 | Backend foundation — M3 | Done | Auth (JWT/bcrypt), users, orgs, locations (8 div/64 district auto-seed), providers, datasets (catalog seed), reports (status workflow + audit), alerts (severity + audit), global validation, guard infrastructure. **Caveat:** role-gated endpoints shipped with a casing bug that rejected every user until 2026-08-17 — see "Critical RBAC Fix" below. |
-| Prisma schema | Done | 14 enums, 23 models — core entities + 4 weather tables + `RefreshToken` + `Observation` (2026-08-17) + `RestorationProject`/`RestorationParticipant` + `Species`/`Occurrence` (both 2026-08-19); client regenerated |
-| Database migration — M4 | Done | `20260814204043_init` applied; 13 tables live; Postgres on port 5433 (remapped — local Postgres occupies 5432) |
+| Prisma schema | Done | 15 enums, 24 models — core entities + 4 weather tables + `RefreshToken` + `Observation` (2026-08-17) + `RestorationProject`/`RestorationParticipant` + `Species`/`Occurrence` (both 2026-08-19) + `DatasetAccessRequest` (2026-08-19, schema-only); client regenerated |
+| Database migration — M4 | Done | 10 migrations applied, 24 tables live (latest: `20260819185617_add_user_deactivate_audit_action`, 2026-08-20); Postgres on port 5433 (remapped — local Postgres occupies 5432) |
 | District coordinates | Done | Migration `add_district_coordinates`; all 64 districts backfilled with real lat/lng sourced from `open-nature`'s district registry (`LocationsService.onModuleInit` backfills on boot if missing) |
 | Seed data | Done | LocationsService auto-seeds 8 divisions + 64 districts (with coordinates) on boot; DatasetsService auto-seeds 5 catalog records; ProvidersService auto-seeds the `OpenMeteo` provider; no separate seed script needed |
 | Auth — refresh / logout | Done | Postgres-backed `RefreshToken` model (not Redis — see "Auth Refresh/Logout" below), opaque tokens with rotation, daily cleanup cron |
+| Audit coverage | Done | Completed 2026-08-20 — 14 of 17 `AuditAction` values now written; every implemented mutating endpoint is audited. See "Audit Coverage Gap" below. |
 | RBAC / role guard casing bug | Done | Fixed 2026-08-17 — see "Critical RBAC Fix" below. Every role-gated endpoint (`POST /alerts`, `PATCH /alerts/:id`, `PATCH /reports/:id/status`, `PATCH /users/:id/role`, `PATCH /users/:id/deactivate`) previously rejected all users, including admins. |
 | PostGIS / geospatial fields | Planned | `lat/lng` Float on `District` (populated) and `CitizenReport`; replace with PostGIS `geography` type when ready |
 | Observations module — M9 | Done | Full CRUD + trust-level workflow live (2026-08-17) — see "Observations Module" below. `/observations` now shows real data with a working submission form. |
@@ -42,6 +43,30 @@ Last updated: 2026-08-19 (Milestone 13 fully complete — all 4 remaining static
 | Community module | Planned | Not planned as an API module at all yet (`docs/architecture/feature-map.md`). Both `/community` (2026-08-17) and the homepage's `community-section.tsx` (2026-08-19) now show an honest empty state — no fabricated content anywhere in the app for this area. |
 | Admin frontend | Planned | Shell only at port 3002 |
 | Data worker | Planned | Python skeleton; no active jobs |
+
+## Audit Coverage Gap (found + fixed 2026-08-20)
+
+Found while syncing `docs/architecture/modules.md` against the code: `AuditAction` declared 16 values, but only 8 were ever written by a service. The schema made audit coverage look complete when it was not.
+
+Unwritten before this pass:
+
+- `USER_REGISTER`, `USER_LOGIN`, `USER_LOGOUT`, `USER_ROLE_CHANGE` — the `auth` and `users` services wrote **no** audit events at all, so authentication activity and role escalations left no trail.
+- `REPORT_SUBMIT` — report *submission* was unaudited; only status changes were. `observations` audited both submit and trust change, so `reports` was inconsistent with its sibling.
+- `DATASET_ACCESS`, `DATASET_DOWNLOAD`, `DATASET_ACCESS_DECISION` — still unwritten, blocked on the unimplemented dataset download/access-request endpoints.
+
+Fixed:
+
+- `auth.service.ts` — new private `recordAuthEvent()` helper writes `USER_REGISTER`, `USER_LOGIN` (only after credentials verify, so failed attempts are not logged), and `USER_LOGOUT`. `auth` is the only service that populates `AuditEvent.ipAddress`, since it already captures request metadata for `RefreshToken` rows.
+- `logout` now reads the token's owning user **before** revoking, so the event is attributable, and audits only a real revocation — repeat logouts and unknown tokens still return `{success: true}` without logging duplicate or unattributable events. The endpoint stays idempotent.
+- `users.service.ts` — `updateRole` writes `USER_ROLE_CHANGE` with `{from, to}`, and `deactivate` writes `USER_DEACTIVATE` with `{wasActive}`. Both in the same `$transaction` as the update, so a failed audit write rolls the change back.
+- `reports.service.ts` — `create` writes `REPORT_SUBMIT`, using the same sequential pattern as `observations` (`entityId` is not known until the row exists, so the array-form `$transaction` cannot reference it).
+- `AuditAction.USER_DEACTIVATE` did not exist and required migration `20260819185617_add_user_deactivate_audit_action` — a single additive `ALTER TYPE ... ADD VALUE`. `prisma migrate status` was checked first to confirm no drift, since `migrate dev` resets the database if it finds any.
+
+Result: 14 of 17 values written. Every implemented mutating endpoint is audited; the only gaps are the three `DATASET_*` values whose endpoints do not exist.
+
+Verified live against real Postgres for all six actions: 2x register, login, 3x logout (exactly 1 `USER_LOGOUT` written — idempotency held), role change with correct actor/target attribution, deactivation (plus a 401 confirming the user could no longer log in), and report submission with `entityId` matching the created report. Report status transitions and the invalid-transition 403 were re-checked as a regression guard, since `reports.service.ts` was touched. All test data deleted afterward and the database confirmed back to its exact prior baseline.
+
+Known remaining gap: failed logins are not audited — there is no `USER_LOGIN_FAILED` enum value. Worth considering before production, since brute-force attempts currently leave no trace.
 
 ## Weather Ingestion (built 2026-08-16)
 
@@ -277,12 +302,12 @@ Verified live across both passes: with an empty DB, all sections correctly showe
 
 ### Shared packages
 
-- `packages/shared/src/index.ts` — 29 exported types and interfaces (added `RestorationCategory` 2026-08-19; `PlatformMetrics` corrected to its real shape 2026-08-19, see "Live Platform Metrics"). Enum values corrected to uppercase 2026-08-17 to match Prisma (see "Critical RBAC Fix" above) — this file is the source of the casing that must always match the database.
-- `packages/contracts/src/index.ts` — route map (incl. `weather`), response entity types (`Dataset`, `CitizenReport`, `Alert`, `Provider`, `CurrentWeatherReading`, `HourlyAirQualityReading`), request types (incl. refresh/logout), envelopes
+- `packages/shared/src/index.ts` — 24 exported types and interfaces (added `RestorationCategory` 2026-08-19; `PlatformMetrics` corrected to its real shape 2026-08-19, see "Live Platform Metrics"). Enum values corrected to uppercase 2026-08-17 to match Prisma (see "Critical RBAC Fix" above) — this file is the source of the casing that must always match the database.
+- `packages/contracts/src/index.ts` — 15 route groups, 36 exported types: response entities (`Dataset`, `CitizenReport`, `Alert`, `Provider`, `Observation`, `RestorationProject`, `Species`, `Occurrence`, `CurrentWeatherReading`, `HourlyAirQualityReading`), request types (incl. refresh/logout), list-param types, envelopes. Note `routes.community` is defined but has no API module behind it, and `apps/api` does not import this package — the no-raw-route-strings rule is frontend-only
 
 ### Database
 
-- `packages/database/prisma/schema.prisma` — full domain schema (14 enums, 23 models, incl. `Observation` (2026-08-17) and `RestorationProject`/`RestorationParticipant`/`Species`/`Occurrence` (2026-08-19))
+- `packages/database/prisma/schema.prisma` — full domain schema (15 enums, 24 models, incl. `Observation` (2026-08-17), `RestorationProject`/`RestorationParticipant`/`Species`/`Occurrence` (2026-08-19), `DatasetAccessRequest` (2026-08-19, schema-only — no endpoint consumes it), and `AuditAction.USER_DEACTIVATE` (2026-08-20))
 
 ### API (`apps/api/src/`)
 
@@ -291,13 +316,13 @@ Verified live across both passes: with an empty DB, all sections correctly showe
 - `common/decorators/roles.decorator.ts`
 - `common/guards/jwt-auth.guard.ts`
 - `common/guards/roles.guard.ts`
-- `auth/` — register, login, profile, refresh (rotating), logout, JWT strategy, refresh-token utils, daily cleanup cron, DTOs
-- `users/` — list, get, update role, deactivate, DTOs (role-gating fixed 2026-08-17, see "Critical RBAC Fix")
+- `auth/` — register, login, profile, refresh (rotating), logout, JWT strategy, refresh-token utils, daily cleanup cron, DTOs; audit events for register/login/logout with caller IP (2026-08-20, see "Audit Coverage Gap")
+- `users/` — list, get, update role, deactivate, DTOs (role-gating fixed 2026-08-17, see "Critical RBAC Fix"); role change + deactivation now audited transactionally (2026-08-20, see "Audit Coverage Gap")
 - `organizations/` — list, get
 - `locations/` — all 5 endpoints, Bangladesh seed (8 div / 64 districts, with lat/lng)
 - `providers/` — list, get, OpenMeteo provider auto-seed
 - `datasets/` — list, get, weather/current, air-quality/current (live via `weather` module), catalog seed
-- `reports/` — list (public), get, create, status workflow, audit log, DTOs (role-gating fixed 2026-08-17; `districtId` validator fixed from `@IsUUID()` to `@IsString()` 2026-08-17, see "Report Submission Form" below)
+- `reports/` — list (public), get, create, status workflow, audit log on both submit and status change (`REPORT_SUBMIT` added 2026-08-20), DTOs (role-gating fixed 2026-08-17; `districtId` validator fixed from `@IsUUID()` to `@IsString()` 2026-08-17, see "Report Submission Form" below)
 - `alerts/` — list (public), get, create, update, audit log, DTOs (role-gating fixed 2026-08-17; `description` now selected in list/detail; `districtId` validator fixed from `@IsUUID()` to `@IsString()` 2026-08-17, same bug as reports)
 - `observations/` — list (public), get, create, `PATCH :id/trust` (RESEARCHER/ADMIN), audit log, DTOs — built 2026-08-17, see "Observations Module" above
 - `restoration/` — list (public), get, create (ORGANIZATION_ADMIN/ADMIN), update (owner/ADMIN), join (idempotent), audit log, DTOs — built 2026-08-19, see "Restoration Projects Module" above

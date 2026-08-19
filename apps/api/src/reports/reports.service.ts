@@ -34,7 +34,7 @@ export class ReportsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(dto: CreateReportDto, user: JwtPayload) {
-    return this.prisma.citizenReport.create({
+    const report = await this.prisma.citizenReport.create({
       data: {
         title: dto.title,
         category: dto.category,
@@ -49,6 +49,17 @@ export class ReportsService {
       },
       select: REPORT_SELECT,
     });
+
+    await this.prisma.auditEvent.create({
+      data: {
+        action: 'REPORT_SUBMIT',
+        userId: user.sub,
+        entityType: 'CitizenReport',
+        entityId: report.id,
+      },
+    });
+
+    return report;
   }
 
   list(status?: ReportStatus, category?: ReportCategory, districtId?: string, page = 1, pageSize = 20) {
