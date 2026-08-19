@@ -102,6 +102,13 @@ enum AuditAction {
   RESTORATION_PROJECT_CREATE
   RESTORATION_PROJECT_UPDATE
   RESTORATION_PROJECT_JOIN
+  DATASET_ACCESS_DECISION
+}
+
+enum DatasetAccessRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 enum ProjectStatus {
@@ -154,6 +161,8 @@ model User {
   refreshTokens RefreshToken[]
   restorationProjectsCreated RestorationProject[]
   restorationParticipations  RestorationParticipant[]
+  datasetAccessRequests DatasetAccessRequest[] @relation("DatasetAccessRequester")
+  datasetAccessDecisions DatasetAccessRequest[] @relation("DatasetAccessDecider")
 
   @@index([email])
   @@index([role])
@@ -284,8 +293,26 @@ model Dataset {
   createdAt    DateTime            @default(now())
   updatedAt    DateTime            @updatedAt
 
+  accessRequests DatasetAccessRequest[]
+
   @@index([category])
   @@index([accessPolicy])
+}
+
+model DatasetAccessRequest {
+  id          String                     @id @default(cuid())
+  datasetId   String
+  dataset     Dataset                    @relation(fields: [datasetId], references: [id])
+  userId      String
+  user        User                       @relation("DatasetAccessRequester", fields: [userId], references: [id])
+  status      DatasetAccessRequestStatus @default(PENDING)
+  decidedById String?
+  decidedBy   User?                      @relation("DatasetAccessDecider", fields: [decidedById], references: [id])
+  decidedAt   DateTime?
+  createdAt   DateTime                   @default(now())
+  updatedAt   DateTime                   @updatedAt
+
+  @@unique([datasetId, userId])
 }
 
 // ─── Reports ──────────────────────────────────────────────────────────────────

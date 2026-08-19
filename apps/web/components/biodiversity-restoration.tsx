@@ -1,7 +1,53 @@
 import Link from 'next/link';
-import { RESTORATION_PROJECTS } from '../lib/static-data';
+import {
+  routes,
+  type Species,
+  type Occurrence,
+  type RestorationProject,
+  type PaginatedEnvelope,
+} from '@nature-grid/contracts';
+import { apiGet } from '../lib/api';
+import { RESTORATION_PROJECTS as FALLBACK_PROJECTS } from '../lib/static-data';
 
-export default function BiodiversityRestoration() {
+interface ProjectPreview {
+  title: string;
+  meta: string;
+}
+
+async function loadBiodiversitySummary(): Promise<{ speciesTotal: number; occurrenceTotal: number } | null> {
+  try {
+    const [species, occurrences] = await Promise.all([
+      apiGet<PaginatedEnvelope<Species>>(`${routes.biodiversity.species}?pageSize=1`),
+      apiGet<PaginatedEnvelope<Occurrence>>(`${routes.biodiversity.occurrences}?pageSize=1`),
+    ]);
+    return { speciesTotal: species.total, occurrenceTotal: occurrences.total };
+  } catch {
+    return null;
+  }
+}
+
+async function loadRestorationProjects(): Promise<{ items: ProjectPreview[]; isLive: boolean }> {
+  try {
+    const res = await apiGet<PaginatedEnvelope<RestorationProject>>(`${routes.restoration.projects}?pageSize=2`);
+    return {
+      isLive: true,
+      items: res.data.map((p) => ({
+        title: p.title,
+        meta: p.impactSummary ?? `${p.organization?.name ?? 'Independent'} · ${p.district?.name ?? 'Nationwide'}`,
+      })),
+    };
+  } catch {
+    return { isLive: false, items: FALLBACK_PROJECTS };
+  }
+}
+
+export default async function BiodiversityRestoration() {
+  const [biodiversity, restoration] = await Promise.all([
+    loadBiodiversitySummary(),
+    loadRestorationProjects(),
+  ]);
+  const noProjects = restoration.isLive && restoration.items.length === 0;
+
   return (
     <section
       className="public-grid public-section"
@@ -27,8 +73,9 @@ export default function BiodiversityRestoration() {
         />
 
         <p className="muted-copy">
-          Mangrove records, Sundarbans wetland sightings, and freshwater species
-          signals across 38 indexed districts.
+          {biodiversity
+            ? `${biodiversity.speciesTotal.toLocaleString()} species recorded across ${biodiversity.occurrenceTotal.toLocaleString()} occurrence records, synced daily from GBIF.`
+            : 'Mangrove records, Sundarbans wetland sightings, and freshwater species signals across Bangladesh.'}
         </p>
 
         <div className="button-row" style={{ marginTop: '14px' }}>
@@ -54,7 +101,8 @@ export default function BiodiversityRestoration() {
         </div>
 
         <div className="record-list">
-          {RESTORATION_PROJECTS.map((p) => (
+          {noProjects && <div className="empty-state">No restoration projects registered yet.</div>}
+          {restoration.items.map((p) => (
             <div key={p.title} className="record-item">
               <strong>{p.title}</strong>
               <span>{p.meta}</span>

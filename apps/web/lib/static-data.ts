@@ -8,8 +8,11 @@
  *   DatasetRow        → DatasetSummary   from @nature-grid/shared
  *   ReportPreview     → CitizenReport    from @nature-grid/shared
  *   AlertPreview      → EnvironmentalAlert from @nature-grid/shared
- *   CommunityItem     → CommunityActivityItem from @nature-grid/shared
  *   Fetch via routes  from @nature-grid/contracts
+ *
+ * COMMUNITY_FEED/CommunityItem removed — Community has no planned API module
+ * (see docs/architecture/feature-map.md), so community-section.tsx and the
+ * /community page both show an honest empty state instead of fabricated feed data.
  */
 
 import type { AlertSeverity } from '@nature-grid/shared';
@@ -44,12 +47,6 @@ export interface AlertPreview {
   title: string;
   meta: string;
   severity: AlertSeverity;
-}
-
-export interface CommunityItem {
-  initials: string;
-  title: string;
-  meta: string;
 }
 
 // ── Metrics ──────────────────────────────────────────────────────────────────
@@ -172,27 +169,3 @@ export const RESTORATION_PROJECTS: ReportPreview[] = [
   },
 ];
 
-// ── Community feed ────────────────────────────────────────────────────────────
-
-export const COMMUNITY_FEED: CommunityItem[] = [
-  {
-    initials: 'DR',
-    title: 'Flood preparedness guide published',
-    meta: 'Disaster Response Team · education resource · 1h ago',
-  },
-  {
-    initials: 'WP',
-    title: 'Wetland photo challenge reached 800 entries',
-    meta: 'Community campaign · submit your sighting this month · 4h ago',
-  },
-  {
-    initials: 'BE',
-    title: 'BRAC Environmental Science Unit joined Nature Grid',
-    meta: 'Verified organization · 18 restoration projects active · 1d ago',
-  },
-  {
-    initials: 'SD',
-    title: 'New research: Haor wetland bird diversity down 12% in 5 years',
-    meta: 'Sylhet University · research publication · 2d ago',
-  },
-];

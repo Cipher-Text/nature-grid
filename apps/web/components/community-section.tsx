@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { COMMUNITY_FEED } from '../lib/static-data';
 
 export default function CommunitySection() {
   return (
@@ -16,43 +15,10 @@ export default function CommunitySection() {
         </Link>
       </div>
 
-      <div className="public-grid">
-        {/* Feed: left column (first two items) */}
-        <div className="feed-list">
-          {COMMUNITY_FEED.slice(0, 2).map((item) => (
-            <FeedItem key={item.title} {...item} />
-          ))}
-        </div>
-
-        {/* Feed: right column (last two items) */}
-        <div className="feed-list">
-          {COMMUNITY_FEED.slice(2).map((item) => (
-            <FeedItem key={item.title} {...item} />
-          ))}
-        </div>
+      <div className="empty-state">
+        Community content isn&apos;t a built module yet — there&apos;s no
+        campaign, challenge, or feed backend behind this section.
       </div>
     </section>
-  );
-}
-
-function FeedItem({
-  initials,
-  title,
-  meta,
-}: {
-  initials: string;
-  title: string;
-  meta: string;
-}) {
-  return (
-    <div className="feed-item">
-      <div className="feed-avatar" aria-hidden="true">
-        {initials}
-      </div>
-      <div className="feed-body">
-        <strong>{title}</strong>
-        <span>{meta}</span>
-      </div>
-    </div>
   );
 }
