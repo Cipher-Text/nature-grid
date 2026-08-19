@@ -1,6 +1,6 @@
 # Progress
 
-Last updated: 2026-08-19 (Milestone 10 — Biodiversity + GBIF — built end to end, real species/occurrence data now live on `/biodiversity`, a real GBIF integer-overflow bug found and fixed along the way; Milestone 11 — Restoration Projects — built end to end, real data now live on `/restoration`; Milestone 9 — Observations module — built end to end, real data now live on `/observations`; Milestone 15 complete — all 7 app-shell pages built; report submission form wired on `/reports`, a second critical validation bug found and fixed along the way; critical RBAC bug found and fixed — every role-gated endpoint was rejecting all users, including admins)
+Last updated: 2026-08-19 (Live platform metrics wired on the homepage — M13 task 7 done; M13 task 2 still partial, see below; Milestone 10 — Biodiversity + GBIF — built end to end, real species/occurrence data now live on `/biodiversity`, a real GBIF integer-overflow bug found and fixed along the way; Milestone 11 — Restoration Projects — built end to end, real data now live on `/restoration`; Milestone 9 — Observations module — built end to end, real data now live on `/observations`; Milestone 15 complete — all 7 app-shell pages built; report submission form wired on `/reports`, a second critical validation bug found and fixed along the way; critical RBAC bug found and fixed — every role-gated endpoint was rejecting all users, including admins)
 
 ## Status Legend
 
@@ -20,7 +20,7 @@ Last updated: 2026-08-19 (Milestone 10 — Biodiversity + GBIF — built end to 
 | Frontend mocks | Done | All 11 pages — nav linking, sidebar, design system, trust levels, feed, admin console, theme reference |
 | Public-first product model | Done | Public `/`, login-gated contribution/download/advanced access |
 | Public frontend — M1 | Done | 8 React components, full CSS design system, static seed data, runs at port 3000 |
-| Frontend live data — M13 | In Progress | Weather sidebar + full auth flow (login/register/logout, protected `/profile` now matching its mockup) live, and citizen report + observation submission both now wired to real endpoints (2026-08-17) — see "Public Weather Wiring", "Public Auth Flow Wiring", "Profile Page Mockup Fidelity", "Report Submission Form", and "Observations Module" below. Live platform metrics and every other homepage component are still static/not started. |
+| Frontend live data — M13 | In Progress | Weather sidebar, full auth flow, citizen report + observation submission, and now live platform metrics (2026-08-19, task 7 done) — see "Public Weather Wiring", "Public Auth Flow Wiring", "Profile Page Mockup Fidelity", "Report Submission Form", "Observations Module", and "Live Platform Metrics" below. Task 2 (replace every static homepage component with live data) is still only partial: `map-section` and now `metrics-section` are live; `dataset-preview`, `reports-alerts-section`, and `biodiversity-restoration`/`community-section` still render static seed data. |
 | Frontend "app shell" layout (sidebar pages) — M15 | Done | Established via `/profile`, powers all 7 pages. `/data`, `/reports`, `/alerts`, `/observations`, `/restoration`, and now `/biodiversity` (all real backend data) — only `/community` still shows an honest empty state (no API module planned for it at all yet). See "App-Shell Pages: Data, Reports, Alerts", "App-Shell Pages: Observations, Biodiversity, Restoration, Community", "Observations Module", "Restoration Projects Module", and "Biodiversity + GBIF Module" below. |
 | Shared types and contracts — M2 | Done | Full enums, DTOs, paginated envelopes, request/response types, route contract map |
 | Backend foundation — M3 | Done | Auth (JWT/bcrypt), users, orgs, locations (8 div/64 district auto-seed), providers, datasets (catalog seed), reports (status workflow + audit), alerts (severity + audit), global validation, guard infrastructure. **Caveat:** role-gated endpoints shipped with a casing bug that rejected every user until 2026-08-17 — see "Critical RBAC Fix" below. |
@@ -203,6 +203,16 @@ Milestone 10 — the third of the four "not built yet" M15 pages to get a real b
 
 Verified live against the real GBIF API: first sync run hit the `Int` overflow bug immediately (see above); after the fix, a full sync pulled 1000 real occurrence records across 285 distinct real species with correct taxonomy, real vernacular names, and real image URLs sourced from GBIF, spread across genuine Bangladesh districts (Pabna, Habiganj, Manikganj, Cumilla, Barguna, etc.) via the nearest-centroid approximation. A second sync run confirmed idempotency: species count stayed at 285, occurrence count stayed at exactly 1000, no duplicates. Browser click-through confirmed the page renders correctly and the name-search filter works (e.g. searching "kingfisher" correctly narrowed to 5 real kingfisher species via vernacular-name matching). Both `apps/api`/`apps/web` builds are clean. Unlike every prior verification pass this session, **the synced GBIF data was left in place rather than cleaned up** — it's real biodiversity data, not throwaway test fixtures. Dev servers stopped and `.next` cache cleared.
 
+## Live Platform Metrics (built 2026-08-19)
+
+M13 task 7 — the last remaining item in M13's explicit task list, though **task 2 (replace every static homepage component) is still only partial** even after this: `dataset-preview`, `reports-alerts-section`, and `biodiversity-restoration`/`community-section` still render static seed data. Only the homepage's metrics cards were in scope for this pass.
+
+- `apps/api/src/metrics/` — new module (didn't exist; `routes.metrics.platform` and `PlatformMetrics` in `packages/shared` were speculative, never wired to anything real, same as several other request/response types corrected earlier this session). `@Public() GET /metrics/platform` returns real counts matching exactly what the homepage's four cards display — **not** the old generic `PlatformMetrics` shape (`totalReports`/`contributors`/`districtsMonitored`), which didn't correspond to any of the four actual cards. Real shape: `activeAlerts` (+ `emergencyAlerts` sub-count), `verifiedReports` (status `VERIFIED` only, matching the label literally), `publicDatasets` (`accessPolicy: PUBLIC` only, not counting gated catalog entries), `researchGradeObservations` (+ `districtsWithResearchGradeObservations`, computed via `distinct: ['districtId']`, not a stored counter).
+- `packages/shared/src/index.ts` — corrected `PlatformMetrics` to the real shape above.
+- `apps/web/components/metrics-section.tsx` — now an async Server Component, same fallback pattern as `map-section.tsx`: fetches `/metrics/platform`, falls back cleanly to the static `METRICS` array if the API is unreachable. Existing card styling (highlighted "Active alerts" card, warning-colored sub-note) preserved, now driven by the real emergency count instead of a hardcoded "4 emergency severity."
+
+Verified live: seeded 2 active alerts (1 `EMERGENCY`), 1 `VERIFIED` report, 2 `RESEARCH_GRADE` observations across 2 districts → confirmed `GET /metrics/platform` returned exactly matching counts → confirmed the homepage rendered those exact numbers (including "Public datasets: 0" — a genuine, honest zero, since none of the seeded catalog datasets actually have `PUBLIC` access policy) → killed the API → homepage fell back cleanly to static values, no crash (same pattern as the original weather-sidebar verification) → restarted the API → live data resumed automatically. Test data cleaned up afterward; dev servers stopped and `.next` cache cleared.
+
 ## Completed Files
 
 ### Project docs
@@ -251,7 +261,7 @@ Verified live against the real GBIF API: first sync run hit the `Int` overflow b
 
 ### Shared packages
 
-- `packages/shared/src/index.ts` — 29 exported types and interfaces (added `RestorationCategory` 2026-08-19). Enum values corrected to uppercase 2026-08-17 to match Prisma (see "Critical RBAC Fix" above) — this file is the source of the casing that must always match the database.
+- `packages/shared/src/index.ts` — 29 exported types and interfaces (added `RestorationCategory` 2026-08-19; `PlatformMetrics` corrected to its real shape 2026-08-19, see "Live Platform Metrics"). Enum values corrected to uppercase 2026-08-17 to match Prisma (see "Critical RBAC Fix" above) — this file is the source of the casing that must always match the database.
 - `packages/contracts/src/index.ts` — route map (incl. `weather`), response entity types (`Dataset`, `CitizenReport`, `Alert`, `Provider`, `CurrentWeatherReading`, `HourlyAirQualityReading`), request types (incl. refresh/logout), envelopes
 
 ### Database
@@ -276,6 +286,7 @@ Verified live against the real GBIF API: first sync run hit the `Int` overflow b
 - `observations/` — list (public), get, create, `PATCH :id/trust` (RESEARCHER/ADMIN), audit log, DTOs — built 2026-08-17, see "Observations Module" above
 - `restoration/` — list (public), get, create (ORGANIZATION_ADMIN/ADMIN), update (owner/ADMIN), join (idempotent), audit log, DTOs — built 2026-08-19, see "Restoration Projects Module" above
 - `biodiversity/` — GBIF client, service (daily sync, capped at 1000 records), scheduler, public `species`/`occurrences` endpoints — built 2026-08-19, see "Biodiversity + GBIF Module" above
+- `metrics/` — public `GET /metrics/platform`, real counts — built 2026-08-19, see "Live Platform Metrics" above
 - `weather/` — OpenMeteo client, service, scheduler, controller (current/hourly/daily/air-quality)
 
 ### Web frontend (`apps/web/`)
@@ -301,12 +312,12 @@ Verified live against the real GBIF API: first sync run hit the `Int` overflow b
 - `components/public-nav.tsx` — async and session-aware (see "Public Auth Flow Wiring" above)
 - `components/app-sidebar.tsx` — reusable sidebar shell, now used by all 8 app-shell routes: `/profile`, `/data`, `/reports`, `/alerts`, `/observations`, `/biodiversity`, `/restoration`, `/community`
 - `components/hero-section.tsx`
-- `components/metrics-section.tsx`
+- `components/metrics-section.tsx` — now live, see "Live Platform Metrics" above; same static-fallback pattern as `map-section.tsx`
 - `components/map-section.tsx` — "Current conditions" sidebar now live (see "Public Weather Wiring" above); map canvas panel still static
-- `components/dataset-preview.tsx`
-- `components/reports-alerts-section.tsx` — severity-to-CSS-class lookup fixed 2026-08-17 (same casing bug, see "Critical RBAC Fix"); dead `/profile` CTA fixed to `/login`
-- `components/biodiversity-restoration.tsx`
-- `components/community-section.tsx`
+- `components/dataset-preview.tsx` — still fully static (M13 task 2 not yet extended here)
+- `components/reports-alerts-section.tsx` — severity-to-CSS-class lookup fixed 2026-08-17 (same casing bug, see "Critical RBAC Fix"); dead `/profile` CTA fixed to `/login`; still fully static otherwise
+- `components/biodiversity-restoration.tsx` — still fully static
+- `components/community-section.tsx` — still fully static
 - `components/public-footer.tsx`
 
 ## Next Work
@@ -323,12 +334,13 @@ See `docs/implementation-plan.md` for the full milestone list (M5–M14).
 8. ~~Write ingestion plan — analyse Java backends, identify gaps, plan NestJS design.~~ Done — `docs/ingestion-plan.md`.
 9. **M5 partial:** District lat/lng ✓, auth refresh/logout ✓ (2026-08-16, Postgres-backed, not Redis — see "Auth Refresh/Logout" above), and `RestorationProject`/`RestorationParticipant` ✓ (2026-08-19, built as part of M11 — see "Restoration Projects Module" above). Still pending: `ReportMedia`, `ReportComment` models.
 10. ~~**M6:** Implement OpenMeteo ingestion — weather + air quality.~~ Done (2026-08-16), with a redesigned scope: self-contained `weather` module (not the generic `ingestion` module originally planned), no `ApiCallLog`/`IngestionJob` wiring. See `docs/ingestion-plan.md` and `docs/implementation-plan.md` for the design-deviation notes.
-11. **M13 in progress:** Homepage weather sidebar (2026-08-16), full auth flow (2026-08-16), `/profile` rebuilt to match its mockup with a reusable sidebar app-shell (2026-08-17), citizen report submission wired to `POST /reports` (2026-08-17), and ~~observation submission~~ done (2026-08-17) — see "Public Weather Wiring", "Public Auth Flow Wiring", "Profile Page Mockup Fidelity", "Report Submission Form", and "Observations Module" above. Still not started: live platform metrics, every other homepage component still static.
+11. **M13 in progress:** Homepage weather sidebar (2026-08-16), full auth flow (2026-08-16), `/profile` rebuilt to match its mockup with a reusable sidebar app-shell (2026-08-17), citizen report submission wired to `POST /reports` (2026-08-17), ~~observation submission~~ done (2026-08-17), and ~~live platform metrics~~ done (2026-08-19, task 7) — see "Public Weather Wiring", "Public Auth Flow Wiring", "Profile Page Mockup Fidelity", "Report Submission Form", "Observations Module", and "Live Platform Metrics" above. Task 2 remains partial: `dataset-preview`, `reports-alerts-section`, and `biodiversity-restoration`/`community-section` still render static seed data on the homepage.
 12. ~~**M15:** Build all 7 app-shell pages.~~ Done (2026-08-17) — `/data`, `/reports`, `/alerts` with real backend data, `/observations`, `/biodiversity`, `/restoration`, `/community` with honest empty states — see "App-Shell Pages: Data, Reports, Alerts" and "App-Shell Pages: Observations, Biodiversity, Restoration, Community" above. Also fixed along the way: a critical RBAC casing bug that had every role-gated endpoint rejecting all users — see "Critical RBAC Fix" above — and a second bug where `districtId` validators required a UUID but the schema uses CUIDs — see "Report Submission Form" above.
 13. ~~**M9:** Observations module — schema, endpoints, trust-level workflow.~~ Done (2026-08-17) — see "Observations Module" above. `/observations` upgraded from an honest empty state to real data + a working submission form.
 14. ~~**M11:** Restoration Projects — schema, endpoints, ownership + join workflow.~~ Done (2026-08-19) — see "Restoration Projects Module" above. `/restoration` upgraded from an honest empty state to real data + a creation form (org-admins/admins) + a Join action (everyone else). Also lands the last of M5's three deferred models.
 15. ~~**M10:** Biodiversity + GBIF — schema, GBIF client, daily sync, public endpoints.~~ Done (2026-08-19) — see "Biodiversity + GBIF Module" above. `/biodiversity` upgraded from an honest empty state to real species/occurrence data pulled from the live GBIF API. Found and fixed a real `Int`-overflow bug on the first sync run.
-16. **Next up:** Live platform metrics on the homepage (rest of M13), WAQI integration (M14) for station-level AQI, ingestion observability (job tracking before a 2nd provider), or resume M5's remaining schema items (ReportMedia, ReportComment). `/community` is the only app-shell page left without a real backend, and no milestone plans one yet.
+16. ~~**M13 task 7:** Live platform metrics on the homepage.~~ Done (2026-08-19) — see "Live Platform Metrics" above. Corrected the previously-unused `PlatformMetrics` shape to match what the homepage's four metric cards actually need.
+17. **Next up:** WAQI integration (M14) for station-level AQI, ingestion observability (job tracking before a 2nd provider), resume M5's remaining schema items (ReportMedia, ReportComment), or finish M13 task 2 by wiring `dataset-preview`/`reports-alerts-section`/`biodiversity-restoration`/`community-section` to the real endpoints that already exist for each of them. `/community` is the only app-shell page left without a real backend, and no milestone plans one yet.
 
 ## Open Questions
 
@@ -341,6 +353,7 @@ See `docs/implementation-plan.md` for the full milestone list (M5–M14).
 - Eco score, badges, and a user-facing activity feed (all shown in the `profile.html` mock) have no backing data model at all — is this product direction still wanted? If so it needs real scoping (a badge/achievement system, an activity log exposed per-user, a scoring formula), not just a UI pass. Currently omitted from `/profile` rather than faked.
 - ~~No milestone currently covers building `/data`, `/observations`, `/reports`, `/alerts`, `/biodiversity`, `/restoration`, `/community` as real `apps/web` routes.~~ Resolved — **Milestone 15** in `implementation-plan.md`, now fully done: `/data`, `/reports`, `/alerts`, `/observations`, `/restoration`, and `/biodiversity` all wired to real backends (2026-08-17 through 2026-08-19); only `/community` still ships an honest empty state, to be revisited once a real content workflow (and its API module) is actually scoped — nothing plans one yet.
 - ~~Should GBIF species get IUCN conservation-status enrichment (a second per-species API call) in v1, or stay unpopulated?~~ Resolved (2026-08-19) — stay unpopulated for v1. `iucnStatus` is a nullable column; `/biodiversity` renders species without a fabricated badge rather than guessing.
+- M13 task 2's remaining static homepage components (`dataset-preview`, `reports-alerts-section`, `biodiversity-restoration`, `community-section`) are no longer backend-blocked — real endpoints now exist for datasets, reports, alerts, observations (feeds "biodiversity" highlights), and restoration projects; only `community-section`'s content would still need an honest-empty-state treatment, same as `/community`. Wiring the rest is now purely a frontend task, same shape as the metrics-section pass.
 - ~~Who should be allowed to promote an observation's trust level — RESEARCHER/ADMIN only, or also MODERATOR?~~ Resolved (2026-08-17) — RESEARCHER/ADMIN only, matching the original M9 plan exactly. Trust validation is treated as a distinct domain-expertise judgment from a moderator's report-review role.
 - ~~Should the original M5 `fundingGoal`/`fundingRaised`/`impactMetrics (Json)` fields be built for `RestorationProject`, or simplified?~~ Resolved (2026-08-19) — simplified to a single `impactSummary` free-text field. No funding-tracking feature is scoped yet, and the mock itself never shows fundraising figures.
 - There's no `Organization`-membership link in the schema (no `User.organizationId`), so `RestorationProject` creation checks `ORGANIZATION_ADMIN` as a bare role rather than "admin of this specific organization" — any org-admin can attach any real organization to a new project. Worth a real membership model if organization-scoped permissions become a product requirement.

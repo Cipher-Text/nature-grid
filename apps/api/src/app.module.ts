@@ -16,6 +16,7 @@ import { RestorationModule } from './restoration/restoration.module';
 import { MediaModule } from './media/media.module';
 import { IngestionModule } from './ingestion/ingestion.module';
 import { WeatherModule } from './weather/weather.module';
+import { MetricsModule } from './metrics/metrics.module';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -37,6 +38,7 @@ import { HealthController } from './health.controller';
     MediaModule,
     IngestionModule,
     WeatherModule,
+    MetricsModule,
   ],
   controllers: [HealthController],
 })

@@ -140,12 +140,12 @@ export interface DistrictSummary {
 // ─── Platform Metrics ─────────────────────────────────────────────────────────
 
 export interface PlatformMetrics {
-  totalReports: number;
-  verifiedReports: number;
   activeAlerts: number;
-  datasets: number;
-  contributors: number;
-  districtsMonitored: number;
+  emergencyAlerts: number;
+  verifiedReports: number;
+  publicDatasets: number;
+  researchGradeObservations: number;
+  districtsWithResearchGradeObservations: number;
 }
 
 // ─── Dataset DTO ──────────────────────────────────────────────────────────────

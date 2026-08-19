@@ -11,6 +11,7 @@ import type {
   ProjectStatus,
   RestorationCategory,
   ProviderType,
+  PlatformMetrics,
 } from '@nature-grid/shared';
 
 // Re-export shared types that callers expect to find here
@@ -27,6 +28,7 @@ export type {
   ProjectStatus,
   RestorationCategory,
   ProviderType,
+  PlatformMetrics,
 } from '@nature-grid/shared';
 
 // ─── API Prefix ───────────────────────────────────────────────────────────────
