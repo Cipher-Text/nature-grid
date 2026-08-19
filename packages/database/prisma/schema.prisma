@@ -232,6 +232,7 @@ model District {
   alerts   Alert[]
   observations Observation[]
   restorationProjects RestorationProject[]
+  occurrences Occurrence[]
 
   currentWeatherReadings CurrentWeatherReading[]
   hourlyWeatherForecasts HourlyWeatherForecast[]
@@ -383,6 +384,47 @@ model RestorationParticipant {
   joinedAt  DateTime           @default(now())
 
   @@unique([projectId, userId])
+}
+
+// ─── Biodiversity (GBIF) ───────────────────────────────────────────────────────
+
+model Species {
+  id              String   @id @default(cuid())
+  gbifKey         Int      @unique
+  canonicalName   String
+  vernacularName  String?
+  kingdom         String?
+  phylum          String?
+  class           String?
+  order           String?
+  family          String?
+  genus           String?
+  iucnStatus      String?
+  imageUrl        String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  occurrences Occurrence[]
+
+  @@index([canonicalName])
+}
+
+model Occurrence {
+  id                String    @id @default(cuid())
+  gbifOccurrenceKey BigInt    @unique
+  speciesId         String
+  species           Species   @relation(fields: [speciesId], references: [id])
+  districtId        String?
+  district          District? @relation(fields: [districtId], references: [id])
+  lat               Float
+  lng               Float
+  observedAt        DateTime?
+  recordedBy        String?
+  basisOfRecord     String?
+  createdAt         DateTime  @default(now())
+
+  @@index([speciesId])
+  @@index([districtId])
 }
 
 // ─── Alerts ───────────────────────────────────────────────────────────────────

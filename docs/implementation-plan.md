@@ -198,32 +198,36 @@ Environmental observations by citizens and researchers with trust levels.
 
 ---
 
-## Milestone 10: Biodiversity + GBIF
+## ~~Milestone 10: Biodiversity + GBIF~~ — Done
 
 Connect to GBIF API for species occurrence data for Bangladesh.
 
-**Target:** `apps/api/src/ingestion/` + new `apps/api/src/biodiversity/` module
+**Target (as built):** self-contained `apps/api/src/biodiversity/`, not `apps/api/src/ingestion/` — same design deviation already made and documented for OpenMeteo (M6): no generic `ApiCallLog`/`IngestionJob` wiring, just a client + service + scheduler + controller in one module.
 
-### New Prisma models
+**Status (2026-08-19):** All 6 tasks done. `apps/web/app/biodiversity/page.tsx` upgraded from an honest empty state (M15) to real species/occurrence data in the same pass. See `docs/progress.md` "Biodiversity + GBIF Module" for full detail.
 
-| Model | Fields |
-| --- | --- |
-| `Species` | gbifKey, canonicalName, vernacularName, kingdom, phylum, class, order, family, genus, iucnStatus, imageUrl |
-| `Occurrence` | speciesId, districtId, lat, lng, observedAt, recordedBy, basisOfRecord, datasetKey, rawJson |
+### New Prisma models — as actually built
+
+| Model | Fields (as built) | Deviation from original spec |
+| --- | --- | --- |
+| `Species` | `gbifKey` (unique), `canonicalName`, `vernacularName?`, `kingdom?/phylum?/class?/order?/family?/genus?`, `iucnStatus?`, `imageUrl?` | Same field list as scoped. `iucnStatus` stays nullable/unpopulated — no per-species IUCN enrichment call built in v1, confirmed with the user. |
+| `Occurrence` | `gbifOccurrenceKey` (unique), `speciesId`/`species`, `districtId?`/`district`, `lat`, `lng`, `observedAt?`, `recordedBy?`, `basisOfRecord?` | Dropped `datasetKey` and `rawJson` (unused, same trim already applied to the weather tables). **Added** `gbifOccurrenceKey` as a natural unique key — without it, every daily re-sync would create duplicate rows for the same physical record. |
+
+**Real bug found and fixed**: `gbifOccurrenceKey` was originally typed `Int`, matching Prisma's default for a numeric ID — but GBIF's own occurrence keys can exceed Postgres `INT4` range (hit a real value of `5,938,050,912` on the very first sync attempt). Fixed by changing to `BigInt`.
 
 ### Tasks
 
-1. Add `Species` and `Occurrence` Prisma models, migrate.
-2. Write `gbif.client.ts` in `ingestion/clients/` — queries `https://api.gbif.org/v1/occurrence/search?country=BD`.
-3. Write `biodiversity.scheduler.ts` — `@Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)` triggers GBIF fetch.
-4. Write `GbifIngestionService` — upserts `Species`, creates `Occurrence` rows.
-5. Add `GET /biodiversity/species` — public, filterable by name/district.
-6. Add `GET /biodiversity/occurrences` — public, filterable by districtId/date.
+1. ~~Add `Species` and `Occurrence` Prisma models, migrate.~~ Done — migrations `20260819145646_add_biodiversity` and `20260819150726_fix_gbif_occurrence_key_bigint` (the second migration is the `Int`→`BigInt` fix above).
+2. ~~Write `gbif.client.ts` in `ingestion/clients/` — queries `https://api.gbif.org/v1/occurrence/search?country=BD`.~~ Done, but in `apps/api/src/biodiversity/gbif.client.ts` (see target deviation above). Query adds `hasCoordinate=true` (occurrences without coordinates can't be geo-located to a district) and paginates at GBIF's 300-record max page size. Native `fetch` + 3-attempt retry, mirrors `weather-openmeteo.client.ts`'s exact shape.
+3. ~~Write `biodiversity.scheduler.ts` — `@Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)` triggers GBIF fetch.~~ Done.
+4. ~~Write `GbifIngestionService` — upserts `Species`, creates `Occurrence` rows.~~ Done as `BiodiversityService.syncFromGbif()` — also upserts `Occurrence` (not just creates), so a repeat sync updates existing rows rather than erroring. **Bounded at ~1000 records per sync** — not exhaustively syncing every GBIF record ever filed for Bangladesh, same reasoning as weather's fixed 64-district loop. District assignment uses nearest-centroid distance to the 64 seeded district centroids — an approximation, since no polygon boundary data exists yet (same gap as the "PostGIS geography fields" open item).
+5. ~~Add `GET /biodiversity/species` — public, filterable by name/district.~~ Done — filterable by name (case-insensitive, matches canonical or vernacular name). District filtering lives on the occurrences endpoint instead, since district is a property of a sighting location, not the species itself.
+6. ~~Add `GET /biodiversity/occurrences` — public, filterable by districtId/date.~~ Done — filterable by `speciesId`/`districtId`. No date filter added (not needed yet; list already orders by `observedAt desc`).
 
 ### Definition of done
 
-- Daily GBIF sync runs and populates Species + Occurrence tables.
-- Public endpoints expose occurrence data.
+- Daily GBIF sync runs and populates Species + Occurrence tables. — Done, verified live against the real GBIF API: first full sync pulled 1000 real occurrence records across 285 distinct species; a second run confirmed idempotency (same counts, no duplicates).
+- Public endpoints expose occurrence data. — Done, verified via `GET /biodiversity/species` (with search) and `GET /biodiversity/occurrences`, and via a full browser click-through of `/biodiversity`.
 
 ---
 
@@ -339,7 +343,7 @@ Built the `apps/web` routes that the nav (`public-nav.tsx`, `app-sidebar.tsx`) a
 | `/reports` | `GET /reports` | Real (M3) — public list is verified/resolved only |
 | `/alerts` | `GET /alerts` | Real (M3) |
 | `/observations` | `GET /observations` | Real (M9, 2026-08-17) |
-| `/biodiversity` | — | Not built (M10) — module stub, no `Species`/`Occurrence` models |
+| `/biodiversity` | `GET /biodiversity/{species,occurrences}` | Real (M10, 2026-08-19) |
 | `/restoration` | `GET /restoration/projects` | Real (M11, 2026-08-19) |
 | `/community` | — | Not planned as an API module at all yet (see `docs/architecture/feature-map.md`) |
 
@@ -349,7 +353,7 @@ Built the `apps/web` routes that the nav (`public-nav.tsx`, `app-sidebar.tsx`) a
 2. ~~`/reports` — wire to `GET /reports`. Public list only, matching what's already enforced server-side.~~ Done — metric cards deliberately show only Verified/Resolved counts, not the mock's Under-review/Submitted-today (those would leak status info the public API intentionally hides); submission form replaced with a sign-in CTA.
 3. ~~`/alerts` — wire to `GET /alerts`.~~ Done — required a small backend fix first (`ALERT_SELECT` wasn't projecting `description`); role-conditional "Issue alert" badge added (real role check, but reads "coming soon" since no creation page exists); "Warning zones" reuses the homepage's existing decorative map placeholder.
 4. ~~`/observations` — no backend yet: honest "not available yet" empty state (same pattern as `/profile`'s activity feed), not fabricated records. Revisit once M9 ships.~~ Done (2026-08-17) — also links to `/reports` as the nearest real thing citizens can do today. **Revisited the same day once M9 shipped**: upgraded to real data + a working submission form, see Milestone 9 above.
-5. ~~`/biodiversity` — same honest-empty-state treatment; revisit once M10 ships.~~ Done (2026-08-17).
+5. ~~`/biodiversity` — same honest-empty-state treatment; revisit once M10 ships.~~ Done (2026-08-17). **Revisited 2026-08-19 once M10 shipped**: upgraded to real species/occurrence data with name search, see Milestone 10 above.
 6. ~~`/restoration` — same honest-empty-state treatment; revisit once M11 ships.~~ Done (2026-08-17). **Revisited 2026-08-19 once M11 shipped**: upgraded to real data + a creation form (org-admins/admins) + a Join action (everyone else), see Milestone 11 above.
 7. ~~`/community` — same honest-empty-state treatment, or keep the existing static `COMMUNITY_FEED` mock data clearly labeled as illustrative, since `feature-map.md` already says to keep this out of core until a real content workflow exists — decide which when this task starts.~~ Done (2026-08-17) — went with the honest empty state, consistent with the other three and with the `/profile`/`/data`/`/reports`/`/alerts` precedent, rather than keeping the mock feed. The homepage's `community-section.tsx` still shows static `COMMUNITY_FEED` data — a separate, already-documented M13 gap, untouched by this task.
 8. ~~Confirm `AppSidebar`'s active-link highlighting is correct for each new route.~~ Done — verified live for all 7 routes.
@@ -358,7 +362,7 @@ Built the `apps/web` routes that the nav (`public-nav.tsx`, `app-sidebar.tsx`) a
 
 - All 7 routes render instead of 404ing (nav links already point to them). — Done, confirmed via browser and `curl` 200s on all 7.
 - `/data`, `/reports`, `/alerts` show real backend data through the sidebar shell. — Done, verified live with seeded real reports/alerts.
-- `/observations`, `/biodiversity`, `/restoration`, `/community` show an honest empty/coming-soon state — no fabricated records, consistent with the `/profile` precedent. — Done (2026-08-17) for all four at the time, verified live in a real browser; production build compiled cleanly with all four as static pages. `/observations` (M9, 2026-08-17) and `/restoration` (M11, 2026-08-19) have since graduated to real data as their backends shipped; `/biodiversity` and `/community` remain honest empty states.
+- `/observations`, `/biodiversity`, `/restoration`, `/community` show an honest empty/coming-soon state — no fabricated records, consistent with the `/profile` precedent. — Done (2026-08-17) for all four at the time, verified live in a real browser; production build compiled cleanly with all four as static pages. `/observations`, `/restoration`, and `/biodiversity` have since graduated to real data as their backends shipped (M9, M11, M10 — all by 2026-08-19); only `/community` remains an honest empty state.
 
 ---
 

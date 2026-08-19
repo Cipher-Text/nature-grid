@@ -1,6 +1,23 @@
 import AppSidebar from '../../components/app-sidebar';
+import { apiGet } from '../../lib/api';
+import { routes, type Species, type Occurrence, type PaginatedEnvelope } from '@nature-grid/contracts';
+import { relativeTime } from '../../lib/format';
 
-export default function BiodiversityPage() {
+export default async function BiodiversityPage({
+  searchParams,
+}: {
+  searchParams: { search?: string };
+}) {
+  const search = searchParams.search;
+  const speciesPath = search
+    ? `${routes.biodiversity.species}?search=${encodeURIComponent(search)}`
+    : routes.biodiversity.species;
+
+  const [speciesRes, occurrencesRes] = await Promise.all([
+    apiGet<PaginatedEnvelope<Species>>(speciesPath),
+    apiGet<PaginatedEnvelope<Occurrence>>(`${routes.biodiversity.occurrences}?pageSize=10`),
+  ]);
+
   return (
     <div className="app-shell">
       <AppSidebar active="biodiversity" />
@@ -8,21 +25,89 @@ export default function BiodiversityPage() {
         <div className="panel-header">
           <div>
             <h1>Biodiversity</h1>
-            <p>Species, habitats, and research records.</p>
+            <p>Species and occurrence records synced daily from GBIF.</p>
           </div>
         </div>
 
-        <article className="panel">
+        <div className="metric-grid">
+          <div className="metric">
+            <span>Species recorded</span>
+            <strong>{speciesRes.total}</strong>
+          </div>
+          <div className="metric">
+            <span>Occurrence records</span>
+            <strong>{occurrencesRes.total}</strong>
+          </div>
+        </div>
+
+        <article className="panel" style={{ marginTop: '20px' }}>
           <div className="panel-header">
             <div>
-              <h2>Species and occurrence records</h2>
-              <p>Verified sightings tied to species and habitat data</p>
+              <h2>Species</h2>
+              <p>Search by scientific or common name</p>
             </div>
           </div>
-          <div className="empty-state">
-            Species and occurrence records aren&apos;t available yet — this
-            module depends on a GBIF ingestion pipeline that hasn&apos;t been
-            built. Once it ships, verified occurrence data will appear here.
+          <form
+            method="get"
+            style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', marginBottom: '16px' }}
+          >
+            <div className="field" style={{ maxWidth: '320px' }}>
+              <label htmlFor="search">Search species</label>
+              <input id="search" name="search" type="text" defaultValue={search} placeholder="e.g. Heritiera fomes" />
+            </div>
+            <button className="button ghost" type="submit">
+              Search
+            </button>
+          </form>
+
+          <div className="table" role="table" aria-label="Species">
+            <div className="table-row table-head" role="row">
+              <span>Species</span>
+              <span>Common name</span>
+              <span>Family</span>
+              <span>Occurrences</span>
+            </div>
+            {speciesRes.data.map((s) => (
+              <div className="table-row" role="row" key={s.id}>
+                <strong>{s.canonicalName}</strong>
+                <span>{s.vernacularName ?? '—'}</span>
+                <span>{s.family ?? '—'}</span>
+                <span>{s._count.occurrences}</span>
+              </div>
+            ))}
+            {speciesRes.data.length === 0 && (
+              <div className="empty-state">No species match this search yet.</div>
+            )}
+          </div>
+        </article>
+
+        <article className="panel" style={{ marginTop: '20px' }}>
+          <div className="panel-header">
+            <div>
+              <h2>Recent occurrence records</h2>
+              <p>Latest synced sightings</p>
+            </div>
+          </div>
+          <div className="table" role="table" aria-label="Occurrence records">
+            <div className="table-row table-head" role="row">
+              <span>Species</span>
+              <span>Location</span>
+              <span>Recorded</span>
+              <span>Basis</span>
+            </div>
+            {occurrencesRes.data.map((o) => (
+              <div className="table-row" role="row" key={o.id}>
+                <strong>{o.species.canonicalName}</strong>
+                <span>{o.district?.name ?? '—'}</span>
+                <span>{o.observedAt ? relativeTime(o.observedAt) : '—'}</span>
+                <span>{o.basisOfRecord ?? '—'}</span>
+              </div>
+            ))}
+            {occurrencesRes.data.length === 0 && (
+              <div className="empty-state">
+                No occurrence records yet — the daily GBIF sync hasn&apos;t run.
+              </div>
+            )}
           </div>
         </article>
       </main>

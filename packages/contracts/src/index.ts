@@ -99,6 +99,7 @@ export const routes = {
     highlights: `${apiPrefix}/biodiversity/highlights`,
     species: `${apiPrefix}/biodiversity/species`,
     speciesDetail: (id: string) => `${apiPrefix}/biodiversity/species/${id}`,
+    occurrences: `${apiPrefix}/biodiversity/occurrences`,
   },
 
   restoration: {
@@ -392,6 +393,47 @@ export interface UpdateRestorationProjectRequest {
 export interface RestorationProjectListParams extends PaginationParams, LocationFilterParams {
   status?: ProjectStatus;
   category?: RestorationCategory;
+}
+
+// ─── Biodiversity ─────────────────────────────────────────────────────────────
+
+export interface Species {
+  id: string;
+  gbifKey: number;
+  canonicalName: string;
+  vernacularName: string | null;
+  kingdom: string | null;
+  phylum: string | null;
+  class: string | null;
+  order: string | null;
+  family: string | null;
+  genus: string | null;
+  /** Not populated in v1 — no per-species GBIF/IUCN enrichment call yet. */
+  iucnStatus: string | null;
+  imageUrl: string | null;
+  _count: { occurrences: number };
+}
+
+export interface Occurrence {
+  id: string;
+  speciesId: string;
+  districtId: string | null;
+  lat: number;
+  lng: number;
+  observedAt: string | null;
+  recordedBy: string | null;
+  basisOfRecord: string | null;
+  createdAt: string;
+  species: Species;
+  district: DistrictSummary | null;
+}
+
+export interface SpeciesListParams extends PaginationParams {
+  search?: string;
+}
+
+export interface OccurrenceListParams extends PaginationParams, LocationFilterParams {
+  speciesId?: string;
 }
 
 // ─── Weather ──────────────────────────────────────────────────────────────────
