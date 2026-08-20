@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import { NestFactory, Reflector } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
@@ -8,6 +9,10 @@ import { RolesGuard } from './common/guards/roles.guard';
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
   const app = await NestFactory.create(AppModule);
+
+  // Security headers. Applied before routing so every response carries them,
+  // including error responses.
+  app.use(helmet());
 
   app.setGlobalPrefix('api/v1');
   app.enableCors({

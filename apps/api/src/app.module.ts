@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { validateEnv } from './common/env.validation';
 import { ScheduleModule } from '@nestjs/schedule';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
@@ -23,6 +25,9 @@ import { HealthController } from './health.controller';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
+    // Baseline limit for every route. Auth routes tighten this further with
+    // their own @Throttle decorators — see auth.controller.ts.
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
     ScheduleModule.forRoot(),
     DatabaseModule,
     AuthModule,
@@ -42,5 +47,8 @@ import { HealthController } from './health.controller';
     MetricsModule,
   ],
   controllers: [HealthController],
+  // ThrottlerGuard is registered here rather than in main.ts's useGlobalGuards
+  // because it needs injected dependencies (storage service + reflector).
+  providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule {}

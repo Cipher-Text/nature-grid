@@ -138,14 +138,90 @@ describe('AuthService', () => {
       ).rejects.toThrow(UnauthorizedException);
     });
 
-    it('does not audit a failed login', async () => {
+    // Failed logins are audited as of 2026-08-21 so brute-force attempts leave
+    // a trail. The HTTP response stays a generic 401 in both branches — only
+    // the audit meta distinguishes an unknown email from a bad password.
+    it('audits a wrong password against the known user', async () => {
+      const { service, prisma } = build();
+      prisma.user.findUnique.mockResolvedValue(await stored());
+
+      await expect(
+        service.login({ email: REGISTER.email, password: 'WrongPass1!' }),
+      ).rejects.toThrow(UnauthorizedException);
+
+      expect(prisma.auditEvent.create).toHaveBeenCalledWith({
+        data: {
+          action: 'USER_LOGIN_FAILED',
+          userId: 'u1',
+          entityType: 'User',
+          entityId: 'u1',
+          meta: { email: REGISTER.email, reason: 'bad_password_or_inactive' },
+          ipAddress: undefined,
+        },
+      });
+    });
+
+    it('audits an unknown email with no user attribution', async () => {
+      const { service, prisma } = build();
+      prisma.user.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.login({ email: 'ghost@nowhere.test', password: 'x' }),
+      ).rejects.toThrow(UnauthorizedException);
+
+      expect(prisma.auditEvent.create).toHaveBeenCalledWith({
+        data: {
+          action: 'USER_LOGIN_FAILED',
+          userId: null,
+          entityType: 'User',
+          entityId: null,
+          meta: { email: 'ghost@nowhere.test', reason: 'unknown_email' },
+          ipAddress: undefined,
+        },
+      });
+    });
+
+    it('audits a deactivated user as a failed login', async () => {
+      const { service, prisma } = build();
+      prisma.user.findUnique.mockResolvedValue({ ...(await stored()), isActive: false });
+
+      await expect(
+        service.login({ email: REGISTER.email, password: REGISTER.password }),
+      ).rejects.toThrow(UnauthorizedException);
+
+      expect(prisma.auditEvent.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ action: 'USER_LOGIN_FAILED', userId: 'u1' }),
+        }),
+      );
+    });
+
+    it('records the caller IP on a failed attempt', async () => {
+      const { service, prisma } = build();
+      prisma.user.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.login({ email: 'ghost@nowhere.test', password: 'x' }, { ipAddress: '198.51.100.9' }),
+      ).rejects.toThrow(UnauthorizedException);
+
+      expect(prisma.auditEvent.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ ipAddress: '198.51.100.9' }),
+        }),
+      );
+    });
+
+    it('does not write USER_LOGIN on a failed attempt', async () => {
       const { service, prisma } = build();
       prisma.user.findUnique.mockResolvedValue(await stored());
 
       await expect(
         service.login({ email: REGISTER.email, password: 'WrongPass1!' }),
       ).rejects.toThrow();
-      expect(prisma.auditEvent.create).not.toHaveBeenCalled();
+
+      const actions = prisma.auditEvent.create.mock.calls.map((c) => c[0].data.action);
+      expect(actions).not.toContain('USER_LOGIN');
+      expect(actions).toEqual(['USER_LOGIN_FAILED']);
     });
 
     it('signs the token with the role from the database, not the request', async () => {

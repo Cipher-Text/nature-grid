@@ -34,7 +34,7 @@ describe('JwtAuthGuard', () => {
         .spyOn(Object.getPrototypeOf(Object.getPrototypeOf(guard)), 'canActivate')
         .mockReturnValue(true);
 
-      guard.canActivate(context());
+      void guard.canActivate(context());
       expect(passport).toHaveBeenCalled();
     });
   });

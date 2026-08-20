@@ -53,10 +53,18 @@ export class AuthService {
 
   async login(dto: LoginDto, deviceMeta: DeviceMeta = {}) {
     const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
-    if (!user || !user.isActive) throw new UnauthorizedException('Invalid credentials');
+    if (!user || !user.isActive) {
+      // No userId to attribute — record the attempted address instead, so a
+      // spray across many unknown accounts is still visible.
+      await this.recordFailedLogin(user?.id, dto.email, deviceMeta);
+      throw new UnauthorizedException('Invalid credentials');
+    }
 
     const valid = await bcrypt.compare(dto.password, user.passwordHash);
-    if (!valid) throw new UnauthorizedException('Invalid credentials');
+    if (!valid) {
+      await this.recordFailedLogin(user.id, dto.email, deviceMeta);
+      throw new UnauthorizedException('Invalid credentials');
+    }
 
     await this.prisma.user.update({
       where: { id: user.id },
@@ -121,6 +129,29 @@ export class AuthService {
     if (record && count > 0) {
       await this.recordAuthEvent('USER_LOGOUT', record.userId, deviceMeta);
     }
+  }
+
+  /**
+   * Records a rejected login. Deliberately separate from `recordAuthEvent`
+   * because the user may not exist, so `userId` can be null and the attempted
+   * email goes in `meta` instead. The HTTP response is an identical generic
+   * 401 either way — this trail is the only place the difference is visible.
+   */
+  private async recordFailedLogin(
+    userId: string | undefined,
+    email: string,
+    deviceMeta: DeviceMeta,
+  ) {
+    await this.prisma.auditEvent.create({
+      data: {
+        action: 'USER_LOGIN_FAILED',
+        userId: userId ?? null,
+        entityType: 'User',
+        entityId: userId ?? null,
+        meta: { email, reason: userId ? 'bad_password_or_inactive' : 'unknown_email' },
+        ipAddress: deviceMeta.ipAddress,
+      },
+    });
   }
 
   /**
