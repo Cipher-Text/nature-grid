@@ -56,6 +56,12 @@ jobs:
         run: pnpm exec tsc --noEmit
         working-directory: apps/admin
 
+      # Unit tests for auth, RBAC and env validation. Fully mocked — no
+      # database or running service required.
+      - name: Test api
+        run: pnpm exec jest --ci
+        working-directory: apps/api
+
       # nest build for the API plus next build for both frontends. Catches
       # decorator and DI errors that tsc alone does not, since Nest wires
       # modules at runtime. No app fetches at build time, so no service

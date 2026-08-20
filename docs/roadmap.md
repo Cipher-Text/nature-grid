@@ -161,8 +161,8 @@ Ordered roughly by risk: the security items are cheap and block any real deploym
 
 ### 6b. Regression safety net
 
-- First test suite covering `auth` and RBAC. These are the two surfaces that have already shipped real bugs (the role-guard casing bug that rejected every user including admins; the refresh-token-usable-as-access-token flaw) and both were caught by hand.
-- CI on pull requests. There is no `.github/` directory at all today. Start with `tsc --noEmit` across all three TS apps plus `prisma validate` — all currently pass, so it goes green immediately and stays useful.
+- ~~First test suite covering `auth` and RBAC.~~ Done (2026-08-21). 56 tests across `RolesGuard`, `JwtAuthGuard`, `AuthService`, the refresh-token utilities and env validation. Fully mocked — no database needed. Each historical bug has a named regression test, and all six were mutation-checked: reintroducing the bug makes the suite fail.
+- ~~CI on pull requests.~~ Done (2026-08-21). `.github/workflows/ci.yml` runs `prisma generate`/`validate`, `tsc --noEmit` on all three apps, the api test suite, and `pnpm build`. Note the repo has no git remote yet, so nothing runs until one is added.
 - Install a working lint setup. `apps/api`'s `lint` script invokes `eslint`, but no `eslint` binary is present, so `pnpm lint` cannot run there.
 - API contract tests. `apps/api` does not import `@nature-grid/contracts`, so backend routes can drift from the contract the frontend relies on with nothing to catch it.
 - End-to-end tests for the public and authenticated flows.
@@ -191,9 +191,9 @@ Deliberately out of scope here: government agency and emergency broadcast integr
 Exit criteria:
 
 - ~~No secret falls back to a hardcoded default.~~ **Met** (2026-08-21) — see 6a.
-- Auth and RBAC have automated test coverage, and CI runs on every PR.
+- ~~Auth and RBAC have automated test coverage, and CI runs on every PR.~~ **Met** (2026-08-21) — pending a git remote for CI to actually execute.
 - An `EMERGENCY` alert reaches a subscribed user, and a failed delivery is visible.
-- Public and authenticated flows are tested. — **Not met.** No automated tests exist anywhere in the repo.
+- Public and authenticated flows are tested. — **Partially met.** Auth, RBAC and env validation have unit coverage (56 tests). No end-to-end or contract tests yet, and `apps/web`/`apps/admin` still have no tests.
 - Sensitive actions are auditable. — **Met for everything built** (2026-08-20). 14 of 17 `AuditAction` values are written; every implemented mutating endpoint audits. The three unwritten `DATASET_*` values belong to endpoints that do not exist yet.
 - Deployment and operations are repeatable. — **Not met.** No container image or deployment path exists.
 
