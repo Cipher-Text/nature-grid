@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# A newer push to the same ref supersedes an in-flight run.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Typecheck and build
+    runs-on: ubuntu-latest
+
+    env:
+      # Prisma resolves env("DATABASE_URL") when it loads the schema. Nothing
+      # here connects to a database — generate and validate are static checks —
+      # but the variable has to be present and well-formed.
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci?schema=public
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Reads the pnpm version from the "packageManager" field in package.json.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Must run before any typecheck: apps/api imports types from the
+      # generated Prisma client, which does not exist in a fresh install.
+      - name: Generate Prisma client
+        run: pnpm --filter @nature-grid/database run db:generate
+
+      - name: Validate Prisma schema
+        run: pnpm exec prisma validate
+        working-directory: packages/database
+
+      - name: Typecheck api
+        run: pnpm exec tsc --noEmit
+        working-directory: apps/api
+
+      - name: Typecheck web
+        run: pnpm exec tsc --noEmit
+        working-directory: apps/web
+
+      - name: Typecheck admin
+        run: pnpm exec tsc --noEmit
+        working-directory: apps/admin
+
+      # nest build for the API plus next build for both frontends. Catches
+      # decorator and DI errors that tsc alone does not, since Nest wires
+      # modules at runtime. No app fetches at build time, so no service
+      # needs to be running.
+      - name: Build all apps
+        run: pnpm build
