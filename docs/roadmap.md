@@ -154,7 +154,7 @@ Ordered roughly by risk: the security items are cheap and block any real deploym
 
 ### 6a. Security must-fixes
 
-- **Fail fast on a missing `JWT_SECRET`.** Both `auth.module.ts:16` and `jwt.strategy.ts:17` currently fall back to the literal `'dev-secret-change-in-production'`, and the variable is absent from `.env.example` and `.env` — so nothing prompts anyone to set it. Throw on startup instead, and add it to `.env.example`.
+- ~~**Fail fast on a missing `JWT_SECRET`.**~~ Done (2026-08-21). `common/env.validation.ts` is wired into `ConfigModule.forRoot({ validate })`; both call sites now use `getOrThrow`, so no fallback exists. Rejects missing, empty, whitespace-only, known placeholders, and anything under 32 characters, and `JWT_SECRET` is documented in `.env.example`.
 - Add `helmet`.
 - Add rate limiting (`@nestjs/throttler`), at minimum on `/auth/login`, `/auth/register`, and `/auth/refresh`.
 - Audit failed logins. `AuditAction` has no `USER_LOGIN_FAILED` value, so brute-force attempts currently leave no trace. Needs an additive enum migration.
@@ -190,7 +190,7 @@ Deliberately out of scope here: government agency and emergency broadcast integr
 
 Exit criteria:
 
-- No secret falls back to a hardcoded default.
+- ~~No secret falls back to a hardcoded default.~~ **Met** (2026-08-21) — see 6a.
 - Auth and RBAC have automated test coverage, and CI runs on every PR.
 - An `EMERGENCY` alert reaches a subscribed user, and a failed delivery is visible.
 - Public and authenticated flows are tested. — **Not met.** No automated tests exist anywhere in the repo.
