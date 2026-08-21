@@ -182,10 +182,10 @@ Remaining gap: no SMS channel (EMAIL only). Government agency and emergency broa
 
 ### 6d. Operations
 
-- Dockerfile for `apps/api`, `apps/web`, `apps/admin`. None exists; `infrastructure/{docker,nginx,terraform}` hold README placeholders only.
-- Deployment documentation and a repeatable path.
-- Backup/restore plan.
-- Observability. Audit *writes* are complete as of 2026-08-20; a dashboard over `AuditEvent` is still missing.
+- ~~Dockerfile for `apps/api`, `apps/web`, `apps/admin`.~~ Done (2026-08-22) — multi-stage Dockerfiles for all three, standalone Next.js output, `prisma migrate deploy` entrypoint, `docker-compose.prod.yml` with healthcheck-gated startup.
+- ~~Deployment documentation and a repeatable path.~~ Done (`infrastructure/docker/README.md`). Single-host compose only; multi-host deferred.
+- Backup/restore plan. — Not done.
+- Observability. Audit *writes* are complete; a dashboard over `AuditEvent` is still missing.
 - Secure file/media handling — blocked on the `media` module, still an empty stub.
 
 Exit criteria:

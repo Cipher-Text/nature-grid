@@ -1,0 +1,73 @@
+# ── Base ──────────────────────────────────────────────────────────────────────
+FROM node:20-alpine AS base
+RUN corepack enable pnpm
+
+# ── Builder ───────────────────────────────────────────────────────────────────
+FROM base AS builder
+WORKDIR /repo
+
+# Copy workspace manifests first — changes here invalidate the install layer,
+# but source changes below do not.
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY apps/api/package.json                 ./apps/api/
+COPY packages/database/package.json       ./packages/database/
+COPY packages/shared/package.json         ./packages/shared/
+COPY packages/contracts/package.json      ./packages/contracts/
+COPY packages/config/package.json         ./packages/config/
+COPY packages/ui/package.json             ./packages/ui/
+
+RUN pnpm install --frozen-lockfile
+
+# Copy source after install so code edits don't bust the deps layer
+COPY packages/   ./packages/
+COPY apps/api/   ./apps/api/
+COPY tsconfig.base.json ./
+
+# Generate Prisma client for the builder's platform (linux/amd64 or arm64)
+RUN node_modules/.bin/prisma generate \
+      --schema=packages/database/prisma/schema.prisma
+
+RUN pnpm --filter @nature-grid/api build
+
+# ── Runtime ───────────────────────────────────────────────────────────────────
+FROM base AS runner
+WORKDIR /repo
+
+# Install only production dependencies in a clean environment
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY apps/api/package.json                 ./apps/api/
+COPY packages/database/package.json       ./packages/database/
+COPY packages/shared/package.json         ./packages/shared/
+COPY packages/contracts/package.json      ./packages/contracts/
+COPY packages/config/package.json         ./packages/config/
+COPY packages/ui/package.json             ./packages/ui/
+
+# Workspace package sources must be present so pnpm can link them
+COPY packages/shared/src/     ./packages/shared/src/
+COPY packages/database/src/   ./packages/database/src/
+COPY packages/database/prisma ./packages/database/prisma
+
+RUN pnpm install --frozen-lockfile --prod
+
+# Regenerate Prisma client for this runtime platform
+RUN node_modules/.bin/prisma generate \
+      --schema=packages/database/prisma/schema.prisma
+
+# Copy compiled application from builder
+COPY --from=builder /repo/apps/api/dist ./apps/api/dist
+
+# Entrypoint runs `prisma migrate deploy` before starting the process
+COPY apps/api/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# Drop root — run as a dedicated non-privileged user
+RUN addgroup -S nature && adduser -S api -G nature
+USER api
+
+EXPOSE 3001
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s \
+  CMD wget -qO- "http://localhost:${PORT:-3001}/api/v1/health" || exit 1
+
+WORKDIR /repo/apps/api
+ENTRYPOINT ["docker-entrypoint.sh"]
+CMD ["node", "dist/main.js"]

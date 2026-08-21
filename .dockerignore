@@ -1,0 +1,21 @@
+# Version control
+.git
+.gitignore
+
+# Build outputs — rebuilt inside Docker
+node_modules
+apps/api/dist
+apps/web/.next
+apps/admin/.next
+
+# Local env — never bake secrets into images
+.env
+.env.local
+.env.production.local
+
+# Dev tooling
+*.log
+.DS_Store
+
+# Test artefacts
+coverage
