@@ -168,17 +168,17 @@ Ordered roughly by risk: the security items are cheap and block any real deploym
 - End-to-end tests for the public and authenticated flows.
 - Accessibility pass.
 
-### 6c. Notification delivery
+### 6c. Notification delivery — Done (2026-08-22)
 
-Pulled into this phase rather than treated as a new domain: `Alert` already has an `EMERGENCY` severity and the subscription model is planned, but there is no way to reach anyone. An alerting platform that cannot deliver alerts is not shippable.
+- ~~Per-user contact details plus verification.~~ Done — reused the existing `User.email` (already verified via login). No separate `notifyEmail` field needed for v1.
+- ~~Transport for at least one channel.~~ Done — Nodemailer SMTP email. Optional: API starts without SMTP configured (one-time warn, sends silently skipped).
+- ~~Delivery on `ACTIVE` alert transitions.~~ Done — `AlertsService.create()` (always ACTIVE) and `AlertsService.update()` (DRAFT → ACTIVE) both fire `notificationsService.dispatchForAlert()` as fire-and-forget.
+- ~~Delivery status recorded so a failed send is visible rather than silent.~~ Done — `NotificationDelivery` records written as `PENDING` before each send attempt, updated to `SENT` or `FAILED` with timestamp and error message.
+- ~~The `Notification` subscription model.~~ Done — `AlertSubscription` with districtId (nullable = nationwide), minSeverity threshold, and channel.
 
-- Per-user contact details plus verification (currently `User` holds only `email` for login).
-- Transport for at least one channel — email or SMS.
-- Delivery on `ACTIVE`/`EMERGENCY` alert transitions.
-- Delivery status recorded so a failed send is visible rather than silent.
-- The `Notification` subscription model itself (already planned in `architecture/data-model.md`).
+See `docs/progress.md` "Phase 6c: Notification Delivery" for design decisions and implementation detail.
 
-Deliberately out of scope here: government agency and emergency broadcast integration (see Phase 7 sourcing).
+Remaining gap: no SMS channel (EMAIL only). Government agency and emergency broadcast integration is Phase 7.
 
 ### 6d. Operations
 

@@ -141,7 +141,7 @@ Future candidates for proper geometry fields:
 | `WaterBody` | Phase 3 | Rivers, haors, wetlands, ponds |
 | `PollutionSource` | Phase 3 | Known or reported pollution source points |
 | `CampaignPost` | Phase 5 | Community campaigns and education resources |
-| `Notification` | Phase 5 | Alert/event subscriptions |
+| `Notification` | ~~Phase 5~~ **Done (Phase 6c, 2026-08-22)** | Built as `AlertSubscription` + `NotificationDelivery` — see schema above |
 
 `Observation`, `Species`, and `RestorationProject` were previously listed here and are now in the schema (M9, M10, M11 — all 2026-08-17 to 2026-08-19).
 

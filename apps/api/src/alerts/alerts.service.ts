@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { AlertStatus, AlertSeverity } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CreateAlertDto } from './dto/create-alert.dto';
 import { UpdateAlertDto } from './dto/update-alert.dto';
 import type { JwtPayload } from '../common/decorators/current-user.decorator';
@@ -20,7 +21,10 @@ const ALERT_SELECT = {
 
 @Injectable()
 export class AlertsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   list(status?: AlertStatus, severity?: AlertSeverity, districtId?: string, page = 1, pageSize = 20) {
     const skip = (page - 1) * pageSize;
@@ -71,6 +75,8 @@ export class AlertsService {
         entityId: alert.id,
       },
     });
+    // Dispatch is fire-and-forget: delivery failures must not fail the HTTP response.
+    this.notifications.dispatchForAlert(alert.id);
     return alert;
   }
 
@@ -95,6 +101,10 @@ export class AlertsService {
           meta: { status: dto.status },
         },
       });
+      // Dispatch when a DRAFT alert is manually activated.
+      if (dto.status === AlertStatus.ACTIVE) {
+        this.notifications.dispatchForAlert(id);
+      }
     }
     return updated;
   }

@@ -1,6 +1,6 @@
 # Progress
 
-Last updated: 2026-08-22 (Phase 6b API contract enforcement — `select` discipline fixed in 4 services, `contract-types.typecheck.ts` added, caught by `tsc --noEmit` in CI; see "Phase 6b: API Contract Enforcement" below. Also Phase 6a fully closed — `helmet`, rate limiting, `USER_LOGIN_FAILED` audit, and ESLint all landed in the same commit; see "Phase 6a Complete" below. Previously: 2026-08-21 — first test suite + CI landed — 56 tests over auth/RBAC/env, all six historical bugs mutation-checked; see "First Test Suite + CI" below. Also `JWT_SECRET` fail-fast landed — the hardcoded fallback is gone and the API refuses to start without a real secret; see "JWT Secret Fail-Fast" below. Previously: 2026-08-20 — audit coverage completed — a real gap found and closed: 6 of the 16 declared `AuditAction` values were never written by any service, so logins, logouts, role changes, user deactivation, and report submission were all silently unaudited; see "Audit Coverage Gap" below. Also a docs-vs-code sync pass across 12 files — `architecture/`, `api/backend-api-links.md`, `tech-stack.md`, `flows.md`, `ingestion-plan.md`, `roles-and-permissions.md` — correcting stale Redis/BullMQ claims (neither is installed), stub markers for modules that shipped months ago, and an API catalog that still listed observations/biodiversity/metrics as not-started and omitted restoration entirely. Ran an Open Nature carryover audit: 8 major features had no counterpart anywhere in Nature Grid. 7 were scheduled — notification delivery into Phase 6c as a production blocker, six domains into a new Phase 7 — and the two genuinely-deferred leftovers went into `implementation-plan.md`'s deferred table, so the temporary register file was retired rather than kept as a ninth planning doc. Phase 6 expanded into 6a security / 6b tests+CI / 6c notifications / 6d operations. Previously: 2026-08-19 — Milestone 13 fully complete — all 4 remaining static homepage components wired to live data or an honest empty state, closing out M13 task 2; a real honesty bug caught and fixed during that pass — see "Homepage Preview Sections Wired" below; live platform metrics wired earlier the same day — M13 task 7; Milestone 10 — Biodiversity + GBIF — built end to end, real species/occurrence data now live on `/biodiversity`, a real GBIF integer-overflow bug found and fixed along the way; Milestone 11 — Restoration Projects — built end to end, real data now live on `/restoration`; Milestone 9 — Observations module — built end to end, real data now live on `/observations`; Milestone 15 complete — all 7 app-shell pages built; report submission form wired on `/reports`, a second critical validation bug found and fixed along the way; critical RBAC bug found and fixed — every role-gated endpoint was rejecting all users, including admins)
+Last updated: 2026-08-22 (Phase 6c notification delivery — `AlertSubscription` + `NotificationDelivery` schema, Nodemailer email service, fire-and-forget dispatch on alert activation; see "Phase 6c: Notification Delivery" below. Previously: Phase 6b API contract enforcement — `select` discipline fixed in 4 services, `contract-types.typecheck.ts` added, caught by `tsc --noEmit` in CI; see "Phase 6b: API Contract Enforcement" below. Also Phase 6a fully closed — `helmet`, rate limiting, `USER_LOGIN_FAILED` audit, and ESLint all landed in the same commit; see "Phase 6a Complete" below. Previously: 2026-08-21 — first test suite + CI landed — 56 tests over auth/RBAC/env, all six historical bugs mutation-checked; see "First Test Suite + CI" below. Also `JWT_SECRET` fail-fast landed — the hardcoded fallback is gone and the API refuses to start without a real secret; see "JWT Secret Fail-Fast" below. Previously: 2026-08-20 — audit coverage completed — a real gap found and closed: 6 of the 16 declared `AuditAction` values were never written by any service, so logins, logouts, role changes, user deactivation, and report submission were all silently unaudited; see "Audit Coverage Gap" below. Also a docs-vs-code sync pass across 12 files — `architecture/`, `api/backend-api-links.md`, `tech-stack.md`, `flows.md`, `ingestion-plan.md`, `roles-and-permissions.md` — correcting stale Redis/BullMQ claims (neither is installed), stub markers for modules that shipped months ago, and an API catalog that still listed observations/biodiversity/metrics as not-started and omitted restoration entirely. Ran an Open Nature carryover audit: 8 major features had no counterpart anywhere in Nature Grid. 7 were scheduled — notification delivery into Phase 6c as a production blocker, six domains into a new Phase 7 — and the two genuinely-deferred leftovers went into `implementation-plan.md`'s deferred table, so the temporary register file was retired rather than kept as a ninth planning doc. Phase 6 expanded into 6a security / 6b tests+CI / 6c notifications / 6d operations. Previously: 2026-08-19 — Milestone 13 fully complete — all 4 remaining static homepage components wired to live data or an honest empty state, closing out M13 task 2; a real honesty bug caught and fixed during that pass — see "Homepage Preview Sections Wired" below; live platform metrics wired earlier the same day — M13 task 7; Milestone 10 — Biodiversity + GBIF — built end to end, real species/occurrence data now live on `/biodiversity`, a real GBIF integer-overflow bug found and fixed along the way; Milestone 11 — Restoration Projects — built end to end, real data now live on `/restoration`; Milestone 9 — Observations module — built end to end, real data now live on `/observations`; Milestone 15 complete — all 7 app-shell pages built; report submission form wired on `/reports`, a second critical validation bug found and fixed along the way; critical RBAC bug found and fixed — every role-gated endpoint was rejecting all users, including admins)
 
 ## Status Legend
 
@@ -32,6 +32,7 @@ Last updated: 2026-08-22 (Phase 6b API contract enforcement — `select` discipl
 | Automated tests | Done (first suite) | 60 tests in `apps/api` covering auth (incl. failed-login audit), RBAC, env validation — 2026-08-21/22. No e2e tests, no web/admin tests. See "First Test Suite + CI" below. |
 | CI | Done | `.github/workflows/ci.yml` — 2026-08-21. Needs a git remote to execute. |
 | API contract enforcement | Done | 2026-08-22 — `contract-types.typecheck.ts` + `select` discipline in 4 services. Checked by `tsc --noEmit` in CI. See "Phase 6b: API Contract Enforcement" below. |
+| Notification delivery — Phase 6c | Done | 2026-08-22 — `AlertSubscription` + `NotificationDelivery` schema, Nodemailer email service, fire-and-forget dispatch on alert activation. See "Phase 6c: Notification Delivery" below. |
 | JWT secret handling | Done | Fixed 2026-08-21 — boot-time validation, no fallback. See "JWT Secret Fail-Fast" below. |
 | Security headers (`helmet`) | Done | 2026-08-21 — see "Phase 6a Complete" below. |
 | Rate limiting (`@nestjs/throttler`) | Done | 2026-08-21 — global 120 req/60 s; auth endpoints 5/20 req/60 s. See "Phase 6a Complete" below. |
@@ -50,6 +51,48 @@ Last updated: 2026-08-22 (Phase 6b API contract enforcement — `select` discipl
 | Community module | Planned | Not planned as an API module at all yet (`docs/architecture/feature-map.md`). Both `/community` (2026-08-17) and the homepage's `community-section.tsx` (2026-08-19) now show an honest empty state — no fabricated content anywhere in the app for this area. |
 | Admin frontend | Planned | Shell only at port 3002 |
 | Data worker | Planned | Python skeleton; no active jobs |
+
+## Phase 6c: Notification Delivery (2026-08-22)
+
+An alerting platform with `EMERGENCY` severity but no delivery mechanism is not shippable. This pass builds the full notification pipeline.
+
+**Schema (migration `20260821215250_add_notification_subscriptions_and_deliveries`):**
+- `NotificationChannel` enum (`EMAIL`) and `DeliveryStatus` enum (`PENDING`, `SENT`, `FAILED`)
+- `AlertSubscription` — userId, districtId (nullable = nationwide), channel, minSeverity (`INFO`/`WATCH`/`WARNING`/`EMERGENCY`). No `@@unique` — Postgres treats `NULL != NULL` in unique indexes, breaking deduplication for global (districtId-null) subscriptions. Uniqueness enforced at application level in `subscribe()` instead.
+- `NotificationDelivery` — subscriptionId (`onDelete: Cascade`), alertId, userId, channel, address (captured at send time), status, sentAt, failedAt, error. Pre-written as `PENDING` before the send attempt so a crash mid-flight leaves auditable evidence.
+- Relations added to `User`, `District`, `Alert`.
+
+**Email service (`notifications/email.service.ts`):**
+- Reads `SMTP_HOST`/`PORT`/`USER`/`PASS`/`FROM` from `ConfigService` at construction — all optional.
+- If `SMTP_HOST` is absent, logs a one-time `warn` and sets `transporter = null`. Every send call is then a debug-logged no-op, not an error. The API starts cleanly without SMTP configured.
+- Plain-text email: severity label, area (district name or "Nationwide"), title, description, instructions (if set), issued timestamp, unsubscribe note.
+
+**Notifications service (`notifications/notifications.service.ts`):**
+- `subscribe()` — application-level uniqueness check (`findFirst`) then creates subscription. Throws `ConflictException` on duplicate.
+- `listSubscriptions(userId)` — returns subscriptions with district name, ordered by `createdAt desc`.
+- `unsubscribe(id, userId)` — `findFirst` to verify ownership, then `deleteMany` to avoid Prisma's own P2025 not-found on race conditions.
+- `dispatchForAlert(alertId): void` — public, synchronous, fire-and-forget. Calls `runDispatch` without await; errors caught in `.catch()` and logged. Called from `AlertsService` — never blocks the HTTP response.
+- `runDispatch` — fetches the alert, guards on `status === ACTIVE`, finds matching subscriptions filtered by district (null OR alertDistrictId) and `minSeverity IN QUALIFYING_MIN_SEVERITIES[alertSeverity]` and `user.isActive`. Deduplicates by userId (Set, earliest subscription wins). Calls `sendToUser` sequentially.
+- `QUALIFYING_MIN_SEVERITIES` — maps alert severity to the set of minSeverity values that qualify: `EMERGENCY → [INFO,WATCH,WARNING,EMERGENCY]`, `WARNING → [INFO,WATCH,WARNING]`, etc.
+- `sendToUser` — creates `PENDING` delivery, calls email service, updates to `SENT`/`FAILED`. The `address` column stores the email at send time so delivery history is preserved if the user later changes account.
+
+**Controller (`notifications/notifications.controller.ts`):**
+- `POST /notifications/subscriptions` — subscribe (any authenticated user)
+- `GET /notifications/subscriptions` — list mine
+- `DELETE /notifications/subscriptions/:id` — unsubscribe (ownership enforced in service)
+
+**AlertsService wiring:**
+- `create()` — calls `this.notifications.dispatchForAlert(alert.id)` after audit write (no await)
+- `update()` — calls dispatch when `dto.status === AlertStatus.ACTIVE` (covers DRAFT → ACTIVE transitions; does not fire for EXPIRED/CANCELLED)
+
+**Env vars added to `.env.example`** (all commented/optional): `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`.
+
+**Design decisions noted:**
+- Nationwide alerts (districtId null) only reach global subscribers (districtId null), not district-specific subscribers. District-specific subscribers opted in to events in their area, not all national events.
+- Send is sequential per subscriber (not parallel) — avoids SMTP thundering herd on large subscriber lists. Queue-based parallel dispatch is the right v2 solution when subscriber counts grow.
+- `onDelete: Cascade` on `NotificationDelivery.subscription` — delivery history is operational audit data, not compliance records; acceptable to lose with the subscription for v1.
+
+`tsc --noEmit` clean. All 60 tests pass.
 
 ## Phase 6b: API Contract Enforcement (2026-08-22)
 

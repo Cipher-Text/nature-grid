@@ -144,6 +144,16 @@ enum ObservationTrustLevel {
   FLAGGED
 }
 
+enum NotificationChannel {
+  EMAIL
+}
+
+enum DeliveryStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
 // ─── Users & Auth ─────────────────────────────────────────────────────────────
 
 model User {
@@ -165,6 +175,8 @@ model User {
   restorationParticipations  RestorationParticipant[]
   datasetAccessRequests DatasetAccessRequest[] @relation("DatasetAccessRequester")
   datasetAccessDecisions DatasetAccessRequest[] @relation("DatasetAccessDecider")
+  alertSubscriptions    AlertSubscription[]
+  notificationDeliveries NotificationDelivery[]
 
   @@index([email])
   @@index([role])
@@ -244,6 +256,7 @@ model District {
   observations Observation[]
   restorationProjects RestorationProject[]
   occurrences Occurrence[]
+  alertSubscriptions AlertSubscription[]
 
   currentWeatherReadings CurrentWeatherReading[]
   hourlyWeatherForecasts HourlyWeatherForecast[]
@@ -472,8 +485,58 @@ model Alert {
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
+  deliveries NotificationDelivery[]
+
   @@index([status])
   @@index([severity])
+}
+
+// ─── Notifications ────────────────────────────────────────────────────────────
+
+model AlertSubscription {
+  id          String              @id @default(cuid())
+  userId      String
+  user        User                @relation(fields: [userId], references: [id])
+  districtId  String?
+  // null = nationwide subscription (receives alerts for any district)
+  district    District?           @relation(fields: [districtId], references: [id])
+  channel     NotificationChannel @default(EMAIL)
+  // Minimum alert severity to trigger delivery. A subscriber with minSeverity
+  // WARNING receives WARNING and EMERGENCY alerts only.
+  minSeverity AlertSeverity       @default(INFO)
+  createdAt   DateTime            @default(now())
+
+  // No @@unique here: Postgres treats NULL != NULL in unique indexes, so
+  // @@unique([userId, districtId, channel]) would allow duplicate global
+  // (districtId IS NULL) subscriptions per user. Uniqueness is enforced in
+  // NotificationsService.subscribe() instead.
+  deliveries NotificationDelivery[]
+
+  @@index([userId])
+  @@index([districtId])
+}
+
+model NotificationDelivery {
+  id             String              @id @default(cuid())
+  subscriptionId String
+  // Cascade: deleting a subscription removes its delivery history.
+  subscription   AlertSubscription   @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  alertId        String
+  alert          Alert               @relation(fields: [alertId], references: [id])
+  userId         String
+  user           User                @relation(fields: [userId], references: [id])
+  channel        NotificationChannel
+  // Address captured at send time — preserved even if the user later changes email.
+  address        String
+  status         DeliveryStatus      @default(PENDING)
+  sentAt         DateTime?
+  failedAt       DateTime?
+  error          String?
+  createdAt      DateTime            @default(now())
+
+  @@index([alertId])
+  @@index([userId])
+  @@index([status])
 }
 
 // ─── Ingestion ────────────────────────────────────────────────────────────────

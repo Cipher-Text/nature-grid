@@ -20,6 +20,7 @@ import { MediaModule } from './media/media.module';
 import { IngestionModule } from './ingestion/ingestion.module';
 import { WeatherModule } from './weather/weather.module';
 import { MetricsModule } from './metrics/metrics.module';
+import { NotificationsModule } from './notifications/notifications.module';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -45,6 +46,7 @@ import { HealthController } from './health.controller';
     IngestionModule,
     WeatherModule,
     MetricsModule,
+    NotificationsModule,
   ],
   controllers: [HealthController],
   // ThrottlerGuard is registered here rather than in main.ts's useGlobalGuards
