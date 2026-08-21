@@ -4,6 +4,22 @@ import { PrismaService } from '../database/prisma.service';
 import { WeatherService } from '../weather/weather.service';
 import { SEED_DATASETS } from './seed/catalog';
 
+const DATASET_SELECT = {
+  id: true,
+  name: true,
+  category: true,
+  accessPolicy: true,
+  source: true,
+  providerId: true,
+  description: true,
+  recordCount: true,
+  lastSyncedAt: true,
+  isPublished: true,
+  createdAt: true,
+  updatedAt: true,
+  provider: { select: { id: true, name: true, type: true } },
+} as const;
+
 @Injectable()
 export class DatasetsService implements OnModuleInit {
   private readonly logger = new Logger(DatasetsService.name);
@@ -39,7 +55,7 @@ export class DatasetsService implements OnModuleInit {
         skip,
         take: pageSize,
         orderBy: { name: 'asc' },
-        include: { provider: { select: { id: true, name: true, type: true } } },
+        select: DATASET_SELECT,
       }),
       this.prisma.dataset.count({ where }),
     ]).then(([data, total]) => ({ data, total, page, pageSize }));
@@ -48,7 +64,7 @@ export class DatasetsService implements OnModuleInit {
   async getById(id: string) {
     const dataset = await this.prisma.dataset.findUnique({
       where: { id },
-      include: { provider: { select: { id: true, name: true, type: true } } },
+      select: DATASET_SELECT,
     });
     if (!dataset) throw new NotFoundException('Dataset not found');
     return dataset;

@@ -28,7 +28,7 @@ pnpm exec jest --watch                          # Watch mode
 pnpm exec jest --coverage                       # Coverage report
 ```
 
-`pnpm lint` is excluded from CI because eslint is not installed as a bin; running it will fail.
+`pnpm lint` is excluded from CI (rule set not yet stabilised) but runs cleanly locally — run it before any PR.
 
 ## Architecture
 
@@ -52,9 +52,11 @@ packages/config    Empty placeholder
 ### API (NestJS)
 
 Global setup in `apps/api/src/main.ts`:
+- `helmet()` applied first — security headers on every response including errors
 - Prefix `/api/v1`
 - `ValidationPipe` with `whitelist: true`, `forbidNonWhitelisted: true`, `transform: true`
-- `JwtAuthGuard` + `RolesGuard` + `ThrottlerGuard` registered globally via `APP_GUARD`
+- `JwtAuthGuard` + `RolesGuard` registered via `useGlobalGuards`; `ThrottlerGuard` registered via `APP_GUARD` in `AppModule` (needs DI)
+- Rate limits: global 120 req / 60 s; auth endpoints tightened — login/register 5 req / 60 s, refresh 20 req / 60 s
 
 **Feature modules** (`apps/api/src/`): `auth`, `users`, `organizations`, `locations`, `providers`, `datasets`, `reports`, `alerts`, `observations`, `restoration`, `biodiversity`, `weather`, `metrics`, `database`, `common`. Stubs with no implementation: `media`, `ingestion`.
 
@@ -99,7 +101,7 @@ Route groups: `(public)` — `/`, `/login`, `/register`; `(app)` — all other p
 
 Fetch helpers: `apiGet` (cached), `apiGetAuthed`, `apiPost`, `apiPostAuthed` (never cached).
 
-`apps/web` depends on `@nature-grid/contracts` for route constants and DTOs. `apps/api` does **not** depend on contracts, so backend route strings and response shapes can drift — there are no contract tests.
+`apps/web` depends on `@nature-grid/contracts` for route constants and DTOs. `apps/api` has `@nature-grid/contracts` as a **devDependency only** — it is never imported in production code, but `apps/api/src/common/contract-types.typecheck.ts` uses it for compile-time contract enforcement: every service return type is asserted against its contract type via `tsc --noEmit` in CI. A service dropping a required field or changing a field type will produce a `TS2322` error and fail the build.
 
 ### Weather & Biodiversity modules
 
@@ -110,10 +112,10 @@ Both are self-contained; neither is wired to the generic `ingestion` module stub
 
 ### Testing
 
-56 unit tests in 5 spec files under `apps/api/src/` (all fully mocked — no DB, no running server):
+61 unit tests in 5 spec files under `apps/api/src/` (all fully mocked — no DB, no running server):
 - `roles.guard.spec.ts` — all 6 roles, case-sensitivity regression
 - `jwt-auth.guard.spec.ts` — `@Public()` bypass, error handling
-- `auth.service.spec.ts` — register/login/refresh/logout, token rotation, audit events
+- `auth.service.spec.ts` — register/login/refresh/logout, token rotation, audit events, `USER_LOGIN_FAILED` in all three failure branches
 - `refresh-token.util.spec.ts` — opaque format, hash isolation
 - `env.validation.spec.ts` — placeholder rejection, 31/32-char boundary
 

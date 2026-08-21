@@ -366,6 +366,25 @@ Built the `apps/web` routes that the nav (`public-nav.tsx`, `app-sidebar.tsx`) a
 
 ---
 
+## Phase 6a + 6b — Done (2026-08-21/22)
+
+Both phases landed back-to-back; see `docs/progress.md` "Phase 6a Complete" and "Phase 6b: API Contract Enforcement" for full detail.
+
+**Phase 6a (security must-fixes)** — all four items done in a single commit (2026-08-21):
+- `helmet` installed and applied in `main.ts` before routing.
+- `@nestjs/throttler` global (120 req/60 s) + auth routes tightened via `@Throttle` (login/register 5/60 s, refresh 20/60 s).
+- `USER_LOGIN_FAILED` — additive migration + `AuthService.recordFailedLogin()` fires on unknown email and bad/inactive password; five regression tests added.
+- ESLint — `.eslintrc.json` added for `apps/api`, `apps/web`, `apps/admin`; `pnpm lint` runs cleanly.
+
+**Phase 6b (regression safety net)** — partially done:
+- First test suite (56 → 60 tests) and CI workflow — Done (2026-08-21).
+- ESLint — Done (2026-08-21, see 6a).
+- API contract enforcement — Done (2026-08-22). `@nature-grid/contracts` added as devDep to `apps/api`. `src/common/contract-types.typecheck.ts` uses `Jsonified<T>` utility + TypeScript structural assignment to verify service return types match contract types; caught by `tsc --noEmit` in CI. Also fixed `include`→`select` discipline in `datasets.service.ts`, `reports.service.ts` (`getById`), `alerts.service.ts` (`getById`), and four weather read methods.
+- E2e tests — Not started.
+- Accessibility pass — Not started.
+
+---
+
 ## Deferred / Later Phases
 
 Cross-check this table against `docs/roadmap.md` Phase 6 and Phase 7 before relying on it — several rows below were scheduled on 2026-08-20 and are annotated accordingly. This table is the single home for deferred work; the separate Open Nature gap register was retired into it and the roadmap on 2026-08-20, once its remaining items were down to these two.

@@ -36,7 +36,7 @@ Owns registration, login, token refresh, session lifecycle, and authentication g
 
 Access tokens are JWTs; refresh tokens are opaque random strings stored as SHA-256 hashes in the `RefreshToken` table, **not** JWTs and **not** Redis-backed. Refresh rotates the pair and revokes the old token, so a stolen refresh token stops working once the legitimate client refreshes. `RefreshTokenCleanupScheduler` runs daily at 2 AM and deletes tokens expired 30+ days ago.
 
-Registration, login, and logout each write an audit event (`USER_REGISTER`, `USER_LOGIN`, `USER_LOGOUT`) with the caller's IP. Logout stays idempotent but audits only a real revocation — repeat logouts and unknown tokens still return success without logging a duplicate or unattributable event. Failed logins are **not** audited (no `USER_LOGIN_FAILED` enum value exists). See `docs/progress.md` "Auth Refresh/Logout" for why Postgres was chosen over Redis.
+Registration, login, and logout each write an audit event (`USER_REGISTER`, `USER_LOGIN`, `USER_LOGOUT`) with the caller's IP. Logout stays idempotent but audits only a real revocation — repeat logouts and unknown tokens still return success without logging a duplicate or unattributable event. Failed logins also write `USER_LOGIN_FAILED` (added 2026-08-21) — unknown email gets `userId: null` with the attempted address in meta; wrong password or deactivated account gets the real `userId` with a `reason` field. The HTTP response is a generic 401 either way; the audit trail is the only place the distinction is visible. See `docs/progress.md` "Auth Refresh/Logout" for why Postgres was chosen over Redis.
 
 ## users ✓
 

@@ -112,6 +112,9 @@ importers:
         specifier: ^7.8.1
         version: 7.8.2
     devDependencies:
+      '@nature-grid/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       '@nestjs/cli':
         specifier: ^10.4.8
         version: 10.4.9

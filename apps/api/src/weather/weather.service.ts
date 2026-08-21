@@ -144,10 +144,43 @@ export class WeatherService {
 
   // ─── Read access ────────────────────────────────────────────────────────
 
+  private static readonly CURRENT_WEATHER_SELECT = {
+    id: true,
+    districtId: true,
+    lat: true,
+    lng: true,
+    readingTime: true,
+    temperature2m: true,
+    relativeHumidity2m: true,
+    apparentTemperature: true,
+    windSpeed10m: true,
+    windDirection10m: true,
+    precipitation: true,
+    weatherCode: true,
+    cloudCover: true,
+    isDay: true,
+  } as const;
+
+  private static readonly AIR_QUALITY_SELECT = {
+    id: true,
+    districtId: true,
+    lat: true,
+    lng: true,
+    forecastTime: true,
+    pm10: true,
+    pm25: true,
+    carbonMonoxide: true,
+    nitrogenDioxide: true,
+    sulphurDioxide: true,
+    ozone: true,
+    uvIndex: true,
+  } as const;
+
   getLatestCurrent(districtId: string) {
     return this.prisma.currentWeatherReading.findFirst({
       where: { districtId },
       orderBy: { readingTime: 'desc' },
+      select: WeatherService.CURRENT_WEATHER_SELECT,
     });
   }
 
@@ -155,7 +188,10 @@ export class WeatherService {
     return this.prisma.currentWeatherReading.findMany({
       distinct: ['districtId'],
       orderBy: [{ districtId: 'asc' }, { readingTime: 'desc' }],
-      include: { district: { select: { id: true, name: true } } },
+      select: {
+        ...WeatherService.CURRENT_WEATHER_SELECT,
+        district: { select: { id: true, name: true } },
+      },
     });
   }
 
@@ -177,6 +213,7 @@ export class WeatherService {
     return this.prisma.hourlyAirQuality.findFirst({
       where: { districtId },
       orderBy: { forecastTime: 'desc' },
+      select: WeatherService.AIR_QUALITY_SELECT,
     });
   }
 
@@ -184,7 +221,10 @@ export class WeatherService {
     return this.prisma.hourlyAirQuality.findMany({
       distinct: ['districtId'],
       orderBy: [{ districtId: 'asc' }, { forecastTime: 'desc' }],
-      include: { district: { select: { id: true, name: true } } },
+      select: {
+        ...WeatherService.AIR_QUALITY_SELECT,
+        district: { select: { id: true, name: true } },
+      },
     });
   }
 }

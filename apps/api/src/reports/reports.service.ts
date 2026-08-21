@@ -85,10 +85,14 @@ export class ReportsService {
   async getById(id: string) {
     const report = await this.prisma.citizenReport.findUnique({
       where: { id },
-      include: {
-        reporter: { select: { id: true, displayName: true } },
-        district: { select: { id: true, name: true, division: { select: { id: true, name: true } } } },
-        statusHistory: { orderBy: { createdAt: 'desc' } },
+      select: {
+        ...REPORT_SELECT,
+        // Detail endpoint additionally exposes the status audit trail.
+        // Not part of the list contract but useful for the detail view.
+        statusHistory: {
+          select: { id: true, status: true, note: true, createdAt: true },
+          orderBy: { createdAt: 'desc' as const },
+        },
       },
     });
     if (!report) throw new NotFoundException('Report not found');

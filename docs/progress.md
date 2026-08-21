@@ -1,6 +1,6 @@
 # Progress
 
-Last updated: 2026-08-21 (first test suite + CI landed — 56 tests over auth/RBAC/env, all six historical bugs mutation-checked; see "First Test Suite + CI" below. Also `JWT_SECRET` fail-fast landed — the hardcoded fallback is gone and the API refuses to start without a real secret; see "JWT Secret Fail-Fast" below. Previously: 2026-08-20 — audit coverage completed — a real gap found and closed: 6 of the 16 declared `AuditAction` values were never written by any service, so logins, logouts, role changes, user deactivation, and report submission were all silently unaudited; see "Audit Coverage Gap" below. Also a docs-vs-code sync pass across 12 files — `architecture/`, `api/backend-api-links.md`, `tech-stack.md`, `flows.md`, `ingestion-plan.md`, `roles-and-permissions.md` — correcting stale Redis/BullMQ claims (neither is installed), stub markers for modules that shipped months ago, and an API catalog that still listed observations/biodiversity/metrics as not-started and omitted restoration entirely. Ran an Open Nature carryover audit: 8 major features had no counterpart anywhere in Nature Grid. 7 were scheduled — notification delivery into Phase 6c as a production blocker, six domains into a new Phase 7 — and the two genuinely-deferred leftovers went into `implementation-plan.md`'s deferred table, so the temporary register file was retired rather than kept as a ninth planning doc. Phase 6 expanded into 6a security / 6b tests+CI / 6c notifications / 6d operations. Previously: 2026-08-19 — Milestone 13 fully complete — all 4 remaining static homepage components wired to live data or an honest empty state, closing out M13 task 2; a real honesty bug caught and fixed during that pass — see "Homepage Preview Sections Wired" below; live platform metrics wired earlier the same day — M13 task 7; Milestone 10 — Biodiversity + GBIF — built end to end, real species/occurrence data now live on `/biodiversity`, a real GBIF integer-overflow bug found and fixed along the way; Milestone 11 — Restoration Projects — built end to end, real data now live on `/restoration`; Milestone 9 — Observations module — built end to end, real data now live on `/observations`; Milestone 15 complete — all 7 app-shell pages built; report submission form wired on `/reports`, a second critical validation bug found and fixed along the way; critical RBAC bug found and fixed — every role-gated endpoint was rejecting all users, including admins)
+Last updated: 2026-08-22 (Phase 6b API contract enforcement — `select` discipline fixed in 4 services, `contract-types.typecheck.ts` added, caught by `tsc --noEmit` in CI; see "Phase 6b: API Contract Enforcement" below. Also Phase 6a fully closed — `helmet`, rate limiting, `USER_LOGIN_FAILED` audit, and ESLint all landed in the same commit; see "Phase 6a Complete" below. Previously: 2026-08-21 — first test suite + CI landed — 56 tests over auth/RBAC/env, all six historical bugs mutation-checked; see "First Test Suite + CI" below. Also `JWT_SECRET` fail-fast landed — the hardcoded fallback is gone and the API refuses to start without a real secret; see "JWT Secret Fail-Fast" below. Previously: 2026-08-20 — audit coverage completed — a real gap found and closed: 6 of the 16 declared `AuditAction` values were never written by any service, so logins, logouts, role changes, user deactivation, and report submission were all silently unaudited; see "Audit Coverage Gap" below. Also a docs-vs-code sync pass across 12 files — `architecture/`, `api/backend-api-links.md`, `tech-stack.md`, `flows.md`, `ingestion-plan.md`, `roles-and-permissions.md` — correcting stale Redis/BullMQ claims (neither is installed), stub markers for modules that shipped months ago, and an API catalog that still listed observations/biodiversity/metrics as not-started and omitted restoration entirely. Ran an Open Nature carryover audit: 8 major features had no counterpart anywhere in Nature Grid. 7 were scheduled — notification delivery into Phase 6c as a production blocker, six domains into a new Phase 7 — and the two genuinely-deferred leftovers went into `implementation-plan.md`'s deferred table, so the temporary register file was retired rather than kept as a ninth planning doc. Phase 6 expanded into 6a security / 6b tests+CI / 6c notifications / 6d operations. Previously: 2026-08-19 — Milestone 13 fully complete — all 4 remaining static homepage components wired to live data or an honest empty state, closing out M13 task 2; a real honesty bug caught and fixed during that pass — see "Homepage Preview Sections Wired" below; live platform metrics wired earlier the same day — M13 task 7; Milestone 10 — Biodiversity + GBIF — built end to end, real species/occurrence data now live on `/biodiversity`, a real GBIF integer-overflow bug found and fixed along the way; Milestone 11 — Restoration Projects — built end to end, real data now live on `/restoration`; Milestone 9 — Observations module — built end to end, real data now live on `/observations`; Milestone 15 complete — all 7 app-shell pages built; report submission form wired on `/reports`, a second critical validation bug found and fixed along the way; critical RBAC bug found and fixed — every role-gated endpoint was rejecting all users, including admins)
 
 ## Status Legend
 
@@ -25,14 +25,18 @@ Last updated: 2026-08-21 (first test suite + CI landed — 56 tests over auth/RB
 | Shared types and contracts — M2 | Done | Full enums, DTOs, paginated envelopes, request/response types, route contract map |
 | Backend foundation — M3 | Done | Auth (JWT/bcrypt), users, orgs, locations (8 div/64 district auto-seed), providers, datasets (catalog seed), reports (status workflow + audit), alerts (severity + audit), global validation, guard infrastructure. **Caveat:** role-gated endpoints shipped with a casing bug that rejected every user until 2026-08-17 — see "Critical RBAC Fix" below. |
 | Prisma schema | Done | 15 enums, 24 models — core entities + 4 weather tables + `RefreshToken` + `Observation` (2026-08-17) + `RestorationProject`/`RestorationParticipant` + `Species`/`Occurrence` (both 2026-08-19) + `DatasetAccessRequest` (2026-08-19, schema-only); client regenerated |
-| Database migration — M4 | Done | 10 migrations applied, 24 tables live (latest: `20260819185617_add_user_deactivate_audit_action`, 2026-08-20); Postgres on port 5433 (remapped — local Postgres occupies 5432) |
+| Database migration — M4 | Done | 11 migrations applied, 24 tables live (latest: `20260820200435_add_user_login_failed_audit_action`, 2026-08-21); Postgres on port 5433 (remapped — local Postgres occupies 5432) |
 | District coordinates | Done | Migration `add_district_coordinates`; all 64 districts backfilled with real lat/lng sourced from `open-nature`'s district registry (`LocationsService.onModuleInit` backfills on boot if missing) |
 | Seed data | Done | LocationsService auto-seeds 8 divisions + 64 districts (with coordinates) on boot; DatasetsService auto-seeds 5 catalog records; ProvidersService auto-seeds the `OpenMeteo` provider; no separate seed script needed |
 | Auth — refresh / logout | Done | Postgres-backed `RefreshToken` model (not Redis — see "Auth Refresh/Logout" below), opaque tokens with rotation, daily cleanup cron |
-| Automated tests | Done (first suite) | 56 tests in `apps/api` covering auth, RBAC, env validation — 2026-08-21. No e2e/contract tests, no web/admin tests. See "First Test Suite + CI" below. |
+| Automated tests | Done (first suite) | 60 tests in `apps/api` covering auth (incl. failed-login audit), RBAC, env validation — 2026-08-21/22. No e2e tests, no web/admin tests. See "First Test Suite + CI" below. |
 | CI | Done | `.github/workflows/ci.yml` — 2026-08-21. Needs a git remote to execute. |
+| API contract enforcement | Done | 2026-08-22 — `contract-types.typecheck.ts` + `select` discipline in 4 services. Checked by `tsc --noEmit` in CI. See "Phase 6b: API Contract Enforcement" below. |
 | JWT secret handling | Done | Fixed 2026-08-21 — boot-time validation, no fallback. See "JWT Secret Fail-Fast" below. |
-| Audit coverage | Done | Completed 2026-08-20 — 14 of 17 `AuditAction` values now written; every implemented mutating endpoint is audited. See "Audit Coverage Gap" below. |
+| Security headers (`helmet`) | Done | 2026-08-21 — see "Phase 6a Complete" below. |
+| Rate limiting (`@nestjs/throttler`) | Done | 2026-08-21 — global 120 req/60 s; auth endpoints 5/20 req/60 s. See "Phase 6a Complete" below. |
+| Audit coverage | Done | 15 of 18 `AuditAction` values written as of 2026-08-21 (`USER_LOGIN_FAILED` added). Every implemented mutating endpoint is audited. See "Audit Coverage Gap" and "Phase 6a Complete" below. |
+| ESLint | Done | 2026-08-21 — `.eslintrc.json` for api/web/admin apps. See "Phase 6a Complete" below. |
 | RBAC / role guard casing bug | Done | Fixed 2026-08-17 — see "Critical RBAC Fix" below. Every role-gated endpoint (`POST /alerts`, `PATCH /alerts/:id`, `PATCH /reports/:id/status`, `PATCH /users/:id/role`, `PATCH /users/:id/deactivate`) previously rejected all users, including admins. |
 | PostGIS / geospatial fields | Planned | `lat/lng` Float on `District` (populated) and `CitizenReport`; replace with PostGIS `geography` type when ready |
 | Observations module — M9 | Done | Full CRUD + trust-level workflow live (2026-08-17) — see "Observations Module" below. `/observations` now shows real data with a working submission form. |
@@ -47,13 +51,55 @@ Last updated: 2026-08-21 (first test suite + CI landed — 56 tests over auth/RB
 | Admin frontend | Planned | Shell only at port 3002 |
 | Data worker | Planned | Python skeleton; no active jobs |
 
+## Phase 6b: API Contract Enforcement (2026-08-22)
+
+The long-standing gap: `apps/api` did not import `@nature-grid/contracts`, so the backend could silently drift from the shapes the frontend relied on — wrong field name, missing field, wrong type — with nothing in CI to catch it.
+
+**`select` discipline** — four services were using Prisma `include` (or no field filter) instead of an explicit `select`, meaning unintended fields could leak into API responses:
+- `datasets.service.ts` `list()`/`getById()` — added `DATASET_SELECT` constant; switched from `include` to `select`
+- `weather.service.ts` — `getLatestCurrent()`, `getLatestCurrentForAllDistricts()`, `getLatestAirQuality()`, `getLatestAirQualityForAllDistricts()` returned `createdAt` (not in the `CurrentWeatherReading` or `HourlyAirQualityReading` contract). Added `CURRENT_WEATHER_SELECT` and `AIR_QUALITY_SELECT` as static class constants; all four read methods now use them.
+- `reports.service.ts` `getById()` — was using `include` (returning all scalar fields: `description`, `reporterId`, `resolvedAt`); changed to `select: { ...REPORT_SELECT, statusHistory: { ... } }`. The `statusHistory` detail is intentionally kept since it's useful for the detail view but is not part of the list contract.
+- `alerts.service.ts` `getById()` — was using `include`; changed to `select: ALERT_SELECT`, matching the list response shape exactly.
+
+**`contract-types.typecheck.ts`** — new file at `apps/api/src/common/contract-types.typecheck.ts`. No runtime effect; only purpose is to be checked by `tsc --noEmit` in CI. Covers all eight domain surfaces: reports, alerts, observations, datasets, restoration, biodiversity, weather (current + AQ), metrics.
+
+Key design decisions:
+- Uses a `Jsonified<T>` utility type (`Date→string`, `T[]→Jsonified<T>[]`, objects recursively mapped) to model NestJS's JSON serialisation — Prisma returns `Date`, the client receives ISO-8601 strings.
+- Each check is a direct `const _check: ContractType = declared_service_result` assignment — TypeScript errors if the service return type is missing a required contract field or has the wrong type. Extra fields on the service side are fine (structural subtyping).
+- Verified via deliberate breakage: injecting a `& { nonExistentField: string }` requirement triggered a precise `TS2322` error naming the exact missing field and the complete inferred service return type; restoring the file returned to zero errors.
+
+`@nature-grid/contracts` added as a devDependency to `apps/api/package.json` (workspace link, zero download cost). `pnpm install` confirms lockfile unchanged.
+
+All 60 existing tests still pass. `tsc --noEmit` clean across all three apps.
+
+## Phase 6a Complete (2026-08-21)
+
+All four security must-fixes landed in a single commit (`d428fa8`).
+
+**`helmet`** — installed and called in `apps/api/src/main.ts` before routing, so every response (including error responses) carries standard security headers (`X-Content-Type-Options`, `X-Frame-Options`, `Strict-Transport-Security`, etc.).
+
+**Rate limiting** — `ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }])` applied globally in `AppModule`. `ThrottlerGuard` registered via `APP_GUARD` (not `useGlobalGuards`) so it gets DI. Auth endpoints tightened with `@Throttle` on the controller:
+- `/auth/login` and `/auth/register`: 5 req / 60 s per IP
+- `/auth/refresh`: 20 req / 60 s per IP (legitimate clients refresh every ~15 min)
+- All other routes: global 120 req / 60 s baseline
+
+**`USER_LOGIN_FAILED` audit** — the last known audit gap. `AuditAction.USER_LOGIN_FAILED` added via additive migration `20260820200435_add_user_login_failed_audit_action`. `AuthService.recordFailedLogin()` fires before every `UnauthorizedException` in `login()`:
+- Unknown email → `userId: null`, `meta: { email, reason: 'unknown_email' }` — a spray across many accounts is still visible even though no `userId` exists
+- Bad password or deactivated account → real `userId`, `meta: { email, reason: 'bad_password_or_inactive' }`
+
+Both branches capture `ipAddress` from the request. The HTTP response remains a generic `401 Invalid credentials` in all cases — the distinction is only in the audit trail, not the API surface. Five regression tests added to `auth.service.spec.ts` verify: wrong-password audit, unknown-email audit, deactivated-user audit, IP capture on failure, and the invariant that `USER_LOGIN` is never written on a failed attempt.
+
+**ESLint** — `.eslintrc.json` added for `apps/api`, `apps/web`, and `apps/admin`. `pnpm lint` now runs cleanly. Kept out of CI for now until the rule set is confirmed stable; `pnpm lint` should be run locally before any PR.
+
+Result: `AuditAction` now has 18 values, 15 of which are actively written. The three unwritten (`DATASET_ACCESS`, `DATASET_DOWNLOAD`, `DATASET_ACCESS_DECISION`) belong to dataset download/access-request endpoints that don't exist yet.
+
 ## First Test Suite + CI (2026-08-21)
 
 The repo had **zero test files and no `.github/` directory**. Both now exist.
 
 **CI** — `.github/workflows/ci.yml`, on pull requests and pushes to `main`: `pnpm install --frozen-lockfile` → `prisma generate` → `prisma validate` → `tsc --noEmit` on api/web/admin → `jest` → `pnpm build`. Three things had to be right for it to pass on the first run: `prisma generate` must precede the typechecks (`apps/api` imports generated client types that do not exist in a fresh install); a dummy `DATABASE_URL` is needed because Prisma resolves `env("DATABASE_URL")` when loading the schema; and both Next builds were confirmed against an unreachable API, since every page is server-rendered on demand and nothing fetches at build time. Whole sequence was run locally end to end before committing.
 
-Deliberately excluded: `pnpm lint` (`apps/api`'s lint script invokes `eslint`, which is not installed) and the `web`/`admin` test stubs. Both would land red and train everyone to ignore the badge.
+Deliberately excluded: `pnpm lint` (ESLint was not yet installed when CI was written; added in Phase 6a, 2026-08-21, but kept out of the workflow until the rule set is stable) and the `web`/`admin` test stubs. Both would land red and train everyone to ignore the badge.
 
 **Tests** — 56 across 5 suites in `apps/api`, all fully mocked, no database or running service:
 

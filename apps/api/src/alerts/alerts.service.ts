@@ -44,9 +44,7 @@ export class AlertsService {
   async getById(id: string) {
     const alert = await this.prisma.alert.findUnique({
       where: { id },
-      include: {
-        district: { select: { id: true, name: true, division: { select: { id: true, name: true } } } },
-      },
+      select: ALERT_SELECT,
     });
     if (!alert) throw new NotFoundException('Alert not found');
     return alert;

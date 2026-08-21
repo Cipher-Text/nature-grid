@@ -146,25 +146,25 @@ Exit criteria:
 
 ## Phase 6: Production Hardening
 
-Status: Planned
+Status: In Progress — 6a fully done (2026-08-21); 6b lint and first test suite done (2026-08-21); 6c and 6d not started.
 
 Goal: Prepare the system for real users and operational trust.
 
 Ordered roughly by risk: the security items are cheap and block any real deployment, the test/CI items protect the 60% already built, and notification delivery closes the one gap that undermines a shipped feature.
 
-### 6a. Security must-fixes
+### 6a. Security must-fixes — Done (2026-08-21)
 
 - ~~**Fail fast on a missing `JWT_SECRET`.**~~ Done (2026-08-21). `common/env.validation.ts` is wired into `ConfigModule.forRoot({ validate })`; both call sites now use `getOrThrow`, so no fallback exists. Rejects missing, empty, whitespace-only, known placeholders, and anything under 32 characters, and `JWT_SECRET` is documented in `.env.example`.
-- Add `helmet`.
-- Add rate limiting (`@nestjs/throttler`), at minimum on `/auth/login`, `/auth/register`, and `/auth/refresh`.
-- Audit failed logins. `AuditAction` has no `USER_LOGIN_FAILED` value, so brute-force attempts currently leave no trace. Needs an additive enum migration.
+- ~~**Add `helmet`.**~~ Done (2026-08-21). `helmet` installed and called in `main.ts` before routing, so every response — including error responses — carries security headers.
+- ~~**Add rate limiting (`@nestjs/throttler`).**~~ Done (2026-08-21). `ThrottlerModule` registered globally at 120 req/60 s baseline. Auth routes tightened via `@Throttle`: `/auth/login` and `/auth/register` at 5 req/60 s (brute-force surface), `/auth/refresh` at 20 req/60 s (legitimate clients refresh every ~15 min). `ThrottlerGuard` registered via `APP_GUARD` in `AppModule` so it receives DI.
+- ~~**Audit failed logins.**~~ Done (2026-08-21). `AuditAction.USER_LOGIN_FAILED` added via additive migration `20260820200435_add_user_login_failed_audit_action`. `AuthService.recordFailedLogin()` writes the event before throwing — fires on unknown email (no `userId`, email in meta) and on bad password / deactivated account (real `userId`, reason in meta). Five regression tests added to `auth.service.spec.ts` covering all three failure branches, caller-IP capture, and the invariant that `USER_LOGIN` is never written on a failed attempt.
 
 ### 6b. Regression safety net
 
 - ~~First test suite covering `auth` and RBAC.~~ Done (2026-08-21). 56 tests across `RolesGuard`, `JwtAuthGuard`, `AuthService`, the refresh-token utilities and env validation. Fully mocked — no database needed. Each historical bug has a named regression test, and all six were mutation-checked: reintroducing the bug makes the suite fail.
 - ~~CI on pull requests.~~ Done (2026-08-21). `.github/workflows/ci.yml` runs `prisma generate`/`validate`, `tsc --noEmit` on all three apps, the api test suite, and `pnpm build`. Note the repo has no git remote yet, so nothing runs until one is added.
-- Install a working lint setup. `apps/api`'s `lint` script invokes `eslint`, but no `eslint` binary is present, so `pnpm lint` cannot run there.
-- API contract tests. `apps/api` does not import `@nature-grid/contracts`, so backend routes can drift from the contract the frontend relies on with nothing to catch it.
+- ~~Install a working lint setup.~~ Done (2026-08-21). `.eslintrc.json` added for `apps/api`, `apps/web`, and `apps/admin`. `pnpm lint` now runs cleanly across all three apps; added to local verification workflow but deliberately kept out of CI until the rule set is stable.
+- ~~API contract tests.~~ Done (2026-08-22). `@nature-grid/contracts` added as a devDependency to `apps/api`. `src/common/contract-types.typecheck.ts` uses TypeScript's structural type system to assert that every service's return type (after JSON serialisation — `Date`→`string` via a `Jsonified<T>` utility) is assignable to its contract type. Checked by the existing `tsc --noEmit` step in CI. Also fixed `include`→`select` discipline in `datasets.service.ts`, `reports.service.ts` (`getById`), `alerts.service.ts` (`getById`), and four weather read methods — eliminating unintended field leakage (e.g. `createdAt` from weather readings not in the contract).
 - End-to-end tests for the public and authenticated flows.
 - Accessibility pass.
 
@@ -192,9 +192,10 @@ Exit criteria:
 
 - ~~No secret falls back to a hardcoded default.~~ **Met** (2026-08-21) — see 6a.
 - ~~Auth and RBAC have automated test coverage, and CI runs on every PR.~~ **Met** (2026-08-21) — pending a git remote for CI to actually execute.
-- An `EMERGENCY` alert reaches a subscribed user, and a failed delivery is visible.
-- Public and authenticated flows are tested. — **Partially met.** Auth, RBAC and env validation have unit coverage (56 tests). No end-to-end or contract tests yet, and `apps/web`/`apps/admin` still have no tests.
-- Sensitive actions are auditable. — **Met for everything built** (2026-08-20). 14 of 17 `AuditAction` values are written; every implemented mutating endpoint audits. The three unwritten `DATASET_*` values belong to endpoints that do not exist yet.
+- ~~Brute-force attempts leave a visible audit trail.~~ **Met** (2026-08-21) — `USER_LOGIN_FAILED` written on every rejected login; see 6a.
+- An `EMERGENCY` alert reaches a subscribed user, and a failed delivery is visible. — **Not met.** See 6c.
+- Public and authenticated flows are tested. — **Partially met.** Auth, RBAC and env validation have unit coverage (56 + 5 new login-failure tests = 61 total). No end-to-end or contract tests yet, and `apps/web`/`apps/admin` still have no tests.
+- Sensitive actions are auditable. — **Met for everything built** (2026-08-21). 15 of 18 `AuditAction` values are written (`USER_LOGIN_FAILED` added 2026-08-21). Every implemented mutating endpoint audits. The three unwritten `DATASET_*` values belong to endpoints that do not exist yet.
 - Deployment and operations are repeatable. — **Not met.** No container image or deployment path exists.
 
 ---
