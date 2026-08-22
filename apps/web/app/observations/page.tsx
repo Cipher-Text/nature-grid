@@ -84,14 +84,14 @@ export default async function ObservationsPage({
             <span>Observed</span>
           </div>
           {observationsRes.data.map((o) => (
-            <div className="table-row" role="row" key={o.id}>
+            <Link className="table-row table-row-link" role="row" key={o.id} href={`/observations/${o.id}`}>
               <span>{titleCase(o.category)}</span>
               <span>{o.district?.name ?? '—'}</span>
               <span className={`tag ${TRUST_VARIANT[o.trustLevel] ?? 'muted'}`}>
                 {titleCase(o.trustLevel)}
               </span>
               <span>{relativeTime(o.observedAt)}</span>
-            </div>
+            </Link>
           ))}
           {observationsRes.data.length === 0 && (
             <div className="empty-state">No observations match this category yet.</div>

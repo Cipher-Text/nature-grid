@@ -1456,6 +1456,39 @@ a {
   margin: 8px 0 20px;
 }
 
+/* ── Observation detail ── */
+.obs-detail-grid {
+  display: grid;
+  gap: 1px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.obs-detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  padding: 10px 14px;
+  background: var(--surface);
+  font-size: 0.9rem;
+  border-top: 1px solid var(--border);
+}
+
+.obs-detail-row:first-child {
+  border-top: 0;
+}
+
+.obs-detail-row span {
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.obs-detail-row strong {
+  text-align: right;
+}
+
 /* ── Alert subscriptions ── */
 .subscription-list {
   display: grid;
