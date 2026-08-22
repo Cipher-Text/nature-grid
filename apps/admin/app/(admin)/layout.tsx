@@ -1,9 +1,9 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import Link from 'next/link';
 import { apiGet } from '../../lib/api';
 import { ADMIN_ACCESS_TOKEN_COOKIE } from '../../lib/session-constants';
 import { logoutAction } from '../../lib/auth-actions';
+import AdminNav from '../../components/admin-nav';
 
 interface AdminUser {
   id: string;
@@ -32,11 +32,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <h2>Admin Console</h2>
         </div>
 
-        <nav className="sidebar-nav">
-          <Link href="/reports" className="nav-link active">
-            Reports
-          </Link>
-        </nav>
+        <AdminNav isAdmin={user.role === 'ADMIN'} />
 
         <div className="sidebar-footer">
           <p className="user-info">

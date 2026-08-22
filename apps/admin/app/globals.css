@@ -516,6 +516,191 @@ body {
   background: #fff;
 }
 
+/* ── User management ───────────────────────────────────────── */
+
+.user-row {
+  padding: 18px 24px;
+  border-bottom: 1px solid #edf1f2;
+}
+
+.user-row:last-child {
+  border-bottom: none;
+}
+
+.user-row.user-inactive {
+  background: #fafafa;
+  opacity: 0.75;
+}
+
+.user-row-main {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.user-identity {
+  flex: 1;
+  min-width: 220px;
+}
+
+.user-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.user-name {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.self-label {
+  font-size: 11px;
+  background: #e5ecee;
+  color: #5b6d74;
+  border-radius: 10px;
+  padding: 1px 7px;
+  font-weight: 600;
+}
+
+.inactive-label {
+  font-size: 11px;
+  background: #fee2e2;
+  color: #991b1b;
+  border-radius: 10px;
+  padding: 1px 7px;
+  font-weight: 600;
+}
+
+.user-email {
+  font-size: 12px;
+  color: #5b6d74;
+  margin-bottom: 4px;
+}
+
+.user-meta {
+  font-size: 11px;
+  color: #8a9fa8;
+}
+
+.user-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+  min-width: 260px;
+}
+
+/* ── Role badges ───────────────────────────────────────────── */
+
+.role-badge {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+.role-admin     { background: #ede9fe; color: #5b21b6; }
+.role-moderator { background: #dbeafe; color: #1d4ed8; }
+.role-government { background: #d1fae5; color: #065f46; }
+.role-org-admin { background: #fef3c7; color: #92400e; }
+.role-researcher { background: #e0f2fe; color: #0369a1; }
+.role-citizen   { background: #f3f4f6; color: #374151; }
+
+/* ── Role change form ──────────────────────────────────────── */
+
+.role-form {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.role-select {
+  padding: 5px 8px;
+  border: 1px solid #d4dcdf;
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: inherit;
+  color: #172026;
+  background: #f8fafb;
+  cursor: pointer;
+}
+
+.role-select:focus {
+  outline: none;
+  border-color: #3d9fa8;
+}
+
+.role-fixed-note {
+  font-size: 11px;
+  color: #8a9fa8;
+  font-style: italic;
+}
+
+/* ── Small button modifier ─────────────────────────────────── */
+
+.btn-sm {
+  padding: 5px 12px;
+  font-size: 12px;
+}
+
+.btn-danger-outline {
+  background: transparent;
+  color: #dc2626;
+  border: 1px solid #fca5a5;
+}
+
+.btn-danger-outline:hover {
+  background: #fee2e2;
+}
+
+/* ── Deactivate confirmation (details/summary) ─────────────── */
+
+.deactivate-details summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.deactivate-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.deactivate-confirm {
+  margin-top: 8px;
+  padding: 12px 14px;
+  background: #fff8f8;
+  border: 1px solid #fca5a5;
+  border-radius: 7px;
+  font-size: 12px;
+  color: #5b6d74;
+}
+
+.deactivate-confirm p {
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+
+.deactivate-confirm strong {
+  color: #172026;
+}
+
+.inactive-note,
+.self-note {
+  font-size: 11px;
+  color: #8a9fa8;
+  font-style: italic;
+}
+
+/* ── Form error (shared) ───────────────────────────────────── */
+
 .form-error {
   color: #991b1b;
   background: #fee2e2;
