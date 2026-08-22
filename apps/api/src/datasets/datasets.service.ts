@@ -3,6 +3,8 @@ import { DatasetCategory, DatasetAccessPolicy } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { WeatherService } from '../weather/weather.service';
 import { SEED_DATASETS } from './seed/catalog';
+import { UpdateDatasetDto } from './dto/update-dataset.dto';
+import type { JwtPayload } from '../common/decorators/current-user.decorator';
 
 const DATASET_SELECT = {
   id: true,
@@ -68,6 +70,36 @@ export class DatasetsService implements OnModuleInit {
     });
     if (!dataset) throw new NotFoundException('Dataset not found');
     return dataset;
+  }
+
+  listAll() {
+    return this.prisma.dataset
+      .findMany({ orderBy: { name: 'asc' }, select: DATASET_SELECT })
+      .then((data) => ({ data, total: data.length }));
+  }
+
+  async update(id: string, dto: UpdateDatasetDto, actor: JwtPayload) {
+    await this.getById(id);
+    const updated = await this.prisma.dataset.update({
+      where: { id },
+      data: {
+        ...(dto.name !== undefined ? { name: dto.name } : {}),
+        ...(dto.accessPolicy !== undefined ? { accessPolicy: dto.accessPolicy } : {}),
+        ...(dto.description !== undefined ? { description: dto.description } : {}),
+        ...(dto.isPublished !== undefined ? { isPublished: dto.isPublished } : {}),
+      },
+      select: DATASET_SELECT,
+    });
+    await this.prisma.auditEvent.create({
+      data: {
+        action: 'DATASET_UPDATE',
+        userId: actor.sub,
+        entityType: 'Dataset',
+        entityId: id,
+        meta: JSON.parse(JSON.stringify(dto)),
+      },
+    });
+    return updated;
   }
 
   async currentWeather() {

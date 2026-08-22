@@ -18,13 +18,27 @@ export default function AdminNav({ isAdmin }: AdminNavProps) {
       >
         Reports
       </Link>
+      <Link
+        href="/alerts"
+        className={`nav-link${pathname.startsWith('/alerts') ? ' active' : ''}`}
+      >
+        Alerts
+      </Link>
       {isAdmin && (
-        <Link
-          href="/users"
-          className={`nav-link${pathname.startsWith('/users') ? ' active' : ''}`}
-        >
-          Users
-        </Link>
+        <>
+          <Link
+            href="/datasets"
+            className={`nav-link${pathname.startsWith('/datasets') ? ' active' : ''}`}
+          >
+            Datasets
+          </Link>
+          <Link
+            href="/users"
+            className={`nav-link${pathname.startsWith('/users') ? ' active' : ''}`}
+          >
+            Users
+          </Link>
+        </>
       )}
     </nav>
   );

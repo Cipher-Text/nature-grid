@@ -710,3 +710,210 @@ body {
   font-size: 13px;
   margin-bottom: 4px;
 }
+
+/* ── Alert management ──────────────────────────────────────── */
+
+/* Severity badges */
+.sev-emergency { background: #fee2e2; color: #991b1b; }
+.sev-warning   { background: #ffedd5; color: #9a3412; }
+.sev-watch     { background: #fef9c3; color: #854d0e; }
+.sev-info      { background: #dbeafe; color: #1d4ed8; }
+
+/* Alert status badges */
+.alert-status-active    { background: #d1fae5; color: #065f46; }
+.alert-status-cancelled { background: #f3f4f6; color: #374151; }
+.alert-status-expired   { background: #e5e7eb; color: #6b7280; }
+
+/* Alert row — left border coloured by severity */
+.alert-row {
+  padding: 16px 20px 16px 18px;
+  border-bottom: 1px solid #edf1f2;
+  border-left: 4px solid transparent;
+}
+
+.alert-row:last-child { border-bottom: none; }
+
+.sev-border-emergency { border-left-color: #dc2626; }
+.sev-border-warning   { border-left-color: #d97706; }
+.sev-border-watch     { border-left-color: #ca8a04; }
+.sev-border-info      { border-left-color: #2563eb; }
+
+.alert-row-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.alert-badges {
+  display: flex;
+  gap: 6px;
+}
+
+.alert-meta {
+  font-size: 12px;
+  color: #6a8490;
+  margin-left: auto;
+}
+
+.alert-title {
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+
+.alert-description {
+  font-size: 13px;
+  color: #3a4f58;
+  margin-bottom: 6px;
+  line-height: 1.5;
+}
+
+.alert-instructions {
+  font-size: 12px;
+  color: #5b6d74;
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+
+.alert-actions {
+  margin-top: 10px;
+}
+
+/* Create form panel */
+.create-panel {
+  background: #fff;
+  border: 1px solid #d4dcdf;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.create-panel-summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.create-panel-summary::-webkit-details-marker { display: none; }
+
+.create-panel-summary:hover { background: #f8fafb; }
+
+.create-panel-label {
+  font-weight: 600;
+  font-size: 13px;
+  color: #172026;
+}
+
+.create-panel-hint {
+  font-size: 12px;
+  color: #8a9fa8;
+}
+
+.create-panel-body {
+  padding: 20px;
+  border-top: 1px solid #edf1f2;
+}
+
+.alert-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.form-row {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.field-grow { flex: 1; min-width: 200px; }
+.field-fixed { width: 180px; flex-shrink: 0; }
+
+.field-optional {
+  font-weight: 400;
+  color: #8a9fa8;
+  font-size: 11px;
+}
+
+.form-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.form-actions-note {
+  font-size: 12px;
+  color: #8a9fa8;
+}
+
+/* ── Dataset management ────────────────────────────────────── */
+
+.dataset-row {
+  padding: 18px 24px;
+  border-bottom: 1px solid #edf1f2;
+}
+
+.dataset-row:last-child { border-bottom: none; }
+
+.dataset-row.dataset-unpublished { background: #fafafa; }
+
+.dataset-row-main {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.dataset-identity { flex: 1; min-width: 260px; }
+
+.dataset-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.dataset-name { font-weight: 600; font-size: 14px; }
+
+.dataset-desc {
+  font-size: 13px;
+  color: #3a4f58;
+  margin-bottom: 4px;
+  line-height: 1.5;
+}
+
+.dataset-meta { font-size: 11px; color: #8a9fa8; }
+
+.dataset-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+  min-width: 220px;
+}
+
+.dataset-draft-badge { background: #fef3c7; color: #92400e; }
+
+.inline-form { display: flex; }
+
+/* Category badges */
+.cat-weather  { background: #e0f2fe; color: #0369a1; }
+.cat-air      { background: #fce7f3; color: #9d174d; }
+.cat-water    { background: #d1fae5; color: #065f46; }
+.cat-bio      { background: #dcfce7; color: #166534; }
+.cat-monitor  { background: #ede9fe; color: #5b21b6; }
+.cat-reports  { background: #fee2e2; color: #991b1b; }
+
+/* Access policy badges */
+.policy-public      { background: #d1fae5; color: #065f46; }
+.policy-login       { background: #dbeafe; color: #1d4ed8; }
+.policy-researcher  { background: #e0f2fe; color: #0369a1; }
+.policy-approved    { background: #fef3c7; color: #92400e; }
+.policy-government  { background: #f3f4f6; color: #374151; }
