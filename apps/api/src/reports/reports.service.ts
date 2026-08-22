@@ -65,6 +65,20 @@ export class ReportsService {
     return report;
   }
 
+  listMine(userId: string, page = 1, pageSize = 10) {
+    const skip = (page - 1) * pageSize;
+    return Promise.all([
+      this.prisma.citizenReport.findMany({
+        where: { reporterId: userId },
+        skip,
+        take: pageSize,
+        orderBy: { createdAt: 'desc' },
+        select: REPORT_SELECT,
+      }),
+      this.prisma.citizenReport.count({ where: { reporterId: userId } }),
+    ]).then(([data, total]) => ({ data, total, page, pageSize }));
+  }
+
   list(status?: ReportStatus, category?: ReportCategory, districtId?: string, page = 1, pageSize = 20) {
     const skip = (page - 1) * pageSize;
     // Public view: only verified/resolved reports

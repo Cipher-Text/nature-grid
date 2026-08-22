@@ -6,16 +6,40 @@ import { getCurrentUser } from '../../lib/current-user';
 import { apiGet, apiGetAuthed } from '../../lib/api';
 import { logoutAction } from '../../lib/auth-actions';
 import { subscribeAction, unsubscribeAction } from '../../lib/notification-actions';
-import { routes, type AlertSubscription } from '@nature-grid/contracts';
+import {
+  routes,
+  type CitizenReport,
+  type Observation,
+  type AlertSubscription,
+  type PaginatedEnvelope,
+} from '@nature-grid/contracts';
+import { titleCase, relativeTime } from '../../lib/format';
 import { ACCESS_TOKEN_COOKIE } from '../../lib/session-constants';
 
+// ── Constants ─────────────────────────────────────────────────────────────────
+
 const ROLE_LABELS: Record<string, string> = {
-  CITIZEN: 'Citizen contributor',
-  RESEARCHER: 'Researcher',
-  ORGANIZATION_ADMIN: 'Organization admin',
-  GOVERNMENT: 'Government',
-  MODERATOR: 'Moderator',
-  ADMIN: 'Admin',
+  CITIZEN:           'Citizen contributor',
+  RESEARCHER:        'Researcher',
+  ORGANIZATION_ADMIN:'Organization admin',
+  GOVERNMENT:        'Government',
+  MODERATOR:         'Moderator',
+  ADMIN:             'Admin',
+};
+
+const REPORT_STATUS_VARIANT: Record<string, string> = {
+  VERIFIED:     'success',
+  RESOLVED:     'success',
+  REJECTED:     'danger',
+  SUBMITTED:    'muted',
+  UNDER_REVIEW: 'info',
+};
+
+const TRUST_VARIANT: Record<string, string> = {
+  RESEARCH_GRADE: 'success',
+  COMMUNITY:      'info',
+  UNVERIFIED:     'muted',
+  FLAGGED:        'danger',
 };
 
 const SEVERITY_LABEL: Record<string, string> = {
@@ -32,10 +56,7 @@ const SEVERITY_VARIANT: Record<string, string> = {
   EMERGENCY: 'danger',
 };
 
-interface DistrictOption {
-  id: string;
-  name: string;
-}
+interface DistrictOption { id: string; name: string; }
 
 function initials(displayName: string): string {
   const parts = displayName.trim().split(/\s+/);
@@ -48,19 +69,25 @@ function monthYear(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 }
 
+// ── Page ─────────────────────────────────────────────────────────────────────
+
 export default async function ProfilePage({
   searchParams,
 }: {
   searchParams: { subscribed?: string; unsubscribed?: string; sub_error?: string };
 }) {
   const user = await getCurrentUser();
-  if (!user) {
-    redirect('/login');
-  }
+  if (!user) redirect('/login');
 
   const accessToken = cookies().get(ACCESS_TOKEN_COOKIE)?.value ?? '';
 
-  const [subscriptions, districts] = await Promise.all([
+  const [myReports, myObservations, subscriptions, districts] = await Promise.all([
+    apiGetAuthed<PaginatedEnvelope<CitizenReport>>(routes.reports.mine, accessToken).catch(
+      (): PaginatedEnvelope<CitizenReport> => ({ data: [], total: 0, page: 1, pageSize: 10 }),
+    ),
+    apiGetAuthed<PaginatedEnvelope<Observation>>(routes.observations.mine, accessToken).catch(
+      (): PaginatedEnvelope<Observation> => ({ data: [], total: 0, page: 1, pageSize: 10 }),
+    ),
     apiGetAuthed<AlertSubscription[]>(routes.notifications.subscriptions, accessToken).catch(
       (): AlertSubscription[] => [],
     ),
@@ -71,6 +98,8 @@ export default async function ProfilePage({
     <div className="app-shell">
       <AppSidebar active="profile" />
       <main className="main">
+
+        {/* ── Hero ── */}
         <header className="profile-hero" aria-label="Your profile">
           <div className="avatar" aria-hidden="true">
             {initials(user.displayName)}
@@ -81,46 +110,106 @@ export default async function ProfilePage({
             <p>{user.email}</p>
             <div className="stat-row" aria-label="Account details">
               <div>
-                <strong>{ROLE_LABELS[user.role] ?? user.role}</strong>
-                <span>Role</span>
+                <strong>{myReports.total}</strong>
+                <span>Reports</span>
+              </div>
+              <div>
+                <strong>{myObservations.total}</strong>
+                <span>Observations</span>
               </div>
               <div>
                 <strong>{monthYear(user.createdAt)}</strong>
                 <span>Member since</span>
               </div>
-              <div>
-                <strong>{user.lastLoginAt ? monthYear(user.lastLoginAt) : 'This session'}</strong>
-                <span>Last sign-in</span>
-              </div>
             </div>
           </div>
           <form action={logoutAction} style={{ alignSelf: 'start' }}>
-            <button className="button ghost" type="submit">
-              Sign out
-            </button>
+            <button className="button ghost" type="submit">Sign out</button>
           </form>
         </header>
 
-        <nav className="tab-nav" aria-label="Profile sections">
-          <Link className="active" href="/profile">
-            Activity
-          </Link>
-          <Link href="/reports">My Reports</Link>
-          <Link href="/observations">My Observations</Link>
-          <Link href="/community">Campaigns</Link>
-        </nav>
-
-        <article className="panel">
+        {/* ── My reports ── */}
+        <article className="panel" style={{ marginTop: 20 }}>
           <div className="panel-header">
             <div>
-              <h2>Recent activity</h2>
-              <p>Your contributions and platform interactions</p>
+              <h2>My reports</h2>
+              <p>All your submissions including pending and rejected</p>
             </div>
+            <Link className="button ghost" href="/reports">Submit new</Link>
           </div>
-          <div className="empty-state">
-            No activity yet. Once report and observation submission are live, your
-            contributions will show up here.
+
+          {myReports.data.length === 0 ? (
+            <div className="empty-state">
+              No reports yet.{' '}
+              <Link href="/reports">Submit your first report</Link>.
+            </div>
+          ) : (
+            <div className="table" role="table" aria-label="My reports">
+              <div className="table-row table-head" role="row">
+                <span>Title</span>
+                <span>Location</span>
+                <span>Status</span>
+                <span>Submitted</span>
+              </div>
+              {myReports.data.map((r) => (
+                <Link
+                  key={r.id}
+                  className="table-row table-row-link"
+                  role="row"
+                  href={`/reports/${r.id}`}
+                >
+                  <strong>{r.title}</strong>
+                  <span>{r.district?.name ?? '—'}</span>
+                  <span className={`tag ${REPORT_STATUS_VARIANT[r.status] ?? 'muted'}`}>
+                    {titleCase(r.status)}
+                  </span>
+                  <span>{relativeTime(r.createdAt)}</span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </article>
+
+        {/* ── My observations ── */}
+        <article className="panel" style={{ marginTop: 20 }}>
+          <div className="panel-header">
+            <div>
+              <h2>My observations</h2>
+              <p>Your submitted environmental observations</p>
+            </div>
+            <Link className="button ghost" href="/observations">Submit new</Link>
           </div>
+
+          {myObservations.data.length === 0 ? (
+            <div className="empty-state">
+              No observations yet.{' '}
+              <Link href="/observations">Submit your first observation</Link>.
+            </div>
+          ) : (
+            <div className="table" role="table" aria-label="My observations">
+              <div className="table-row table-head" role="row">
+                <span>Category</span>
+                <span>Location</span>
+                <span>Trust level</span>
+                <span>Observed</span>
+              </div>
+              {myObservations.data.map((o) => (
+                <Link
+                  key={o.id}
+                  className="table-row table-row-link"
+                  role="row"
+                  href={`/observations/${o.id}`}
+                >
+                  <span>{titleCase(o.category)}</span>
+                  <span>{o.district?.name ?? '—'}</span>
+                  <span className={`tag ${TRUST_VARIANT[o.trustLevel] ?? 'muted'}`}>
+                    {titleCase(o.trustLevel)}
+                  </span>
+                  <span>{relativeTime(o.observedAt)}</span>
+                </Link>
+              ))}
+            </div>
+          )}
         </article>
 
         {/* ── Alert subscriptions ── */}
@@ -153,9 +242,7 @@ export default async function ProfilePage({
                     </span>
                   </div>
                   <form action={unsubscribeAction.bind(null, sub.id)}>
-                    <button className="button ghost" type="submit">
-                      Remove
-                    </button>
+                    <button className="button ghost" type="submit">Remove</button>
                   </form>
                 </div>
               ))}
@@ -173,9 +260,7 @@ export default async function ProfilePage({
                   <select id="districtId" name="districtId" className="select-field">
                     <option value="">Nationwide (all districts)</option>
                     {districts.map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.name}
-                      </option>
+                      <option key={d.id} value={d.id}>{d.name}</option>
                     ))}
                   </select>
                 </div>
@@ -195,6 +280,7 @@ export default async function ProfilePage({
             </form>
           </div>
         </article>
+
       </main>
     </div>
   );

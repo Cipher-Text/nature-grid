@@ -51,6 +51,20 @@ export class ObservationsService {
     return observation;
   }
 
+  listMine(userId: string, page = 1, pageSize = 10) {
+    const skip = (page - 1) * pageSize;
+    return Promise.all([
+      this.prisma.observation.findMany({
+        where: { observerId: userId },
+        skip,
+        take: pageSize,
+        orderBy: { observedAt: 'desc' },
+        select: OBSERVATION_SELECT,
+      }),
+      this.prisma.observation.count({ where: { observerId: userId } }),
+    ]).then(([data, total]) => ({ data, total, page, pageSize }));
+  }
+
   list(
     category?: ObservationCategory,
     trustLevel?: ObservationTrustLevel,

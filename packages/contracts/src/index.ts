@@ -78,6 +78,7 @@ export const routes = {
 
   reports: {
     list: `${apiPrefix}/reports`,
+    mine: `${apiPrefix}/reports/mine`,
     detail: (id: string) => `${apiPrefix}/reports/${id}`,
     create: `${apiPrefix}/reports`,
     updateStatus: (id: string) => `${apiPrefix}/reports/${id}/status`,
@@ -96,6 +97,7 @@ export const routes = {
 
   observations: {
     list: `${apiPrefix}/observations`,
+    mine: `${apiPrefix}/observations/mine`,
     detail: (id: string) => `${apiPrefix}/observations/${id}`,
     create: `${apiPrefix}/observations`,
     updateTrust: (id: string) => `${apiPrefix}/observations/${id}/trust`,

@@ -31,6 +31,20 @@ export class ObservationsController {
     );
   }
 
+  /** Authenticated: returns the caller's own observations across all trust levels. */
+  @Get('mine')
+  listMine(
+    @CurrentUser() user: JwtPayload,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
+    return this.observationsService.listMine(
+      user.sub,
+      Number(page ?? 1),
+      Number(pageSize ?? 10),
+    );
+  }
+
   @Public()
   @Get(':id')
   getById(@Param('id') id: string) {
