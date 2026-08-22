@@ -50,3 +50,20 @@ export async function joinRestorationProjectAction(formData: FormData) {
 
   redirect('/restoration?joined=1');
 }
+
+/** Join action called from the project detail page — redirects back to the detail view. */
+export async function joinFromDetailAction(projectId: string) {
+  const accessToken = cookies().get(ACCESS_TOKEN_COOKIE)?.value;
+  if (!accessToken) {
+    redirect('/login');
+  }
+
+  try {
+    await apiPostAuthed<RestorationProject>(routes.restoration.join(projectId), {}, accessToken);
+  } catch (err) {
+    const message = err instanceof ApiError ? err.message : 'Failed to join project';
+    redirect(`/restoration/${projectId}?error=${encodeURIComponent(message)}`);
+  }
+
+  redirect(`/restoration/${projectId}?joined=1`);
+}

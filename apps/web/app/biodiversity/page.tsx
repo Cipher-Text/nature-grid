@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import AppSidebar from '../../components/app-sidebar';
 import { apiGet } from '../../lib/api';
 import { routes, type Species, type Occurrence, type PaginatedEnvelope } from '@nature-grid/contracts';
@@ -68,12 +69,12 @@ export default async function BiodiversityPage({
               <span>Occurrences</span>
             </div>
             {speciesRes.data.map((s) => (
-              <div className="table-row" role="row" key={s.id}>
+              <Link className="table-row table-row-link" role="row" key={s.id} href={`/biodiversity/species/${s.id}`}>
                 <strong>{s.canonicalName}</strong>
                 <span>{s.vernacularName ?? '—'}</span>
                 <span>{s.family ?? '—'}</span>
                 <span>{s._count.occurrences}</span>
-              </div>
+              </Link>
             ))}
             {speciesRes.data.length === 0 && (
               <div className="empty-state">No species match this search yet.</div>

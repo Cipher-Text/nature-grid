@@ -104,7 +104,7 @@ export default async function RestorationPage({
           </div>
           {projectsRes.data.map((p) => (
             <div className="table-row" role="row" key={p.id}>
-              <strong>{p.title}</strong>
+              <Link href={`/restoration/${p.id}`} className="table-title-link">{p.title}</Link>
               <span>
                 {p.organization?.name ?? '—'}
                 {p.district?.name ? ` · ${p.district.name}` : ''}

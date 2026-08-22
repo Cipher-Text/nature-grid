@@ -1456,6 +1456,17 @@ a {
   margin: 8px 0 20px;
 }
 
+/* ── Table title link (inline link inside a table row) ── */
+.table-title-link {
+  font-weight: 700;
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.table-title-link:hover {
+  text-decoration: underline;
+}
+
 /* ── Observation detail ── */
 .obs-detail-grid {
   display: grid;
