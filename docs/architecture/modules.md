@@ -123,9 +123,15 @@ Submission writes a `REPORT_SUBMIT` audit event. Every status transition writes 
 | Method | Path | Access |
 | --- | --- | --- |
 | GET | `/reports` | Public — verified/resolved only (`?status`, `?category`, `?districtId`, `?page`, `?pageSize`) |
-| GET | `/reports/:id` | Public if publishable |
+| GET | `/reports/mine` | Authenticated — caller's own reports, all statuses |
+| GET | `/reports/:id` | Public |
 | POST | `/reports` | Authenticated |
 | PATCH | `/reports/:id/status` | Moderator / Admin |
+| GET | `/reports/:id/comments` | Public — non-internal only |
+| GET | `/reports/:id/comments/all` | Moderator / Admin — includes internal notes |
+| POST | `/reports/:id/comments` | Authenticated |
+| GET | `/reports/:id/media` | Public |
+| POST | `/reports/:id/media` | Authenticated |
 
 ## alerts ✓
 
@@ -155,6 +161,7 @@ Trust levels: `RESEARCH_GRADE | COMMUNITY | UNVERIFIED | FLAGGED`
 | Method | Path | Access |
 | --- | --- | --- |
 | GET | `/observations` | Public (`?category`, `?trustLevel`, `?districtId`, `?page`, `?pageSize`) |
+| GET | `/observations/mine` | Authenticated — caller's own observations, all trust levels |
 | GET | `/observations/:id` | Public |
 | POST | `/observations` | Authenticated |
 | PATCH | `/observations/:id/trust` | Researcher / Admin |

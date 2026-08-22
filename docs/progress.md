@@ -1,6 +1,6 @@
 # Progress
 
-Last updated: 2026-08-22 (M12 Admin Console fully done — login/logout, report moderation, user management, alert management, dataset management; M5 Report Enrichment done — `ReportComment` + `ReportMedia` schema, 4 new API endpoints, contracts updated; see "M12 Admin Console + M5 Report Enrichment" below. Previously: Phase 6d Dockerfiles — api/web/admin Dockerfiles, standalone Next.js output, docker-compose.prod.yml, deployment README; see "Phase 6d: Dockerfiles" below. Previously: Phase 6c notification delivery — `AlertSubscription` + `NotificationDelivery` schema, Nodemailer email service, fire-and-forget dispatch on alert activation; see "Phase 6c: Notification Delivery" below. Previously: Phase 6b API contract enforcement — `select` discipline fixed in 4 services, `contract-types.typecheck.ts` added, caught by `tsc --noEmit` in CI; see "Phase 6b: API Contract Enforcement" below. Also Phase 6a fully closed — `helmet`, rate limiting, `USER_LOGIN_FAILED` audit, and ESLint all landed in the same commit; see "Phase 6a Complete" below. Previously: 2026-08-21 — first test suite + CI landed — 56 tests over auth/RBAC/env, all six historical bugs mutation-checked; see "First Test Suite + CI" below. Also `JWT_SECRET` fail-fast landed — the hardcoded fallback is gone and the API refuses to start without a real secret; see "JWT Secret Fail-Fast" below. Previously: 2026-08-20 — audit coverage completed — a real gap found and closed: 6 of the 16 declared `AuditAction` values were never written by any service, so logins, logouts, role changes, user deactivation, and report submission were all silently unaudited; see "Audit Coverage Gap" below. Also a docs-vs-code sync pass across 12 files — `architecture/`, `api/backend-api-links.md`, `tech-stack.md`, `flows.md`, `ingestion-plan.md`, `roles-and-permissions.md` — correcting stale Redis/BullMQ claims (neither is installed), stub markers for modules that shipped months ago, and an API catalog that still listed observations/biodiversity/metrics as not-started and omitted restoration entirely. Ran an Open Nature carryover audit: 8 major features had no counterpart anywhere in Nature Grid. 7 were scheduled — notification delivery into Phase 6c as a production blocker, six domains into a new Phase 7 — and the two genuinely-deferred leftovers went into `implementation-plan.md`'s deferred table, so the temporary register file was retired rather than kept as a ninth planning doc. Phase 6 expanded into 6a security / 6b tests+CI / 6c notifications / 6d operations. Previously: 2026-08-19 — Milestone 13 fully complete — all 4 remaining static homepage components wired to live data or an honest empty state, closing out M13 task 2; a real honesty bug caught and fixed during that pass — see "Homepage Preview Sections Wired" below; live platform metrics wired earlier the same day — M13 task 7; Milestone 10 — Biodiversity + GBIF — built end to end, real species/occurrence data now live on `/biodiversity`, a real GBIF integer-overflow bug found and fixed along the way; Milestone 11 — Restoration Projects — built end to end, real data now live on `/restoration`; Milestone 9 — Observations module — built end to end, real data now live on `/observations`; Milestone 15 complete — all 7 app-shell pages built; report submission form wired on `/reports`, a second critical validation bug found and fixed along the way; critical RBAC bug found and fixed — every role-gated endpoint was rejecting all users, including admins)
+Last updated: 2026-08-23 (Consumer frontend complete — 5 new detail pages, profile activity feed, 2 new API endpoints; see "Consumer Frontend" below. Previously: M12 Admin Console fully done — login/logout, report moderation, user management, alert management, dataset management; M5 Report Enrichment done — `ReportComment` + `ReportMedia` schema, 4 new API endpoints, contracts updated; see "M12 Admin Console + M5 Report Enrichment" below. Previously: Phase 6d Dockerfiles — api/web/admin Dockerfiles, standalone Next.js output, docker-compose.prod.yml, deployment README; see "Phase 6d: Dockerfiles" below. Previously: Phase 6c notification delivery — `AlertSubscription` + `NotificationDelivery` schema, Nodemailer email service, fire-and-forget dispatch on alert activation; see "Phase 6c: Notification Delivery" below. Previously: Phase 6b API contract enforcement — `select` discipline fixed in 4 services, `contract-types.typecheck.ts` added, caught by `tsc --noEmit` in CI; see "Phase 6b: API Contract Enforcement" below. Also Phase 6a fully closed — `helmet`, rate limiting, `USER_LOGIN_FAILED` audit, and ESLint all landed in the same commit; see "Phase 6a Complete" below. Previously: 2026-08-21 — first test suite + CI landed — 56 tests over auth/RBAC/env, all six historical bugs mutation-checked; see "First Test Suite + CI" below. Also `JWT_SECRET` fail-fast landed — the hardcoded fallback is gone and the API refuses to start without a real secret; see "JWT Secret Fail-Fast" below. Previously: 2026-08-20 — audit coverage completed — a real gap found and closed: 6 of the 16 declared `AuditAction` values were never written by any service, so logins, logouts, role changes, user deactivation, and report submission were all silently unaudited; see "Audit Coverage Gap" below. Also a docs-vs-code sync pass across 12 files — `architecture/`, `api/backend-api-links.md`, `tech-stack.md`, `flows.md`, `ingestion-plan.md`, `roles-and-permissions.md` — correcting stale Redis/BullMQ claims (neither is installed), stub markers for modules that shipped months ago, and an API catalog that still listed observations/biodiversity/metrics as not-started and omitted restoration entirely. Ran an Open Nature carryover audit: 8 major features had no counterpart anywhere in Nature Grid. 7 were scheduled — notification delivery into Phase 6c as a production blocker, six domains into a new Phase 7 — and the two genuinely-deferred leftovers went into `implementation-plan.md`'s deferred table, so the temporary register file was retired rather than kept as a ninth planning doc. Phase 6 expanded into 6a security / 6b tests+CI / 6c notifications / 6d operations. Previously: 2026-08-19 — Milestone 13 fully complete — all 4 remaining static homepage components wired to live data or an honest empty state, closing out M13 task 2; a real honesty bug caught and fixed during that pass — see "Homepage Preview Sections Wired" below; live platform metrics wired earlier the same day — M13 task 7; Milestone 10 — Biodiversity + GBIF — built end to end, real species/occurrence data now live on `/biodiversity`, a real GBIF integer-overflow bug found and fixed along the way; Milestone 11 — Restoration Projects — built end to end, real data now live on `/restoration`; Milestone 9 — Observations module — built end to end, real data now live on `/observations`; Milestone 15 complete — all 7 app-shell pages built; report submission form wired on `/reports`, a second critical validation bug found and fixed along the way; critical RBAC bug found and fixed — every role-gated endpoint was rejecting all users, including admins)
 
 ## Status Legend
 
@@ -51,7 +51,49 @@ Last updated: 2026-08-22 (M12 Admin Console fully done — login/logout, report 
 | Community module | Planned | Not planned as an API module at all yet (`docs/architecture/feature-map.md`). Both `/community` (2026-08-17) and the homepage's `community-section.tsx` (2026-08-19) now show an honest empty state — no fabricated content anywhere in the app for this area. |
 | Dockerfiles | Done | 2026-08-22 — api/web/admin Dockerfiles + docker-compose.prod.yml + deployment README. See "Phase 6d: Dockerfiles" below. |
 | Admin frontend — M12 | Done | 2026-08-22 — full console at port 3002: login/logout (MODERATOR/ADMIN only, separate httpOnly cookies from web app), report moderation (5-status workflow + notes), user management (role change, deactivate with self-guard), alert management (create, cancel, status tabs with counts), dataset management (publish toggle, access policy selector). Sidebar nav role-gated: ADMIN sees Datasets + Users; MODERATOR sees Reports + Alerts only. See "M12 Admin Console + M5 Report Enrichment" below. |
+| Consumer detail pages + profile activity | Done | 2026-08-23 — detail pages for reports, alerts, observations, restoration projects, and biodiversity species; all list pages now have clickable rows; `GET /reports/mine` + `GET /observations/mine` authenticated endpoints; profile page shows live report/observation history. See "Consumer Frontend" below. |
 | Data worker | Planned | Python skeleton; no active jobs |
+
+## Consumer Frontend (2026-08-23)
+
+All major list pages now link to detail pages. Two new authenticated API endpoints allow users to view their own submissions regardless of status.
+
+### New API endpoints
+
+| Method | Path | Access | Purpose |
+| --- | --- | --- | --- |
+| GET | `/reports/mine` | Authenticated | Caller's own reports, all statuses, newest first |
+| GET | `/observations/mine` | Authenticated | Caller's own observations, all trust levels, most recent first |
+
+Both return `PaginatedEnvelope<CitizenReport>` / `PaginatedEnvelope<Observation>` — same shape as the public list, same `REPORT_SELECT` / `OBSERVATION_SELECT`. Routes added to `packages/contracts`.
+
+### New detail pages
+
+| Page | Route | Notes |
+| --- | --- | --- |
+| Report detail | `/reports/[id]` | Description, moderator summary, status history trail, media, comments, comment form |
+| Alert detail | `/alerts/[id]` | Severity banner, description, instructions, subscription CTA |
+| Observation detail | `/observations/[id]` | Trust-level strip, description, taxonomy-style details grid |
+| Restoration project detail | `/restoration/[id]` | Description, impact summary, details grid, join form (active projects) |
+| Biodiversity species detail | `/biodiversity/species/[id]` | Taxonomy, occurrence count, per-species occurrence table |
+
+### List page updates
+
+- All five list pages now have clickable rows or title links pointing to detail pages.
+- Alerts page: made cards and history rows into `<Link>` elements; emergency strip also links to the alert detail; removed a broken decorative CSS map section (classes had been deleted); replaced stale "coming soon" notification banner with a real link to the profile subscriptions panel.
+- Restoration list: title column is a link (rows have inline join forms so cannot be fully wrapped).
+- Biodiversity species list: entire rows are links.
+
+### Profile activity feed
+
+The profile page "Recent activity" placeholder replaced with two live panels:
+
+- **My reports** — fetches `/reports/mine` (authenticated), shows all statuses including SUBMITTED/UNDER_REVIEW with colour-coded badges, links to detail pages.
+- **My observations** — fetches `/observations/mine` (authenticated), shows all trust levels, links to detail pages.
+- **Hero stats** updated to show real report count, observation count, and member-since date.
+- Alert subscriptions panel retained from Phase 6c UI.
+
+---
 
 ## M12 Admin Console + M5 Report Enrichment (2026-08-22)
 

@@ -118,11 +118,16 @@ Legend: **Done** | **Partial** | *Planned* | ~~Deferred~~
 | --- | --- | --- |
 | `/` | Weather, metrics, datasets, reports, alerts, biodiversity, restoration | **Done** — all sections live or honest empty state |
 | `/data` | `GET /datasets`, `GET /providers` | **Done** |
-| `/reports` | `GET /reports` | **Done** — public verified/resolved only; submission form |
-| `/alerts` | `GET /alerts` | **Done** |
-| `/observations` | `GET /observations` | **Done** — submission form |
-| `/biodiversity` | `GET /biodiversity/species`, `GET /biodiversity/occurrences` | **Done** — name search |
-| `/restoration` | `GET /restoration/projects` | **Done** — creation form, join action |
+| `/reports` | `GET /reports` | **Done** — public verified/resolved only; submission form; rows link to detail |
+| `/reports/:id` | `GET /reports/:id`, `/comments`, `/media` | **Done** — description, status history, comments, media |
+| `/alerts` | `GET /alerts` | **Done** — clickable cards and history rows |
+| `/alerts/:id` | `GET /alerts/:id` | **Done** — description, instructions, subscription CTA |
+| `/observations` | `GET /observations` | **Done** — submission form; rows link to detail |
+| `/observations/:id` | `GET /observations/:id` | **Done** — trust level, description, details grid |
+| `/biodiversity` | `GET /biodiversity/species`, `GET /biodiversity/occurrences` | **Done** — name search; rows link to detail |
+| `/biodiversity/species/:id` | `GET /biodiversity/species/:id`, `/occurrences?speciesId` | **Done** — taxonomy, per-species occurrences |
+| `/restoration` | `GET /restoration/projects` | **Done** — creation form, join action; title links to detail |
+| `/restoration/:id` | `GET /restoration/projects/:id` | **Done** — description, details grid, join form |
 | `/community` | — | *Planned* — honest empty state; no API module |
-| `/profile` | `GET /auth/profile` | **Done** |
+| `/profile` | `GET /auth/profile`, `GET /reports/mine`, `GET /observations/mine`, `GET /notifications/subscriptions` | **Done** — live report + observation history; alert subscription management |
 | `/login`, `/register` | `POST /auth/login`, `POST /auth/register` | **Done** |
