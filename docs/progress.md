@@ -1,6 +1,6 @@
 # Progress
 
-Last updated: 2026-08-22 (Phase 6d Dockerfiles — api/web/admin Dockerfiles, standalone Next.js output, docker-compose.prod.yml, deployment README; see "Phase 6d: Dockerfiles" below. Previously: Phase 6c notification delivery — `AlertSubscription` + `NotificationDelivery` schema, Nodemailer email service, fire-and-forget dispatch on alert activation; see "Phase 6c: Notification Delivery" below. Previously: Phase 6b API contract enforcement — `select` discipline fixed in 4 services, `contract-types.typecheck.ts` added, caught by `tsc --noEmit` in CI; see "Phase 6b: API Contract Enforcement" below. Also Phase 6a fully closed — `helmet`, rate limiting, `USER_LOGIN_FAILED` audit, and ESLint all landed in the same commit; see "Phase 6a Complete" below. Previously: 2026-08-21 — first test suite + CI landed — 56 tests over auth/RBAC/env, all six historical bugs mutation-checked; see "First Test Suite + CI" below. Also `JWT_SECRET` fail-fast landed — the hardcoded fallback is gone and the API refuses to start without a real secret; see "JWT Secret Fail-Fast" below. Previously: 2026-08-20 — audit coverage completed — a real gap found and closed: 6 of the 16 declared `AuditAction` values were never written by any service, so logins, logouts, role changes, user deactivation, and report submission were all silently unaudited; see "Audit Coverage Gap" below. Also a docs-vs-code sync pass across 12 files — `architecture/`, `api/backend-api-links.md`, `tech-stack.md`, `flows.md`, `ingestion-plan.md`, `roles-and-permissions.md` — correcting stale Redis/BullMQ claims (neither is installed), stub markers for modules that shipped months ago, and an API catalog that still listed observations/biodiversity/metrics as not-started and omitted restoration entirely. Ran an Open Nature carryover audit: 8 major features had no counterpart anywhere in Nature Grid. 7 were scheduled — notification delivery into Phase 6c as a production blocker, six domains into a new Phase 7 — and the two genuinely-deferred leftovers went into `implementation-plan.md`'s deferred table, so the temporary register file was retired rather than kept as a ninth planning doc. Phase 6 expanded into 6a security / 6b tests+CI / 6c notifications / 6d operations. Previously: 2026-08-19 — Milestone 13 fully complete — all 4 remaining static homepage components wired to live data or an honest empty state, closing out M13 task 2; a real honesty bug caught and fixed during that pass — see "Homepage Preview Sections Wired" below; live platform metrics wired earlier the same day — M13 task 7; Milestone 10 — Biodiversity + GBIF — built end to end, real species/occurrence data now live on `/biodiversity`, a real GBIF integer-overflow bug found and fixed along the way; Milestone 11 — Restoration Projects — built end to end, real data now live on `/restoration`; Milestone 9 — Observations module — built end to end, real data now live on `/observations`; Milestone 15 complete — all 7 app-shell pages built; report submission form wired on `/reports`, a second critical validation bug found and fixed along the way; critical RBAC bug found and fixed — every role-gated endpoint was rejecting all users, including admins)
+Last updated: 2026-08-22 (M12 Admin Console fully done — login/logout, report moderation, user management, alert management, dataset management; M5 Report Enrichment done — `ReportComment` + `ReportMedia` schema, 4 new API endpoints, contracts updated; see "M12 Admin Console + M5 Report Enrichment" below. Previously: Phase 6d Dockerfiles — api/web/admin Dockerfiles, standalone Next.js output, docker-compose.prod.yml, deployment README; see "Phase 6d: Dockerfiles" below. Previously: Phase 6c notification delivery — `AlertSubscription` + `NotificationDelivery` schema, Nodemailer email service, fire-and-forget dispatch on alert activation; see "Phase 6c: Notification Delivery" below. Previously: Phase 6b API contract enforcement — `select` discipline fixed in 4 services, `contract-types.typecheck.ts` added, caught by `tsc --noEmit` in CI; see "Phase 6b: API Contract Enforcement" below. Also Phase 6a fully closed — `helmet`, rate limiting, `USER_LOGIN_FAILED` audit, and ESLint all landed in the same commit; see "Phase 6a Complete" below. Previously: 2026-08-21 — first test suite + CI landed — 56 tests over auth/RBAC/env, all six historical bugs mutation-checked; see "First Test Suite + CI" below. Also `JWT_SECRET` fail-fast landed — the hardcoded fallback is gone and the API refuses to start without a real secret; see "JWT Secret Fail-Fast" below. Previously: 2026-08-20 — audit coverage completed — a real gap found and closed: 6 of the 16 declared `AuditAction` values were never written by any service, so logins, logouts, role changes, user deactivation, and report submission were all silently unaudited; see "Audit Coverage Gap" below. Also a docs-vs-code sync pass across 12 files — `architecture/`, `api/backend-api-links.md`, `tech-stack.md`, `flows.md`, `ingestion-plan.md`, `roles-and-permissions.md` — correcting stale Redis/BullMQ claims (neither is installed), stub markers for modules that shipped months ago, and an API catalog that still listed observations/biodiversity/metrics as not-started and omitted restoration entirely. Ran an Open Nature carryover audit: 8 major features had no counterpart anywhere in Nature Grid. 7 were scheduled — notification delivery into Phase 6c as a production blocker, six domains into a new Phase 7 — and the two genuinely-deferred leftovers went into `implementation-plan.md`'s deferred table, so the temporary register file was retired rather than kept as a ninth planning doc. Phase 6 expanded into 6a security / 6b tests+CI / 6c notifications / 6d operations. Previously: 2026-08-19 — Milestone 13 fully complete — all 4 remaining static homepage components wired to live data or an honest empty state, closing out M13 task 2; a real honesty bug caught and fixed during that pass — see "Homepage Preview Sections Wired" below; live platform metrics wired earlier the same day — M13 task 7; Milestone 10 — Biodiversity + GBIF — built end to end, real species/occurrence data now live on `/biodiversity`, a real GBIF integer-overflow bug found and fixed along the way; Milestone 11 — Restoration Projects — built end to end, real data now live on `/restoration`; Milestone 9 — Observations module — built end to end, real data now live on `/observations`; Milestone 15 complete — all 7 app-shell pages built; report submission form wired on `/reports`, a second critical validation bug found and fixed along the way; critical RBAC bug found and fixed — every role-gated endpoint was rejecting all users, including admins)
 
 ## Status Legend
 
@@ -24,8 +24,8 @@ Last updated: 2026-08-22 (Phase 6d Dockerfiles — api/web/admin Dockerfiles, st
 | Frontend "app shell" layout (sidebar pages) — M15 | Done | Established via `/profile`, powers all 7 pages. `/data`, `/reports`, `/alerts`, `/observations`, `/restoration`, and now `/biodiversity` (all real backend data) — only `/community` still shows an honest empty state (no API module planned for it at all yet). See "App-Shell Pages: Data, Reports, Alerts", "App-Shell Pages: Observations, Biodiversity, Restoration, Community", "Observations Module", "Restoration Projects Module", and "Biodiversity + GBIF Module" below. |
 | Shared types and contracts — M2 | Done | Full enums, DTOs, paginated envelopes, request/response types, route contract map |
 | Backend foundation — M3 | Done | Auth (JWT/bcrypt), users, orgs, locations (8 div/64 district auto-seed), providers, datasets (catalog seed), reports (status workflow + audit), alerts (severity + audit), global validation, guard infrastructure. **Caveat:** role-gated endpoints shipped with a casing bug that rejected every user until 2026-08-17 — see "Critical RBAC Fix" below. |
-| Prisma schema | Done | 15 enums, 24 models — core entities + 4 weather tables + `RefreshToken` + `Observation` (2026-08-17) + `RestorationProject`/`RestorationParticipant` + `Species`/`Occurrence` (both 2026-08-19) + `DatasetAccessRequest` (2026-08-19, schema-only); client regenerated |
-| Database migration — M4 | Done | 11 migrations applied, 24 tables live (latest: `20260820200435_add_user_login_failed_audit_action`, 2026-08-21); Postgres on port 5433 (remapped — local Postgres occupies 5432) |
+| Prisma schema | Done | 17 enums, 28 models — core entities + 4 weather tables + `RefreshToken` + `Observation` (2026-08-17) + `RestorationProject`/`RestorationParticipant` + `Species`/`Occurrence` (both 2026-08-19) + `DatasetAccessRequest` (2026-08-19, schema-only) + `AlertSubscription`/`NotificationDelivery` (2026-08-22, Phase 6c) + `ReportComment`/`ReportMedia` (2026-08-22, M5); client regenerated |
+| Database migration — M4 | Done | 14 migrations applied, 28 tables live (latest: `20260822120000_add_report_comment_and_media`, 2026-08-22); Postgres on port 5433 (remapped — local Postgres occupies 5432) |
 | District coordinates | Done | Migration `add_district_coordinates`; all 64 districts backfilled with real lat/lng sourced from `open-nature`'s district registry (`LocationsService.onModuleInit` backfills on boot if missing) |
 | Seed data | Done | LocationsService auto-seeds 8 divisions + 64 districts (with coordinates) on boot; DatasetsService auto-seeds 5 catalog records; ProvidersService auto-seeds the `OpenMeteo` provider; no separate seed script needed |
 | Auth — refresh / logout | Done | Postgres-backed `RefreshToken` model (not Redis — see "Auth Refresh/Logout" below), opaque tokens with rotation, daily cleanup cron |
@@ -36,13 +36,13 @@ Last updated: 2026-08-22 (Phase 6d Dockerfiles — api/web/admin Dockerfiles, st
 | JWT secret handling | Done | Fixed 2026-08-21 — boot-time validation, no fallback. See "JWT Secret Fail-Fast" below. |
 | Security headers (`helmet`) | Done | 2026-08-21 — see "Phase 6a Complete" below. |
 | Rate limiting (`@nestjs/throttler`) | Done | 2026-08-21 — global 120 req/60 s; auth endpoints 5/20 req/60 s. See "Phase 6a Complete" below. |
-| Audit coverage | Done | 15 of 18 `AuditAction` values written as of 2026-08-21 (`USER_LOGIN_FAILED` added). Every implemented mutating endpoint is audited. See "Audit Coverage Gap" and "Phase 6a Complete" below. |
+| Audit coverage | Done | 18 of 21 `AuditAction` values written as of 2026-08-22 (`DATASET_UPDATE`, `REPORT_COMMENT_ADD`, `REPORT_MEDIA_ADD` added this session). 3 remaining unwritten belong to the dataset access/download flow (`DATASET_ACCESS`, `DATASET_DOWNLOAD`, `DATASET_ACCESS_DECISION`) — those endpoints don't exist yet. See "Audit Coverage Gap" and "Phase 6a Complete" below. |
 | ESLint | Done | 2026-08-21 — `.eslintrc.json` for api/web/admin apps. See "Phase 6a Complete" below. |
 | RBAC / role guard casing bug | Done | Fixed 2026-08-17 — see "Critical RBAC Fix" below. Every role-gated endpoint (`POST /alerts`, `PATCH /alerts/:id`, `PATCH /reports/:id/status`, `PATCH /users/:id/role`, `PATCH /users/:id/deactivate`) previously rejected all users, including admins. |
 | PostGIS / geospatial fields | Planned | `lat/lng` Float on `District` (populated) and `CitizenReport`; replace with PostGIS `geography` type when ready |
 | Observations module — M9 | Done | Full CRUD + trust-level workflow live (2026-08-17) — see "Observations Module" below. `/observations` now shows real data with a working submission form. |
 | Biodiversity module — M10 | Done | Daily GBIF sync + public species/occurrence endpoints live (2026-08-19) — see "Biodiversity + GBIF Module" below. `/biodiversity` now shows real species and occurrence data with a working search. |
-| Media module | Planned | Module stub only; no schema model yet |
+| Report media (M5) | Done | `ReportMedia` schema + `POST/GET /reports/:id/media` endpoints done (2026-08-22). File upload still deferred — clients register an external URL; no MinIO/S3 wired yet. The `media` module stub is separate and unrelated. |
 | Weather ingestion (OpenMeteo) | Done | Live `weather` module — see "Weather ingestion" below |
 | Ingestion module (generic) | Planned | `IngestionJob` model exists but unused by weather; module stub only, no job lifecycle wiring, no `ApiCallLog`/audit trail (deliberately skipped for weather — see `docs/ingestion-plan.md`) |
 | Environmental monitoring model | Planned | OGC SensorThings-style or simplified internal model — decision pending |
@@ -50,8 +50,75 @@ Last updated: 2026-08-22 (Phase 6d Dockerfiles — api/web/admin Dockerfiles, st
 | Restoration / projects — M11 | Done | Full CRUD + idempotent join workflow live (2026-08-19) — see "Restoration Projects Module" below. `/restoration` now shows real data with a working creation form (org-admins/admins) and a Join action (everyone else). |
 | Community module | Planned | Not planned as an API module at all yet (`docs/architecture/feature-map.md`). Both `/community` (2026-08-17) and the homepage's `community-section.tsx` (2026-08-19) now show an honest empty state — no fabricated content anywhere in the app for this area. |
 | Dockerfiles | Done | 2026-08-22 — api/web/admin Dockerfiles + docker-compose.prod.yml + deployment README. See "Phase 6d: Dockerfiles" below. |
-| Admin frontend | Planned | Shell only at port 3002 |
+| Admin frontend — M12 | Done | 2026-08-22 — full console at port 3002: login/logout (MODERATOR/ADMIN only, separate httpOnly cookies from web app), report moderation (5-status workflow + notes), user management (role change, deactivate with self-guard), alert management (create, cancel, status tabs with counts), dataset management (publish toggle, access policy selector). Sidebar nav role-gated: ADMIN sees Datasets + Users; MODERATOR sees Reports + Alerts only. See "M12 Admin Console + M5 Report Enrichment" below. |
 | Data worker | Planned | Python skeleton; no active jobs |
+
+## M12 Admin Console + M5 Report Enrichment (2026-08-22)
+
+### M12: Admin Console Frontend
+
+Full internal console at `apps/admin` (port 3002), built entirely with Next.js 14 App Router Server Components and Server Actions — no client-side state management.
+
+**Auth and session design:**
+- Separate cookie names (`nga_access` / `nga_refresh`) from the public web app (`ng_access_token` / `ng_refresh_token`) to prevent cross-app interference — both run on different ports but share a domain in production.
+- `apps/admin/middleware.ts` — protects all routes under `/reports`+ prefix; decodes JWT expiry via `atob` (Edge runtime compatible, no `Buffer`); auto-refreshes expired access tokens before the page renders.
+- Login enforces MODERATOR or ADMIN role at the application layer — attempts from CITIZEN/RESEARCHER accounts are rejected immediately after token issuance.
+
+**Files added:**
+- `apps/admin/lib/session-constants.ts` — cookie names + max-age constants
+- `apps/admin/lib/api.ts` — `apiGet`, `apiPost`, `apiPatch` helpers with `ApiError` class
+- `apps/admin/lib/session.ts` — `setSessionCookies`, `clearSessionCookies`, `getAccessToken`
+- `apps/admin/lib/auth-actions.ts` — `loginAction`, `logoutAction`, `getCurrentAdminUser`
+- `apps/admin/lib/report-actions.ts` — `updateReportStatusAction`
+- `apps/admin/lib/user-actions.ts` — `updateRoleAction`, `deactivateUserAction`
+- `apps/admin/lib/alert-actions.ts` — `createAlertAction`, `cancelAlertAction`
+- `apps/admin/lib/dataset-actions.ts` — `togglePublishAction`, `updateAccessPolicyAction`
+- `apps/admin/middleware.ts` — route protection + token auto-refresh
+- `apps/admin/components/admin-nav.tsx` — `'use client'` nav with `usePathname()` active-state; Datasets + Users links ADMIN-only
+- `apps/admin/app/(admin)/layout.tsx` — dark sidebar shell, fetches `/api/v1/auth/profile`, enforces MODERATOR/ADMIN role
+- `apps/admin/app/(admin)/reports/page.tsx` — status-tab moderation queue (SUBMITTED / UNDER_REVIEW / VERIFIED / REJECTED / RESOLVED) with inline transition forms and note textarea
+- `apps/admin/app/(admin)/users/page.tsx` — user list, role selector (hidden for ADMIN accounts), deactivate confirm (`<details>/<summary>`), self-deactivation prevented via JWT `sub` decode
+- `apps/admin/app/(admin)/alerts/page.tsx` — create panel (`<details>` collapsible, auto-opens on error), ACTIVE / CANCELLED / EXPIRED tabs with live counts, per-severity left-border colour
+- `apps/admin/app/(admin)/datasets/page.tsx` — publish/unpublish toggle, access policy selector, calls `GET /api/v1/datasets/admin` (ADMIN-only)
+- `apps/admin/app/globals.css` — dark sidebar, status/severity/role/category/policy badge variants, `<details>` confirm pattern
+
+**API changes to support admin console:**
+- `datasets.controller.ts` — removed class-level `@Public()`, added per-endpoint `@Public()` to list/detail/weather/AQ; added `GET /datasets/admin` (`@Roles('ADMIN')`) before `GET :id` to avoid route conflict; added `PATCH /datasets/:id` (`@Roles('ADMIN')`)
+- `datasets.service.ts` — added `listAll()` (no `isPublished` filter) and `update(id, dto, actor)` (writes `DATASET_UPDATE` audit)
+- `schema.prisma` — `DATASET_UPDATE` added to `AuditAction` enum
+- Migration `20260822100000_add_dataset_update_audit_action` — `ALTER TYPE "AuditAction" ADD VALUE 'DATASET_UPDATE'`
+
+**Task 2 (Ingestion dashboard) remains blocked** — the `ingestion` module is an empty stub (`@Module({})` only); there is nothing to display.
+
+---
+
+### M5: Report Enrichment (schema + API)
+
+Citizens and moderators can now attach evidence and discussion to reports.
+
+**Schema (migration `20260822120000_add_report_comment_and_media`):**
+- `ReportComment` — `reportId`, `authorId`, `body` (Text), `isInternal` (default false), `createdAt`. Internal comments are only returned to MODERATOR/ADMIN via `GET /reports/:id/comments/all`.
+- `ReportMedia` — `reportId`, `uploadedById`, `url`, `mimeType?`, `fileSize?`, `caption?`, `createdAt`. No file upload — clients register an externally hosted URL.
+- Back-relations added to `CitizenReport` (`comments[]`, `media[]`) and `User` (`reportComments[]`, `reportMedia[]`).
+- `REPORT_COMMENT_ADD` and `REPORT_MEDIA_ADD` added to `AuditAction` enum.
+
+**New API endpoints:**
+
+| Method | Path | Auth | Notes |
+| --- | --- | --- | --- |
+| `GET` | `/reports/:id/comments` | Public | Returns non-internal comments only |
+| `GET` | `/reports/:id/comments/all` | MODERATOR / ADMIN | All comments including internal |
+| `POST` | `/reports/:id/comments` | Any authenticated | CITIZEN/RESEARCHER cannot set `isInternal: true` — silently clamped |
+| `GET` | `/reports/:id/media` | Public | Lists all media on a report |
+| `POST` | `/reports/:id/media` | Any authenticated | Registers a URL; no server-side upload |
+
+**Contracts updated (`packages/contracts/src/index.ts`):**
+- `ReportComment`, `ReportMedia`, `CreateReportCommentRequest`, `AddReportMediaRequest` types added
+- `routes.reports` extended with `comments`, `addComment`, `media`, `addMedia` entries
+
+**What's not done (deliberate scope):** nested comment replies (no `parentCommentId`), comment editing/soft-delete (no `PATCH /comments/:commentId`), file upload transport (MinIO/S3 deferred — see deferred table in `implementation-plan.md`).
+
+---
 
 ## Phase 6d: Dockerfiles (2026-08-22)
 

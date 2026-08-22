@@ -75,7 +75,7 @@ Also add to `District` model: `lat Float?` and `lng Float?` for OpenMeteo centro
 
 ### Definition of done
 
-- Migration applied, all new tables live. — `RefreshToken` ✓; `RestorationProject`/`RestorationParticipant` ✓ (2026-08-19, via M11); `ReportMedia`/`ReportComment` still pending.
+- Migration applied, all new tables live. — `RefreshToken` ✓; `RestorationProject`/`RestorationParticipant` ✓ (2026-08-19, via M11); `ReportMedia`/`ReportComment` ✓ (2026-08-22, via M8 pass — migration `20260822120000_add_report_comment_and_media`).
 - `POST /auth/refresh` and `POST /auth/logout` work. ✓ — verified live: register → refresh (rotates) → old token rejected → refresh token rejected as a Bearer access token → logout → refresh rejected → logout again still succeeds.
 - `District` has lat/lng columns (nullable, populated in next milestone). ✓
 
@@ -147,25 +147,27 @@ Implement the access-policy-aware dataset endpoints that are currently stubs.
 
 ---
 
-## Milestone 8: Report Enrichment
+## ~~Milestone 8: Report Enrichment~~ — Done (2026-08-22, partial scope)
 
 Add media attachments and comments to citizen reports.
 
 **Target:** `apps/api/src/reports/`
 
+**Status (2026-08-22):** Tasks 1–4 done. Task 5 (comment editing/soft-delete) and nested replies deferred — no `parentCommentId` field; not needed for the current moderation workflow.
+
 ### Tasks
 
-1. Add `POST /reports/:id/media` — upload metadata (URL from external storage, or later MinIO), create `ReportMedia` row.
-2. Add `GET /reports/:id/media` — list media for a report.
-3. Add `POST /reports/:id/comments` — authenticated users can comment. Creates `ReportComment`.
-4. Add `GET /reports/:id/comments` — list comments (tree structure for replies).
-5. Add `PATCH /reports/:id/comments/:commentId` (author or moderator) — edit or soft-delete.
+1. ~~Add `POST /reports/:id/media` — upload metadata (URL from external storage, or later MinIO), create `ReportMedia` row.~~ Done — clients register an externally hosted URL; no server-side file upload.
+2. ~~Add `GET /reports/:id/media` — list media for a report.~~ Done — public endpoint.
+3. ~~Add `POST /reports/:id/comments` — authenticated users can comment. Creates `ReportComment`.~~ Done — `isInternal` flag supported; CITIZEN/RESEARCHER cannot set it true (silently clamped). Writes `REPORT_COMMENT_ADD` audit event.
+4. ~~Add `GET /reports/:id/comments` — list comments.~~ Done — two variants: `GET /reports/:id/comments` (public, non-internal only) and `GET /reports/:id/comments/all` (`@Roles('MODERATOR', 'ADMIN')`, all including internal).
+5. Add `PATCH /reports/:id/comments/:commentId` (author or moderator) — edit or soft-delete. — **Not done.** Deferred; no `isDeleted`/`editedAt` fields on `ReportComment`.
 
 ### Definition of done
 
-- Reports can have media attachments and comments.
-- Nested replies supported.
-- Comment moderation available to MODERATOR/ADMIN.
+- Reports can have media attachments and comments. — Done.
+- Nested replies supported. — **Not done.** No `parentCommentId` field added; deferred.
+- Comment moderation available to MODERATOR/ADMIN. — Done via `GET …/comments/all` and the `isInternal` visibility filter.
 
 ---
 
@@ -259,24 +261,26 @@ Task 1's premise was wrong: **the `RestorationProject` model had NOT actually be
 
 ---
 
-## Milestone 12: Admin Console Frontend
+## ~~Milestone 12: Admin Console Frontend~~ — Done (2026-08-22, task 2 blocked)
 
 **Target:** `apps/admin`
 
 Basic internal console for the operational views most needed first.
 
+**Status (2026-08-22):** Tasks 1, 3–6 done. Task 2 blocked — the `ingestion` module is an empty stub with no `IngestionJob` records ever written; there is nothing to display. See `docs/progress.md` "M12 Admin Console + M5 Report Enrichment" for full implementation detail.
+
 ### Tasks
 
-1. Wire admin app to API — auth flow, token storage.
-2. Ingestion status dashboard — live `IngestionJob` list, ApiCallLog failures.
-3. Report moderation queue — filterable, inline status transitions.
-4. User management — list, role change, deactivate.
-5. Alert management — create/update/cancel alerts.
-6. Dataset management — publish/unpublish catalog entries.
+1. ~~Wire admin app to API — auth flow, token storage.~~ Done — separate httpOnly cookies (`nga_access`/`nga_refresh`), Edge-compatible middleware with auto-refresh, login enforces MODERATOR/ADMIN role at application layer.
+2. Ingestion status dashboard — live `IngestionJob` list, ApiCallLog failures. — **Blocked.** `IngestionModule` is `@Module({})` only; `IngestionJob` model exists in schema but no service writes to it. Cannot build a dashboard over empty tables.
+3. ~~Report moderation queue — filterable, inline status transitions.~~ Done — 5-status tabs (SUBMITTED/UNDER_REVIEW/VERIFIED/REJECTED/RESOLVED) with per-tab counts, inline `PATCH /reports/:id/status` forms with note textarea.
+4. ~~User management — list, role change, deactivate.~~ Done — role selector (hidden for ADMIN accounts to prevent privilege lock-out), `<details>/<summary>` confirm for deactivate, self-deactivation prevented via JWT `sub` decode.
+5. ~~Alert management — create/update/cancel alerts.~~ Done — collapsible create panel, ACTIVE/CANCELLED/EXPIRED status tabs, per-severity left-border colour, cancel confirm.
+6. ~~Dataset management — publish/unpublish catalog entries.~~ Done — publish toggle + access policy selector, calls `GET /api/v1/datasets/admin`; API controller rewritten to add `@Roles('ADMIN')` per endpoint.
 
 ### Definition of done
 
-- Admin users can perform moderation and monitoring tasks without direct DB access.
+- Admin users can perform moderation and monitoring tasks without direct DB access. — **Met** for reports, users, alerts, and datasets. Ingestion monitoring remains blocked (task 2).
 
 ---
 

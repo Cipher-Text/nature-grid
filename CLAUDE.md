@@ -75,7 +75,7 @@ Each feature module follows: `*.module.ts` → `*.controller.ts` → `*.service.
 
 ### Database (Prisma)
 
-Schema: `packages/database/prisma/schema.prisma` — 24 models, 15 enums.
+Schema: `packages/database/prisma/schema.prisma` — 28 models, 17 enums.
 
 **All IDs are Prisma CUIDs** (e.g. `cmstewlrj0012usw17sqz1d3n`). Use `@IsString()` in DTO validators, never `@IsUUID()`.
 
@@ -102,6 +102,20 @@ Route groups: `(public)` — `/`, `/login`, `/register`; `(app)` — all other p
 Fetch helpers: `apiGet` (cached), `apiGetAuthed`, `apiPost`, `apiPostAuthed` (never cached).
 
 `apps/web` depends on `@nature-grid/contracts` for route constants and DTOs. `apps/api` has `@nature-grid/contracts` as a **devDependency only** — it is never imported in production code, but `apps/api/src/common/contract-types.typecheck.ts` uses it for compile-time contract enforcement: every service return type is asserted against its contract type via `tsc --noEmit` in CI. A service dropping a required field or changing a field type will produce a `TS2322` error and fail the build.
+
+### Admin Console (apps/admin)
+
+Next.js 14 App Router at port 3002. Same Server Components + Server Actions pattern as `apps/web` — no client-side state.
+
+Route groups: `(auth)` — `/login`; `(admin)` — all other pages behind a dark sidebar shell. Edge middleware (`middleware.ts`) guards all routes, decodes JWT expiry via `atob` (Edge runtime — no `Buffer`), auto-refreshes tokens before page render.
+
+**Cookie separation:** uses `nga_access` / `nga_refresh` cookie names — distinct from `apps/web`'s `ng_access_token` / `ng_refresh_token` to prevent cross-app interference. Constants in `lib/session-constants.ts`.
+
+**Role enforcement:** login rejects non-MODERATOR/ADMIN accounts at the application layer (best-effort revoke + clear cookies). The `(admin)` layout re-checks role on every render via `GET /api/v1/auth/profile`.
+
+**Nav:** `components/admin-nav.tsx` is `'use client'` (uses `usePathname()` for active-link state); Datasets and Users links are ADMIN-only. The layout itself stays a Server Component.
+
+Pages: Reports (moderation queue, 5-status tabs), Users (role change, deactivate), Alerts (create, cancel, status tabs), Datasets (publish toggle, access policy). Ingestion dashboard blocked — `IngestionModule` is an empty stub.
 
 ### Weather & Biodiversity modules
 
