@@ -59,9 +59,9 @@ export default async function AlertsPage({
         </div>
 
         {emergency && (
-          <div className="alert-strip danger" role="alert">
-            {emergency.title} — {emergency.district?.name ?? 'Nationwide'}
-          </div>
+          <Link className="alert-strip danger" href={`/alerts/${emergency.id}`} role="alert">
+            {emergency.title} — {emergency.district?.name ?? 'Nationwide'} →
+          </Link>
         )}
 
         <div className="toolbar" aria-label="Severity filter">
@@ -81,9 +81,10 @@ export default async function AlertsPage({
 
         <div className="alert-grid">
           {activeRes.data.map((a) => (
-            <article
+            <Link
               key={a.id}
-              className={`alert-card ${SEVERITY_CARD_CLASS[a.severity] ?? 'info-card'}`}
+              href={`/alerts/${a.id}`}
+              className={`alert-card alert-card-link ${SEVERITY_CARD_CLASS[a.severity] ?? 'info-card'}`}
             >
               <span className={SEVERITY_BADGE_CLASS[a.severity] ?? 'info'}>
                 {titleCase(a.severity)}
@@ -95,32 +96,12 @@ export default async function AlertsPage({
                 {new Date(a.issuedAt).toLocaleDateString()}
                 {a.expiresAt && ` · Expires ${new Date(a.expiresAt).toLocaleDateString()}`}
               </p>
-            </article>
+            </Link>
           ))}
           {activeRes.data.length === 0 && (
             <div className="empty-state">No active alerts at this severity.</div>
           )}
         </div>
-
-        {/* CSS-rendered map canvas — replace with real map library in Phase 4 */}
-        <article className="panel" style={{ marginTop: '20px' }}>
-          <div className="panel-header">
-            <div>
-              <h2>Warning zones</h2>
-              <p>Illustrative overview — replace with a real map in a later phase</p>
-            </div>
-          </div>
-          <div
-            className="map-canvas polished"
-            role="img"
-            aria-label="Illustrative map of alert zones"
-          >
-            <div className="map-river" aria-hidden="true" />
-            <div className="map-zone map-zone-one" aria-hidden="true" />
-            <div className="map-zone map-zone-two" aria-hidden="true" />
-            <div className="map-point map-point-a" aria-hidden="true" />
-          </div>
-        </article>
 
         <article className="panel" style={{ marginTop: '20px' }}>
           <div className="panel-header">
@@ -137,14 +118,14 @@ export default async function AlertsPage({
               <span>Status</span>
             </div>
             {historyRes.data.map((a) => (
-              <div className="table-row" role="row" key={a.id}>
+              <Link className="table-row table-row-link" role="row" key={a.id} href={`/alerts/${a.id}`}>
                 <strong>{a.title}</strong>
                 <span>{a.district?.name ?? 'Nationwide'}</span>
                 <span className={`tag ${SEVERITY_BADGE_CLASS[a.severity] ?? 'info'}`}>
                   {titleCase(a.severity)}
                 </span>
                 <span className="tag muted">{titleCase(a.status)}</span>
-              </div>
+              </Link>
             ))}
             {historyRes.data.length === 0 && (
               <div className="empty-state">No expired alerts yet.</div>
@@ -152,8 +133,13 @@ export default async function AlertsPage({
           </div>
         </article>
 
-        <div className="info-banner" style={{ marginTop: '20px' }}>
-          Alert notification subscriptions aren&apos;t available yet — coming soon.
+        <div className="access-note" style={{ marginTop: '20px' }}>
+          <strong>Get notified about alerts</strong>
+          <span>
+            Sign in and visit your{' '}
+            <Link href="/profile">profile</Link>{' '}
+            to subscribe to district or nationwide alert emails.
+          </span>
         </div>
       </main>
     </div>

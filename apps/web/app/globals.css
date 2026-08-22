@@ -1171,6 +1171,18 @@ a {
   color: white;
 }
 
+.alert-card-link {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+  transition: box-shadow 0.15s, transform 0.1s;
+}
+
+.alert-card-link:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.09);
+  transform: translateY(-1px);
+}
+
 .alert-strip {
   display: flex;
   align-items: center;
