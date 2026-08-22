@@ -125,7 +125,7 @@ Added these well-designed entities not yet in nature-grid:
 | 4 | **BMD** | Gov approval | Bangladesh Met Dept — local station weather, cyclone bulletins | As available | May require official registration. Start with OpenMeteo for coverage. |
 | 5 | **FFWC** | Gov approval | Bangladesh Flood Forecasting Warning Centre — flood alerts | Real-time | `http://www.ffwc.gov.bd`. May need scraping if no public API. |
 
-Two further sources the Open Nature repos designed for are unscheduled:
+Two further sources are unscheduled:
 
 - **iNaturalist** occurrence ingestion. `apps/api/src/datasets/seed/catalog.ts` already lists iNaturalist as a dataset source, so the catalog advertises a source with no ingestion behind it.
 - **OpenWeatherMap** / **AirNow** as additional weather and AQ coverage.

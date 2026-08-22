@@ -2,7 +2,7 @@
 
 Nature Grid uses PostgreSQL as the primary database. The Prisma schema lives at `packages/database/prisma/schema.prisma`. The Prisma client is regenerated via `pnpm run db:generate` from the `packages/database` directory.
 
-Current state: **24 models, 15 enums, 10 migrations applied.**
+Current state: **28 models, 17 enums, 14 migrations applied.**
 
 ## Enums
 
@@ -22,9 +22,11 @@ Current state: **24 models, 15 enums, 10 migrations applied.**
 | `DatasetAccessRequestStatus` | `PENDING APPROVED REJECTED` |
 | `ProviderType` | `GOVERNMENT_AGENCY RESEARCH_INSTITUTION NGO INTERNATIONAL_ORG CITIZEN_SCIENCE SATELLITE IOT_SENSOR` |
 | `IngestionStatus` | `QUEUED RUNNING SUCCEEDED FAILED CANCELLED` |
-| `AuditAction` | `USER_REGISTER USER_LOGIN USER_LOGOUT USER_ROLE_CHANGE USER_DEACTIVATE REPORT_SUBMIT REPORT_STATUS_CHANGE ALERT_CREATE ALERT_STATUS_CHANGE DATASET_ACCESS DATASET_DOWNLOAD OBSERVATION_SUBMIT OBSERVATION_TRUST_CHANGE RESTORATION_PROJECT_CREATE RESTORATION_PROJECT_UPDATE RESTORATION_PROJECT_JOIN DATASET_ACCESS_DECISION` |
+| `NotificationChannel` | `EMAIL` |
+| `DeliveryStatus` | `PENDING SENT FAILED` |
+| `AuditAction` | `USER_REGISTER USER_LOGIN USER_LOGIN_FAILED USER_LOGOUT USER_ROLE_CHANGE USER_DEACTIVATE REPORT_SUBMIT REPORT_STATUS_CHANGE REPORT_COMMENT_ADD REPORT_MEDIA_ADD ALERT_CREATE ALERT_STATUS_CHANGE DATASET_ACCESS DATASET_DOWNLOAD DATASET_UPDATE OBSERVATION_SUBMIT OBSERVATION_TRUST_CHANGE RESTORATION_PROJECT_CREATE RESTORATION_PROJECT_UPDATE RESTORATION_PROJECT_JOIN DATASET_ACCESS_DECISION` |
 
-14 of these 17 actions are written by a service. Only the three `DATASET_*` actions are unwritten, pending the dataset download/access-request endpoints. See the `audit` section in [modules.md](modules.md) for which services write what.
+18 of these 21 actions are written by a service. The three unwritten (`DATASET_ACCESS`, `DATASET_DOWNLOAD`, `DATASET_ACCESS_DECISION`) belong to the dataset download and access-request endpoints, which are not yet implemented. See the `audit` section in [modules.md](modules.md) for which services write what.
 
 ## Users & Auth
 
@@ -64,8 +66,10 @@ Current state: **24 models, 15 enums, 10 migrations applied.**
 
 | Model | Key Fields | Relations |
 | --- | --- | --- |
-| `CitizenReport` | `id`, `title`, `description`, `category ReportCategory`, `status ReportStatus`, `summary?`, `reporterId?`, `districtId?`, `lat?`, `lng?`, `resolvedAt?` | → `User?`, `District?`, `ReportStatusEvent[]` |
+| `CitizenReport` | `id`, `title`, `description`, `category ReportCategory`, `status ReportStatus`, `summary?`, `reporterId?`, `districtId?`, `lat?`, `lng?`, `resolvedAt?` | → `User?`, `District?`, `ReportStatusEvent[]`, `ReportComment[]`, `ReportMedia[]` |
 | `ReportStatusEvent` | `id`, `reportId`, `status ReportStatus`, `note?` | → `CitizenReport` |
+| `ReportComment` | `id`, `reportId`, `authorId`, `body Text`, `isInternal Boolean default false`, `createdAt` | → `CitizenReport`, `User`; non-internal comments public; internal visible to MODERATOR/ADMIN only |
+| `ReportMedia` | `id`, `reportId`, `uploadedById`, `url`, `mimeType?`, `fileSize?`, `caption?`, `createdAt` | → `CitizenReport`, `User`; URL-registered only — no server-side upload yet |
 
 ## Observations
 
@@ -93,11 +97,13 @@ The unique constraint on `(projectId, userId)` is what makes joining a project i
 
 `gbifOccurrenceKey` is `BigInt`, not `Int` — GBIF occurrence keys exceed the 32-bit signed range and overflowed on first sync (fixed in migration `20260819150726_fix_gbif_occurrence_key_bigint`). `iucnStatus` is nullable and intentionally unpopulated: GBIF's occurrence search does not return IUCN status, and a per-species enrichment call was scoped out of v1. Separate from `Observation` by design — GBIF occurrences are externally sourced records, not user submissions.
 
-## Alerts
+## Alerts and Notifications
 
 | Model | Key Fields | Relations |
 | --- | --- | --- |
-| `Alert` | `id`, `title`, `description`, `severity AlertSeverity`, `status AlertStatus`, `instructions?`, `districtId?`, `issuedAt`, `expiresAt?` | → `District?` |
+| `Alert` | `id`, `title`, `description`, `severity AlertSeverity`, `status AlertStatus`, `instructions?`, `districtId?`, `issuedAt`, `expiresAt?` | → `District?`, `NotificationDelivery[]` |
+| `AlertSubscription` | `id`, `userId`, `districtId?` (null = nationwide), `channel NotificationChannel`, `minSeverity AlertSeverity` | → `User`, `District?`, `NotificationDelivery[]`; uniqueness enforced in service (Postgres `NULL != NULL` in unique indexes breaks naive deduplication for global subscriptions) |
+| `NotificationDelivery` | `id`, `subscriptionId`, `alertId`, `userId`, `channel`, `address` (captured at send time), `status DeliveryStatus`, `sentAt?`, `failedAt?`, `error?` | → `AlertSubscription` (cascade delete), `Alert`, `User` |
 
 ## Ingestion & Audit
 
@@ -145,7 +151,7 @@ Future candidates for proper geometry fields:
 
 `Observation`, `Species`, and `RestorationProject` were previously listed here and are now in the schema (M9, M10, M11 — all 2026-08-17 to 2026-08-19).
 
-Features from the Open Nature repos with no model planned at all — emissions, climate predictions, carbon footprint, research publications, climate surveys — are scheduled in `docs/roadmap.md` Phase 7, and get their models when that phase starts.
+Advanced domain models — emissions sources, climate forecasts, carbon footprint, research publications, structured surveys — are planned for Phase 7 and get their schema when that phase starts. See `docs/roadmap.md` Phase 7 and `docs/architecture/feature-map.md`.
 
 ## Status Workflows
 
@@ -203,7 +209,7 @@ pnpm run db:generate          # Regenerate Prisma client after schema changes
 pnpm run db:studio            # Open Prisma Studio at localhost:5555
 ```
 
-**Migrations applied (10, in order):**
+**Migrations applied (14, in order):**
 
 | Migration | Adds |
 | --- | --- |
@@ -217,7 +223,11 @@ pnpm run db:studio            # Open Prisma Studio at localhost:5555
 | `20260819150726_fix_gbif_occurrence_key_bigint` | `Occurrence.gbifOccurrenceKey` → `BigInt` |
 | `20260819173836_add_dataset_access_requests` | `DatasetAccessRequest` |
 | `20260819185617_add_user_deactivate_audit_action` | `AuditAction.USER_DEACTIVATE` |
+| `20260820200435_add_user_login_failed_audit_action` | `AuditAction.USER_LOGIN_FAILED` |
+| `20260821215250_add_notification_subscriptions_and_deliveries` | `AlertSubscription`, `NotificationDelivery`, `NotificationChannel`, `DeliveryStatus` enums |
+| `20260822100000_add_dataset_update_audit_action` | `AuditAction.DATASET_UPDATE` |
+| `20260822120000_add_report_comment_and_media` | `ReportComment`, `ReportMedia`, `AuditAction.REPORT_COMMENT_ADD`, `AuditAction.REPORT_MEDIA_ADD` |
 
-24 tables live.
+28 tables live.
 
 The `LocationsService`, `DatasetsService`, and `ProvidersService` auto-seed geography, catalog, and provider data on first boot via `OnModuleInit`. `LocationsService` also backfills district coordinates if missing. No separate seed script is required for those tables.

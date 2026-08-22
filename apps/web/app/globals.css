@@ -441,77 +441,52 @@ a {
   box-shadow: 0 2px 8px rgba(18, 48, 38, 0.08);
 }
 
-/* ── CSS map canvas ── */
+/* ── Leaflet map canvas ── */
 .map-canvas {
   position: relative;
   min-height: 400px;
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background:
-    linear-gradient(90deg, rgba(47, 125, 92, 0.08) 1px, transparent 1px),
-    linear-gradient(0deg, rgba(47, 125, 92, 0.08) 1px, transparent 1px),
-    #edf6f2;
-  background-size: 34px 34px;
 }
 
-.map-canvas.polished {
-  background:
-    radial-gradient(circle at 24% 30%, rgba(47, 125, 92, 0.16), transparent 22%),
-    radial-gradient(circle at 72% 42%, rgba(15, 118, 110, 0.14), transparent 26%),
-    linear-gradient(90deg, rgba(47, 125, 92, 0.08) 1px, transparent 1px),
-    linear-gradient(0deg, rgba(47, 125, 92, 0.08) 1px, transparent 1px),
-    #edf6f2;
-  background-size: auto, auto, 34px 34px, 34px 34px, auto;
+/* Fix Leaflet z-index conflicts with sticky nav */
+.leaflet-pane,
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 1;
 }
 
-.map-river {
-  position: absolute;
-  top: 55%;
-  left: -4%;
-  width: 110%;
-  height: 80px;
-  border: 14px solid rgba(15, 118, 110, 0.18);
-  border-top: 0;
-  border-right: 0;
-  border-radius: 0 0 0 70%;
-  transform: rotate(-9deg);
+/* ── Map legend ── */
+.map-legend {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
-.map-zone {
-  position: absolute;
-  border: 1px solid rgba(18, 48, 38, 0.18);
-  background: rgba(47, 125, 92, 0.14);
-  clip-path: polygon(18% 8%, 76% 16%, 94% 48%, 70% 90%, 24% 78%, 4% 42%);
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--muted);
 }
 
-.map-zone-one   { top: 72px; left: 120px; width: 180px; height: 240px; }
-.map-zone-two   { right: 120px; bottom: 70px; width: 240px; height: 180px; background: rgba(15, 118, 110, 0.16); }
-.map-zone-three { right: 210px; top: 48px; width: 170px; height: 150px; background: rgba(217, 119, 6, 0.14); }
-
-.map-point {
-  position: absolute;
-  width: 14px;
-  height: 14px;
-  border: 3px solid #fff;
-  border-radius: 999px;
-  background: var(--primary);
-  box-shadow: 0 0 0 5px rgba(47, 125, 92, 0.16);
+.legend-item::before {
+  content: '';
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
-.map-point-a { top: 46%; left: 40%; }
-.map-point-b { top: 27%; right: 33%; background: var(--warning); box-shadow: 0 0 0 5px rgba(217, 119, 6, 0.16); }
-
-.map-label {
-  position: absolute;
-  border-radius: 999px;
-  padding: 8px 10px;
-  font-size: 0.78rem;
-  font-weight: 800;
-}
-
-.map-label-primary { left: 210px; top: 170px; background: var(--primary-dark); color: white; }
-.map-label-alert   { right: 150px; top: 120px; background: var(--warning); color: white; }
+.legend-alert-emergency::before { background: #dc2626; }
+.legend-alert-warning::before   { background: #ea580c; }
+.legend-alert-watch::before     { background: #d97706; }
+.legend-report::before          { background: #2f7d5c; }
 
 /* ── Condition list ── */
 .condition-list {

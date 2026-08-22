@@ -200,24 +200,25 @@ Exit criteria:
 
 ---
 
-## Phase 7: Deferred Open Nature Domains
+## Phase 7: Advanced Platform Domains
 
 Status: Planned
 
-Goal: Absorb the environmental domains that the Open Nature repos designed but Nature Grid has not carried over, so the legacy repos can be archived without losing design intent.
+Goal: Extend Nature Grid into the richer environmental science domains that the core platform was designed to support but that require deeper infrastructure, specialist data sources, or a larger user base before they pay off. Each domain here either has a clear data dependency on Phase 3–6 work, or requires specialist review before scoping.
 
-These were previously tracked only as an uncommitted gap register, which was retired into this roadmap on 2026-08-20 once its contents were scheduled. Each entry names its source so the original design work can be recovered rather than redone. Order within the phase is not fixed; satellite ingestion is the largest and most infrastructure-heavy, so it is likely last.
+Order is not fixed. Satellite ingestion is the most infrastructure-heavy and depends on PostGIS, media storage, and the Python data-worker all landing first, so it is likely last.
 
-| Domain | Source | What it needs |
+| Domain | What it adds | Dependencies |
 | --- | --- | --- |
-| Emissions data | `open-nature-backend` `emissions_data` | A measurement domain distinct from ambient air quality — emissions are measured at source. Complements the planned `PollutionSource` model, which identifies sources but stores no quantities. |
-| Climate prediction | `open-nature-backend` `climate_predictions`, `prediction_models` | Model registry, prediction storage, accuracy tracking. Nature Grid stores OpenMeteo's *provider* forecasts but has no concept of a platform-generated prediction. Prerequisite for the ML flood forecasting in `NEW_PROJECT.md` module 18. |
-| Carbon footprint | `open-nature-backend` `carbon_footprint_entries`; `NEW_PROJECT.md` module 23 | Per-user/org footprint entries, calculation method, offset accounting. Note `HourlyAirQuality.carbonMonoxide` is an air-quality pollutant and unrelated. |
-| Research publications | `open-nature-backend` `research_publications`; `NEW_PROJECT.md` module 25 | Paper records, authorship, citations, institution linkage. `RESEARCHER` is a first-class role with nowhere to put its output today. |
-| Climate surveys | `open-nature-backend/survey.md` | Structured, solicited data collection — distinct from `CitizenReport` (unsolicited) and `Observation` (measurements). A worked two-table design already exists. |
-| Satellite / remote sensing | `NEW_PROJECT.md` modules 9–11 | Imagery ingestion (NASA/Sentinel) and change detection. Today `DEFORESTATION` is only ever citizen-reported, never satellite-detected. Needs object storage, a processing runtime (`apps/data-worker`), and geometry beyond point lat/lng — so it depends on PostGIS and media storage landing first. |
+| **Emissions tracking** | Source-level pollution measurement (factories, industrial sites, vehicles) — distinct from ambient readings in `HourlyAirQuality`. Adds a `PollutionSource` model and per-source emission entries with units and measurement method. | None |
+| **Climate forecasting** | Platform-generated predictions (flood risk, drought early warning, heat index). Adds a model registry, prediction storage, and accuracy tracking — separate from the provider forecasts already in `HourlyWeatherForecast`/`DailyWeatherForecast`. | Python data-worker; ML pipeline |
+| **Carbon accounting** | Per-user and per-organisation footprint entries with calculation methodology and offset tracking. `HourlyAirQuality.carbonMonoxide` is a pollutant measurement and unrelated to this feature. | None |
+| **Research platform** | Publication records, authorship, citations, and institution linkage. Gives the `RESEARCHER` role a meaningful place to publish and cite findings from the platform's own data. | None |
+| **Structured surveys** | Solicited, structured data collection campaigns. Distinct from `CitizenReport` (unsolicited incident reporting) and `Observation` (point-in-time measurements) — surveys target specific questions with a defined form schema and response lifecycle. | None |
+| **Satellite / remote sensing** | Satellite imagery ingestion (NASA MODIS, Sentinel-2), change-detection analysis, and automated deforestation/flooding alerts. Fills the gap where `DEFORESTATION` and `FLOODING` report categories currently only have citizen-reported evidence. | PostGIS geometry fields, object storage, Python data-worker |
 
 Exit criteria:
 
-- Each domain either ships, or is explicitly rejected and recorded in "Accepted Divergences" in the gap register.
-- The remaining register holds only smaller items, so `open-nature`, `open-nature-backend`, and `open-nature-backend2` can be archived.
+- Each domain has a schema, at least one public read endpoint, and one write endpoint before the phase closes.
+- Satellite ingestion has a running proof-of-concept change-detection job on at least one district.
+- Research publications are searchable and linkable to dataset records and observations.

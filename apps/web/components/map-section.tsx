@@ -1,18 +1,42 @@
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { routes, type CurrentWeatherReading, type HourlyAirQualityReading } from '@nature-grid/contracts';
+import { routes, type Alert, type CitizenReport, type CurrentWeatherReading, type HourlyAirQualityReading } from '@nature-grid/contracts';
 import { apiGet } from '../lib/api';
 import { CONDITIONS as FALLBACK_CONDITIONS, type Condition } from '../lib/static-data';
+import type { MapDistrict, MapAlert, MapReport } from './map-client';
 
-const FILTER_TABS: { label: string; href: string; active?: boolean }[] = [
-  { label: 'All', href: '/#map', active: true },
-  { label: 'Alerts', href: '/alerts' },
-  { label: 'Reports', href: '/reports' },
-  { label: 'Species', href: '/biodiversity' },
-];
+// Leaflet requires browser APIs — must load with ssr: false
+const MapClient = dynamic(() => import('./map-client'), {
+  ssr: false,
+  loading: () => (
+    <div className="map-canvas" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', fontSize: 14 }}>
+      Loading map…
+    </div>
+  ),
+});
+
+// ── Types for the district API response (includes lat/lng, not in DistrictSummary) ──
+
+interface DistrictRow {
+  id: string;
+  name: string;
+  lat: number | null;
+  lng: number | null;
+}
+
+interface PaginatedAlerts {
+  data: Alert[];
+}
+
+interface PaginatedReports {
+  data: CitizenReport[];
+}
+
+// ── Conditions sidebar data ──
 
 const SYNC_STALE_AFTER_MINUTES = 20;
-const PM25_DANGER_THRESHOLD = 55.4; // EPA "Unhealthy" breakpoint
-const PM25_WARNING_THRESHOLD = 35.4; // EPA "Unhealthy for Sensitive Groups" breakpoint
+const PM25_DANGER_THRESHOLD = 55.4;
+const PM25_WARNING_THRESHOLD = 35.4;
 
 function findByDistrict<T extends { district?: { name: string } }>(
   rows: T[],
@@ -87,8 +111,65 @@ async function loadConditions(): Promise<Condition[]> {
   }
 }
 
+// ── Map data ──
+
+async function loadMapData(): Promise<{
+  districts: MapDistrict[];
+  alerts: MapAlert[];
+  reports: MapReport[];
+}> {
+  try {
+    const [districtRows, alertRes, reportRes] = await Promise.all([
+      apiGet<DistrictRow[]>(routes.locations.districts),
+      apiGet<PaginatedAlerts>(`${routes.alerts.list}?status=ACTIVE&pageSize=50`),
+      apiGet<PaginatedReports>(`${routes.reports.list}?status=VERIFIED&pageSize=50`),
+    ]);
+
+    const districts: MapDistrict[] = districtRows
+      .filter((d): d is DistrictRow & { lat: number; lng: number } => d.lat != null && d.lng != null)
+      .map((d) => ({ id: d.id, name: d.name, lat: d.lat, lng: d.lng }));
+
+    const districtById = new Map(districts.map((d) => [d.id, d]));
+
+    const alerts: MapAlert[] = alertRes.data.map((a) => ({
+      id: a.id,
+      title: a.title,
+      severity: a.severity,
+      districtId: a.district?.id ?? null,
+      districtName: a.district?.name ?? null,
+    }));
+
+    const reports: MapReport[] = reportRes.data
+      .filter((r) => {
+        if (r.lat != null && r.lng != null) return true;
+        if (r.districtId && districtById.has(r.districtId)) return true;
+        return false;
+      })
+      .map((r) => {
+        const fallbackDistrict = r.districtId ? districtById.get(r.districtId) : undefined;
+        return {
+          id: r.id,
+          title: r.title,
+          category: r.category,
+          lat: r.lat ?? fallbackDistrict!.lat,
+          lng: r.lng ?? fallbackDistrict!.lng,
+          districtName: r.district?.name ?? null,
+        };
+      });
+
+    return { districts, alerts, reports };
+  } catch {
+    return { districts: [], alerts: [], reports: [] };
+  }
+}
+
+// ── Component ──
+
 export default async function MapSection() {
-  const conditions = await loadConditions();
+  const [conditions, { districts, alerts, reports }] = await Promise.all([
+    loadConditions(),
+    loadMapData(),
+  ]);
 
   return (
     <section
@@ -102,46 +183,24 @@ export default async function MapSection() {
           <div>
             <h2>Environmental map</h2>
             <p>
-              Verified reports, active alerts, biodiversity and restoration
-              coverage
+              Active alerts, verified reports, and district coverage across Bangladesh
             </p>
           </div>
-          <div className="segmented" role="group" aria-label="Map filter">
-            {FILTER_TABS.map(({ label, href, active }) => (
-              <Link
-                key={label}
-                href={href}
-                className={`segmented-btn${active ? ' active' : ''}`}
-              >
-                {label}
-              </Link>
-            ))}
+          <div className="map-legend" aria-label="Map legend">
+            <span className="legend-item legend-alert-emergency">Emergency</span>
+            <span className="legend-item legend-alert-warning">Warning</span>
+            <span className="legend-item legend-alert-watch">Watch</span>
+            <span className="legend-item legend-report">Report</span>
           </div>
         </div>
 
-        {/* CSS-rendered map canvas — replace with real map library in Phase 4 */}
-        <div
-          className="map-canvas polished"
-          role="img"
-          aria-label="Bangladesh environmental data map showing districts, alert zones, and verified reports"
-        >
-          <div className="map-river" aria-hidden="true" />
-          <div className="map-zone map-zone-one" aria-hidden="true" />
-          <div className="map-zone map-zone-two" aria-hidden="true" />
-          <div className="map-zone map-zone-three" aria-hidden="true" />
-          <div className="map-point map-point-a" aria-hidden="true" />
-          <div className="map-point map-point-b" aria-hidden="true" />
-          <div className="map-label map-label-primary" aria-hidden="true">
-            Dhaka verified reports
-          </div>
-          <div className="map-label map-label-alert" aria-hidden="true">
-            Sylhet flood watch
-          </div>
+        <div className="map-canvas" style={{ padding: 0, overflow: 'hidden' }}>
+          <MapClient districts={districts} alerts={alerts} reports={reports} />
         </div>
 
         <div className="button-row" style={{ marginTop: '14px' }}>
           <Link className="button ghost" href="/alerts">
-            Full alert map
+            All alerts
           </Link>
           <Link className="button ghost" href="/reports">
             All verified reports

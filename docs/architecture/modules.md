@@ -257,4 +257,4 @@ If audit event volume grows, extract to a dedicated `AuditModule` with its own s
 
 ## Coverage note
 
-`app.module.ts` registers 16 modules: `database` plus 15 feature modules, of which 13 are implemented and 2 (`media`, `ingestion`) are empty stubs. Together they cover the domains Nature Grid has adopted. Domains present in the Open Nature repos with no module here — satellite ingestion, climate prediction, emissions, carbon footprint, research publications, climate surveys, notification delivery — are scheduled in `docs/roadmap.md` Phase 6c and Phase 7.
+`app.module.ts` registers 16 modules: `database` plus 15 feature modules, of which 13 are implemented and 2 (`media`, `ingestion`) are empty stubs. Advanced domains not yet represented by a module — satellite ingestion, climate prediction, emissions, carbon accounting, research publications, structured surveys — are planned for Phase 7. See `docs/roadmap.md` and `docs/architecture/feature-map.md`.

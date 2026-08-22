@@ -51,23 +51,22 @@ Legend: ✓ Implemented | ~ Stub only
 
 `weather` is self-contained (not built under `ingestion/`) — see `docs/ingestion-plan.md` "Implementation status" for why. `ingestion` remains a stub reserved for future generic provider job tracking (WAQI, GBIF, etc.), which weather deliberately does not use.
 
-## Open Nature Feature Carryover
+## Domain Map
 
-Open Nature had a strong environmental dashboard UI and a backend centered on authentication, district/location data, weather ingestion, and district-level weather statistics. Nature Grid keeps that logic but maps it into clearer domains:
+| Domain | API Module(s) | What it covers |
+| --- | --- | --- |
+| Authentication and sessions | `auth` | JWT access tokens, opaque refresh tokens, login/register/logout, audit trail |
+| Users and roles | `users` | 6 roles (CITIZEN → ADMIN), role updates, deactivation |
+| Organizations | `organizations` | Org records linked to providers and restoration projects |
+| Geography | `locations` | 8 divisions, 64 districts (with lat/lng), upazilas, unions — auto-seeded |
+| Environmental data | `datasets`, `weather` | Dataset catalog, access policy, OpenMeteo weather/AQ ingestion |
+| Biodiversity | `biodiversity` | GBIF species and occurrence records, daily sync |
+| Citizen engagement | `reports`, `observations`, `restoration` | Reports (status workflow + comments + media), observations (trust levels), restoration projects |
+| Alerts and notifications | `alerts`, `notifications` | Severity-tiered alerts, email delivery, subscription by district/nationwide |
+| Platform metrics | `metrics` | Live counters for the public homepage |
+| Admin console | `apps/admin` | Moderation, user management, alert creation, dataset publishing |
 
-| Open Nature Area | Nature Grid Domain |
-| --- | --- |
-| JWT auth and user roles | `auth`, `users`, `organizations` |
-| District/division/upazila/union data | `locations` (now with lat/lng, backfilled from Open Nature's district registry) |
-| OpenMeteo ingestion | `weather` — done; current/hourly/daily/air-quality, also surfaced via `datasets` |
-| District weather statistics | `locations`, `datasets` |
-| Citizen reports UI | `reports`, `media`, `observations` |
-| Disaster alerts UI | `alerts` |
-| Restoration projects UI | `observations`, `organizations`, future `projects` module if needed |
-| Community content and campaigns UI | future `community` module, not part of API core yet |
-| Data hub UI | `datasets`, `biodiversity`, `locations` |
-
-Features from the Open Nature repos that were **not** carried over are scheduled in `docs/roadmap.md` Phase 6c (notification delivery) and Phase 7 (emissions, climate prediction, carbon footprint, research publications, climate surveys, satellite). Anything still deferred sits in `docs/implementation-plan.md` "Deferred / Later Phases".
+Advanced domains (emissions tracking, climate forecasting, carbon accounting, research publications, structured surveys, satellite remote sensing) are planned for Phase 7 — see `docs/roadmap.md` and `docs/architecture/feature-map.md`.
 
 ## Boundary Rules
 

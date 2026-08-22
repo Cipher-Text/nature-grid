@@ -1,54 +1,128 @@
 # Feature Map
 
-This document translates the existing Open Nature feature logic into the Nature Grid target architecture.
+Nature Grid's feature set is organised by domain area. Status reflects what is built and live as of the last progress update — see `docs/progress.md` for detail on each item.
 
-## Phase 1: Foundation
+Legend: **Done** | **Partial** | *Planned* | ~~Deferred~~
 
-| Feature | App/API Module | Status |
+---
+
+## Foundation
+
+| Feature | Module / App | Status |
 | --- | --- | --- |
-| Public single-page home | `apps/web` | Start first |
-| Authentication | `apps/api/src/auth` | Start first |
-| Users and roles | `apps/api/src/users` | Start first |
-| Administrative locations | `apps/api/src/locations` | Start first |
-| Public web shell | `apps/web` | Start first |
-| Admin shell | `apps/admin` | Start first |
-| Shared contracts | `packages/contracts` | Start first |
-| Database schema | `packages/database` | Start first |
+| Authentication (register, login, JWT, refresh, logout) | `auth` | **Done** |
+| Users and role management | `users` | **Done** |
+| Organizations | `organizations` | **Done** |
+| Administrative geography (divisions, districts, upazilas, unions) | `locations` | **Done** |
+| Shared type contracts and route map | `packages/contracts` | **Done** |
+| Database schema and migrations | `packages/database` | **Done** |
+| Audit trail (`AuditEvent` on all mutations) | `common` | **Done** |
+| Security headers, rate limiting, JWT secret validation | `common` | **Done** |
+| Automated tests (auth, RBAC, env validation) | `apps/api` | **Done** |
+| CI pipeline | `.github/workflows/ci.yml` | **Done** — awaits git remote |
+| Production Dockerfiles | `infrastructure/docker` | **Done** |
 
-## Phase 2: Environmental Core
+---
 
-| Feature | App/API Module | Notes |
+## Environmental Data
+
+| Feature | Module / App | Status |
 | --- | --- | --- |
-| Observations | `observations` | Public verified explorer; login-gated contribution |
-| Citizen reports | `reports`, `media`, `locations` | Public verified list; login-gated submission and tracking |
-| Datasets | `datasets`, `weather` | Public summaries; login-gated advanced access/download/contribution. Weather/AQ summaries are now live, not stubs. |
-| Weather + air quality ingestion | `weather` | Done — OpenMeteo current/hourly/daily/AQ, self-contained module (not built under `ingestion`) |
-| Ingestion job lifecycle | `ingestion`, `data-worker` | Still a stub — no job tracking/audit trail exists yet, deliberately skipped for weather. Needed before adding a 2nd provider (WAQI, GBIF). |
-| Alerts | `alerts` | Disaster and environmental warnings |
+| Weather ingestion — current, hourly, daily (OpenMeteo) | `weather` | **Done** |
+| Air quality ingestion — hourly (OpenMeteo) | `weather` | **Done** |
+| Urban AQI — station-level (WAQI) | `weather` | *Planned* — free key needed at aqicn.org |
+| Dataset catalog with access policy | `datasets` | **Done** |
+| Dataset download + access request endpoints | `datasets` | *Planned* |
+| Biodiversity — species and occurrence records (GBIF daily sync) | `biodiversity` | **Done** |
+| Ingestion job lifecycle (queue, track, retry, audit) | `ingestion` | *Planned* — stub only |
+| BMD / FFWC government data | `ingestion` | *Planned* — requires gov access or scraping |
 
-## Phase 3: Advanced Domains
+---
 
-| Feature | Module | Notes |
+## Citizen Engagement
+
+| Feature | Module / App | Status |
 | --- | --- | --- |
-| Biodiversity | `biodiversity` | Species, taxa, sightings, habitats |
-| Restoration projects | Future `projects` or existing `observations` + `organizations` | Decide after real workflow design |
-| Community content | Future `community` | Keep out of core until content workflow is clear |
-| Analytics | `datasets`, `data-worker` | Derived metrics and geospatial summaries |
+| Citizen report submission and tracking | `reports` | **Done** |
+| Report status workflow (moderation → verified → resolved) | `reports` | **Done** |
+| Report comments (public + internal moderator notes) | `reports` | **Done** |
+| Report media attachments (URL registration) | `reports` | **Done** |
+| Report media upload (file storage) | `reports`, `media` | *Planned* — needs MinIO/S3 |
+| Environmental observations with trust levels | `observations` | **Done** |
+| Restoration project creation, tracking, and joining | `restoration` | **Done** |
+| Structured survey campaigns | — | *Planned* (Phase 7) |
+| Community content and campaigns | — | *Planned* — no API module yet |
 
-## Frontend Route Direction
+---
 
-| Route | App | Data Source Direction |
+## Alerts and Notifications
+
+| Feature | Module / App | Status |
 | --- | --- | --- |
-| `/` | `web` | Public single-page board showing all major platform areas — weather/AQ sidebar now live via `weather` module (2026-08-16); rest of the page still static seed data |
-| `/data` | `web` | Public dataset summaries; login for advanced views/downloads |
-| `/observations` | `web` | Public observation explorer; login to submit |
-| `/reports` | `web` | Public verified reports; login to submit/track |
-| `/alerts` | `web` | Public alerts and warning map |
-| `/profile` | `web` | Login-required user profile and activity |
-| `/contribute` | `web` | Login-required contribution hub |
-| `/downloads` | `web` | Login/role-gated dataset downloads |
-| `/admin` | `admin` | Separate admin app, not a route inside web |
+| Environmental alerts (create, severity, lifecycle) | `alerts` | **Done** |
+| Alert subscription (district or nationwide, min severity) | `notifications` | **Done** |
+| Email delivery on alert activation | `notifications` | **Done** |
+| SMS / multi-channel delivery | `notifications` | *Planned* (Phase 7) |
+| Government / emergency broadcast integration | `notifications` | *Planned* (Phase 7) |
 
-## Not Carried Over
+---
 
-This document maps Open Nature features that Nature Grid adopted. Features with no Nature Grid counterpart are scheduled in `docs/roadmap.md` Phase 6c and Phase 7; the rest are in `docs/implementation-plan.md` "Deferred / Later Phases".
+## Platform Intelligence
+
+| Feature | Module / App | Status |
+| --- | --- | --- |
+| Live platform metrics | `metrics` | **Done** |
+| Emissions source tracking | — | *Planned* (Phase 7) |
+| Climate forecasting and ML predictions | `data-worker` | *Planned* (Phase 7) |
+| Carbon footprint accounting | — | *Planned* (Phase 7) |
+
+---
+
+## Research and Governance
+
+| Feature | Module / App | Status |
+| --- | --- | --- |
+| Research publication records | — | *Planned* (Phase 7) |
+| Dataset access request workflow | `datasets` | **Partial** — schema only; endpoints not built |
+| Government and researcher role-gated datasets | `datasets` | **Partial** — access policy enforced on reads; download endpoint not built |
+
+---
+
+## Geospatial
+
+| Feature | Module / App | Status |
+| --- | --- | --- |
+| District-level point coordinates (lat/lng) | `locations` | **Done** — all 64 districts backfilled |
+| PostGIS geometry (polygons, boundaries) | `packages/database` | *Planned* — Docker image ready; no migration yet |
+| Satellite / remote sensing ingestion | `data-worker` | *Planned* (Phase 7) — depends on PostGIS + object storage |
+| Change detection (deforestation, flooding) | `data-worker` | *Planned* (Phase 7) |
+
+---
+
+## Admin Console
+
+| Feature | App | Status |
+| --- | --- | --- |
+| Login / logout (MODERATOR + ADMIN only) | `apps/admin` | **Done** |
+| Report moderation queue | `apps/admin` | **Done** |
+| User management (role change, deactivate) | `apps/admin` | **Done** |
+| Alert management (create, cancel, status tabs) | `apps/admin` | **Done** |
+| Dataset management (publish toggle, access policy) | `apps/admin` | **Done** |
+| Ingestion monitoring dashboard | `apps/admin` | *Planned* — blocked until ingestion module ships |
+
+---
+
+## Public Web (`apps/web`)
+
+| Route | Data Source | Status |
+| --- | --- | --- |
+| `/` | Weather, metrics, datasets, reports, alerts, biodiversity, restoration | **Done** — all sections live or honest empty state |
+| `/data` | `GET /datasets`, `GET /providers` | **Done** |
+| `/reports` | `GET /reports` | **Done** — public verified/resolved only; submission form |
+| `/alerts` | `GET /alerts` | **Done** |
+| `/observations` | `GET /observations` | **Done** — submission form |
+| `/biodiversity` | `GET /biodiversity/species`, `GET /biodiversity/occurrences` | **Done** — name search |
+| `/restoration` | `GET /restoration/projects` | **Done** — creation form, join action |
+| `/community` | — | *Planned* — honest empty state; no API module |
+| `/profile` | `GET /auth/profile` | **Done** |
+| `/login`, `/register` | `POST /auth/login`, `POST /auth/register` | **Done** |
