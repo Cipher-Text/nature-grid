@@ -81,6 +81,10 @@ export const routes = {
     detail: (id: string) => `${apiPrefix}/reports/${id}`,
     create: `${apiPrefix}/reports`,
     updateStatus: (id: string) => `${apiPrefix}/reports/${id}/status`,
+    comments: (id: string) => `${apiPrefix}/reports/${id}/comments`,
+    addComment: (id: string) => `${apiPrefix}/reports/${id}/comments`,
+    media: (id: string) => `${apiPrefix}/reports/${id}/media`,
+    addMedia: (id: string) => `${apiPrefix}/reports/${id}/media`,
   },
 
   alerts: {
@@ -245,6 +249,36 @@ export interface CreateReportRequest {
 export interface UpdateReportStatusRequest {
   status: ReportStatus;
   note?: string;
+}
+
+export interface ReportComment {
+  id: string;
+  body: string;
+  isInternal: boolean;
+  createdAt: string;
+  author: { id: string; displayName: string };
+}
+
+export interface CreateReportCommentRequest {
+  body: string;
+  isInternal?: boolean;
+}
+
+export interface ReportMedia {
+  id: string;
+  url: string;
+  mimeType: string | null;
+  fileSize: number | null;
+  caption: string | null;
+  createdAt: string;
+  uploadedBy: { id: string; displayName: string };
+}
+
+export interface AddReportMediaRequest {
+  url: string;
+  mimeType?: string;
+  fileSize?: number;
+  caption?: string;
 }
 
 export interface ReportListParams extends PaginationParams, LocationFilterParams {

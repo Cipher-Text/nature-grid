@@ -95,6 +95,8 @@ enum AuditAction {
   USER_DEACTIVATE
   REPORT_SUBMIT
   REPORT_STATUS_CHANGE
+  REPORT_COMMENT_ADD
+  REPORT_MEDIA_ADD
   ALERT_CREATE
   ALERT_STATUS_CHANGE
   DATASET_ACCESS
@@ -178,6 +180,8 @@ model User {
   datasetAccessDecisions DatasetAccessRequest[] @relation("DatasetAccessDecider")
   alertSubscriptions    AlertSubscription[]
   notificationDeliveries NotificationDelivery[]
+  reportComments ReportComment[]
+  reportMedia    ReportMedia[]
 
   @@index([email])
   @@index([role])
@@ -351,6 +355,8 @@ model CitizenReport {
   updatedAt   DateTime       @updatedAt
 
   statusHistory ReportStatusEvent[]
+  comments      ReportComment[]
+  media         ReportMedia[]
 
   @@index([status])
   @@index([category])
@@ -364,6 +370,35 @@ model ReportStatusEvent {
   status    ReportStatus
   note      String?
   createdAt DateTime     @default(now())
+
+  @@index([reportId])
+}
+
+model ReportComment {
+  id         String        @id @default(cuid())
+  reportId   String
+  report     CitizenReport @relation(fields: [reportId], references: [id])
+  authorId   String
+  author     User          @relation(fields: [authorId], references: [id])
+  body       String        @db.Text
+  isInternal Boolean       @default(false)
+  createdAt  DateTime      @default(now())
+
+  @@index([reportId])
+  @@index([authorId])
+}
+
+model ReportMedia {
+  id           String        @id @default(cuid())
+  reportId     String
+  report       CitizenReport @relation(fields: [reportId], references: [id])
+  uploadedById String
+  uploadedBy   User          @relation(fields: [uploadedById], references: [id])
+  url          String
+  mimeType     String?
+  fileSize     Int?
+  caption      String?
+  createdAt    DateTime      @default(now())
 
   @@index([reportId])
 }

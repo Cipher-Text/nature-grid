@@ -3,6 +3,8 @@ import { ReportStatus, ReportCategory } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { CreateReportDto } from './dto/create-report.dto';
 import { UpdateReportStatusDto } from './dto/update-status.dto';
+import { CreateCommentDto } from './dto/create-comment.dto';
+import { AddMediaDto } from './dto/add-media.dto';
 import type { JwtPayload } from '../common/decorators/current-user.decorator';
 
 /** Allowed status transitions per role. */
@@ -97,6 +99,111 @@ export class ReportsService {
     });
     if (!report) throw new NotFoundException('Report not found');
     return report;
+  }
+
+  async listComments(id: string, includeInternal: boolean) {
+    await this.getById(id);
+    return this.prisma.reportComment.findMany({
+      where: {
+        reportId: id,
+        ...(includeInternal ? {} : { isInternal: false }),
+      },
+      orderBy: { createdAt: 'asc' },
+      select: {
+        id: true,
+        body: true,
+        isInternal: true,
+        createdAt: true,
+        author: { select: { id: true, displayName: true } },
+      },
+    });
+  }
+
+  async addComment(id: string, dto: CreateCommentDto, actor: JwtPayload) {
+    await this.getById(id);
+    const canMarkInternal = actor.role === 'MODERATOR' || actor.role === 'ADMIN';
+    const isInternal = canMarkInternal ? (dto.isInternal ?? false) : false;
+
+    const comment = await this.prisma.reportComment.create({
+      data: {
+        reportId: id,
+        authorId: actor.sub,
+        body: dto.body,
+        isInternal,
+      },
+      select: {
+        id: true,
+        body: true,
+        isInternal: true,
+        createdAt: true,
+        author: { select: { id: true, displayName: true } },
+      },
+    });
+
+    await this.prisma.auditEvent.create({
+      data: {
+        action: 'REPORT_COMMENT_ADD',
+        userId: actor.sub,
+        entityType: 'CitizenReport',
+        entityId: id,
+        meta: { commentId: comment.id, isInternal },
+      },
+    });
+
+    return comment;
+  }
+
+  async listMedia(id: string) {
+    await this.getById(id);
+    return this.prisma.reportMedia.findMany({
+      where: { reportId: id },
+      orderBy: { createdAt: 'asc' },
+      select: {
+        id: true,
+        url: true,
+        mimeType: true,
+        fileSize: true,
+        caption: true,
+        createdAt: true,
+        uploadedBy: { select: { id: true, displayName: true } },
+      },
+    });
+  }
+
+  async addMedia(id: string, dto: AddMediaDto, actor: JwtPayload) {
+    await this.getById(id);
+
+    const media = await this.prisma.reportMedia.create({
+      data: {
+        reportId: id,
+        uploadedById: actor.sub,
+        url: dto.url,
+        mimeType: dto.mimeType,
+        fileSize: dto.fileSize,
+        caption: dto.caption,
+      },
+      select: {
+        id: true,
+        url: true,
+        mimeType: true,
+        fileSize: true,
+        caption: true,
+        createdAt: true,
+        uploadedBy: { select: { id: true, displayName: true } },
+      },
+    });
+
+    await this.prisma.auditEvent.create({
+      data: {
+        action: 'REPORT_MEDIA_ADD',
+        userId: actor.sub,
+        entityType: 'CitizenReport',
+        entityId: id,
+        meta: { mediaId: media.id, mimeType: dto.mimeType ?? null },
+      },
+    });
+
+    return media;
   }
 
   async updateStatus(id: string, dto: UpdateReportStatusDto, actor: JwtPayload) {

@@ -3,6 +3,8 @@ import { ReportStatus, ReportCategory } from '@prisma/client';
 import { ReportsService } from './reports.service';
 import { CreateReportDto } from './dto/create-report.dto';
 import { UpdateReportStatusDto } from './dto/update-status.dto';
+import { CreateCommentDto } from './dto/create-comment.dto';
+import { AddMediaDto } from './dto/add-media.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { CurrentUser, JwtPayload } from '../common/decorators/current-user.decorator';
@@ -51,5 +53,46 @@ export class ReportsController {
     @CurrentUser() user: JwtPayload,
   ) {
     return this.reportsService.updateStatus(id, dto, user);
+  }
+
+  /** Public: returns only non-internal comments. */
+  @Public()
+  @Get(':id/comments')
+  listComments(@Param('id') id: string) {
+    return this.reportsService.listComments(id, false);
+  }
+
+  /** Mod/admin: returns all comments including internal. */
+  @Roles('MODERATOR', 'ADMIN')
+  @Get(':id/comments/all')
+  listAllComments(@Param('id') id: string) {
+    return this.reportsService.listComments(id, true);
+  }
+
+  /** Any authenticated user may comment on a report. */
+  @Post(':id/comments')
+  addComment(
+    @Param('id') id: string,
+    @Body() dto: CreateCommentDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.reportsService.addComment(id, dto, user);
+  }
+
+  /** Public: list media attached to a report. */
+  @Public()
+  @Get(':id/media')
+  listMedia(@Param('id') id: string) {
+    return this.reportsService.listMedia(id);
+  }
+
+  /** Any authenticated user may attach media to a report. */
+  @Post(':id/media')
+  addMedia(
+    @Param('id') id: string,
+    @Body() dto: AddMediaDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.reportsService.addMedia(id, dto, user);
   }
 }
