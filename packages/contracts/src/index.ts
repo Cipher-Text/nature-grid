@@ -226,6 +226,7 @@ export interface DistrictSummary {
 export interface CitizenReport {
   id: string;
   title: string;
+  description: string;
   category: ReportCategory;
   status: ReportStatus;
   summary: string | null;

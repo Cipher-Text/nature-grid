@@ -19,6 +19,7 @@ const STATUS_TRANSITIONS: Record<ReportStatus, ReportStatus[]> = {
 const REPORT_SELECT = {
   id: true,
   title: true,
+  description: true,
   category: true,
   status: true,
   summary: true,

@@ -2,7 +2,7 @@
 
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { routes, type CitizenReport } from '@nature-grid/contracts';
+import { routes, type CitizenReport, type ReportComment } from '@nature-grid/contracts';
 import { apiPostAuthed, ApiError } from './api';
 import { ACCESS_TOKEN_COOKIE } from './session-constants';
 
@@ -29,4 +29,26 @@ export async function submitReportAction(formData: FormData) {
   }
 
   redirect('/reports?submitted=1');
+}
+
+export async function addCommentAction(reportId: string, formData: FormData) {
+  const accessToken = cookies().get(ACCESS_TOKEN_COOKIE)?.value;
+  if (!accessToken) {
+    redirect('/login');
+  }
+
+  const body = String(formData.get('body') ?? '').trim();
+
+  try {
+    await apiPostAuthed<ReportComment>(
+      routes.reports.addComment(reportId),
+      { body },
+      accessToken,
+    );
+  } catch (err) {
+    const message = err instanceof ApiError ? err.message : 'Failed to post comment';
+    redirect(`/reports/${reportId}?error=${encodeURIComponent(message)}`);
+  }
+
+  redirect(`/reports/${reportId}?commented=1`);
 }

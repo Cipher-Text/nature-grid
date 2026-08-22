@@ -98,14 +98,14 @@ export default async function ReportsPage({
             <span>Updated</span>
           </div>
           {reportsRes.data.map((r) => (
-            <div className="table-row" role="row" key={r.id}>
+            <Link className="table-row table-row-link" role="row" key={r.id} href={`/reports/${r.id}`}>
               <strong>{r.title}</strong>
               <span>{r.district?.name ?? '—'}</span>
               <span className={`tag ${STATUS_VARIANT[r.status] ?? 'muted'}`}>
                 {titleCase(r.status)}
               </span>
               <span>{relativeTime(r.updatedAt)}</span>
-            </div>
+            </Link>
           ))}
           {reportsRes.data.length === 0 && (
             <div className="empty-state">No reports match this category yet.</div>
