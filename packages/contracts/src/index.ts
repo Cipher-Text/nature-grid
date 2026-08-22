@@ -148,6 +148,11 @@ export const routes = {
   metrics: {
     platform: `${apiPrefix}/metrics/platform`,
   },
+
+  notifications: {
+    subscriptions: `${apiPrefix}/notifications/subscriptions`,
+    unsubscribe: (id: string) => `${apiPrefix}/notifications/subscriptions/${id}`,
+  },
 } as const;
 
 // ─── Response Envelopes ───────────────────────────────────────────────────────
@@ -507,4 +512,22 @@ export interface HourlyAirQualityReading {
   ozone: number | null;
   uvIndex: number | null;
   district?: { id: string; name: string };
+}
+
+// ─── Notifications ────────────────────────────────────────────────────────────
+
+export interface AlertSubscription {
+  id: string;
+  userId: string;
+  districtId: string | null;
+  channel: string;
+  minSeverity: AlertSeverity;
+  createdAt: string;
+  district: { id: string; name: string } | null;
+}
+
+export interface CreateSubscriptionRequest {
+  districtId?: string;
+  minSeverity?: AlertSeverity;
+  channel?: string;
 }

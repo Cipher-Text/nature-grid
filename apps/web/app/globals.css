@@ -1443,3 +1443,52 @@ a {
   font-size: 0.9rem;
   margin: 8px 0 20px;
 }
+
+/* ── Alert subscriptions ── */
+.subscription-list {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.subscription-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.subscription-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.subscription-form-section {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+
+.subscription-form-section h3 {
+  font-size: 0.92rem;
+  font-weight: 750;
+  margin-bottom: 12px;
+  color: var(--text);
+}
+
+.subscription-form-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 640px) {
+  .subscription-form-fields {
+    grid-template-columns: 1fr;
+  }
+}
