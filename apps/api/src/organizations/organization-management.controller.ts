@@ -14,6 +14,11 @@ import { PermissionsGuard } from '../common/guards/permissions.guard';
 export class OrganizationManagementController {
   constructor(private readonly organizationsService: OrganizationsService) {}
 
+  @Get('users')
+  users() {
+    return this.organizationsService.manageUsers();
+  }
+
   @Get()
   list() {
     return this.organizationsService.manageList();

@@ -87,8 +87,29 @@ export class AuthService {
   async getProfile(userId: string) {
     return this.prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, email: true, displayName: true, role: true, createdAt: true, lastLoginAt: true },
-    }).then((user) => user && { ...user, permissions: permissionsForRole(user.role) });
+      select: {
+        id: true,
+        email: true,
+        displayName: true,
+        role: true,
+        createdAt: true,
+        lastLoginAt: true,
+        organizationMemberships: {
+          select: {
+            role: true,
+            organization: { select: { id: true, name: true, type: true, isVerified: true } },
+          },
+          orderBy: { organization: { name: 'asc' } },
+        },
+      },
+    }).then((user) => {
+      if (!user) return null;
+      const permissions = permissionsForRole(user.role);
+      if (user.organizationMemberships.length > 0 && !permissions.includes('organizations.access')) {
+        permissions.push('organizations.access');
+      }
+      return { ...user, organizations: user.organizationMemberships.map((membership) => ({ ...membership.organization, membershipRole: membership.role })), permissions };
+    });
   }
 
   /** Validates a refresh token, revokes it, and issues a brand new access+refresh pair. */

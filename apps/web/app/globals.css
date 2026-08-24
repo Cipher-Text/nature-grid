@@ -401,6 +401,33 @@ a {
   gap: 16px;
 }
 
+.page-stack {
+  display: grid;
+  gap: 24px;
+}
+
+.page-heading {
+  display: grid;
+  gap: 8px;
+}
+
+.page-heading p:not(.eyebrow) {
+  color: var(--muted);
+  max-width: 62ch;
+}
+
+.content-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 20px;
+}
+
+.content-card h2 { margin: 8px 0; font-size: 1.15rem; }
+.content-card p { color: var(--muted); font-size: 0.88rem; }
+.card-kicker { color: var(--accent); font-size: 0.74rem; font-weight: 800; text-transform: uppercase; }
+.card-meta { margin-top: 18px; font-size: 0.82rem; font-weight: 700; }
+
 .public-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

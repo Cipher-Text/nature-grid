@@ -44,6 +44,7 @@ Refresh tokens are opaque, Postgres-backed, and rotated on use — not Redis, no
 | POST | `/organizations` | Authenticated | ✗ | Request org creation |
 | PATCH | `/organizations/:id` | Org admin / Admin | ✗ | Update org |
 | GET | `/admin/organizations` | `organizations.manage` | ✓ | Admin organization list with memberships |
+| GET | `/admin/organizations/users` | `organizations.manage` | ✓ | Active users available for membership attachment |
 | POST | `/admin/organizations` | `organizations.manage` | ✓ | Create organization |
 | POST | `/admin/organizations/:id/members` | `organizations.manage` | ✓ | Attach or update a user membership |
 | PATCH | `/admin/organizations/:id/members/:userId` | `organizations.manage` | ✓ | Change membership role (`ADMIN` / `MEMBER`) |

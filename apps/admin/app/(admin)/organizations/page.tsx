@@ -35,7 +35,7 @@ export default async function OrganizationsPage({
   const token = cookies().get(ADMIN_ACCESS_TOKEN_COOKIE)?.value ?? '';
   const [organizations, users] = await Promise.all([
     apiGet<Organization[]>('/api/v1/admin/organizations', token),
-    apiGet<{ data: User[] }>('/api/v1/users?page=1&pageSize=100', token),
+    apiGet<User[]>('/api/v1/admin/organizations/users', token),
   ]);
 
   return (
@@ -95,7 +95,7 @@ export default async function OrganizationsPage({
               <input type="hidden" name="organizationId" value={organization.id} />
               <select name="userId" className="role-select" required defaultValue="">
                 <option value="" disabled>Attach user</option>
-                {users.data.filter((user) => user.isActive).map((user) => (
+                {users.filter((user) => user.isActive).map((user) => (
                   <option key={user.id} value={user.id}>{user.displayName} · {user.email}</option>
                 ))}
               </select>

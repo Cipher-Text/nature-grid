@@ -11,6 +11,13 @@ export interface CurrentUser {
   createdAt: string;
   lastLoginAt: string | null;
   permissions: string[];
+  organizations: Array<{
+    id: string;
+    name: string;
+    type: string;
+    isVerified: boolean;
+    membershipRole: 'ADMIN' | 'MEMBER';
+  }>;
 }
 
 /**

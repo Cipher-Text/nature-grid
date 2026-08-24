@@ -85,7 +85,7 @@ export type OrganizationType =
 
 export type OrganizationMemberRole = 'ADMIN' | 'MEMBER';
 
-export type Permission = 'organizations.manage';
+export type Permission = 'organizations.access' | 'organizations.manage';
 
 // ─── Observation Enums ────────────────────────────────────────────────────────
 // No Prisma model exists yet (Observations module is a stub) — uppercased now

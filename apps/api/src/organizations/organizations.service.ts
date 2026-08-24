@@ -30,6 +30,14 @@ export class OrganizationsService {
     });
   }
 
+  manageUsers() {
+    return this.prisma.user.findMany({
+      where: { isActive: true },
+      select: { id: true, displayName: true, email: true, isActive: true },
+      orderBy: { displayName: 'asc' },
+    });
+  }
+
   create(dto: { name: string; type: OrganizationType; description?: string; website?: string; country?: string }) {
     return this.prisma.organization.create({
       data: {

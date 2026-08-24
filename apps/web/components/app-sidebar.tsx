@@ -111,10 +111,10 @@ export default function AppSidebar({ user }: { user: CurrentUser }) {
                   {link.label}
                 </Link>
               ))}
-              {user.permissions?.includes('organizations.manage') && (
-                <a href="http://localhost:3002/organizations">
+              {user.permissions?.includes('organizations.access') && (
+                <Link href="/organizations" className={isActive('/organizations') ? 'active' : undefined} onClick={close}>
                   Organizations
-                </a>
+                </Link>
               )}
             </div>
           ))}
