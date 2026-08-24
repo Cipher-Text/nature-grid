@@ -3,18 +3,14 @@ import { getCurrentUser } from '../lib/current-user';
 import { logoutAction } from '../lib/auth-actions';
 
 const NAV_LINKS = [
-  { href: '/data', label: 'Data' },
-  { href: '/observations', label: 'Observations' },
-  { href: '/reports', label: 'Reports' },
-  { href: '/alerts', label: 'Alerts' },
-  { href: '/biodiversity', label: 'Biodiversity' },
-  { href: '/restoration', label: 'Restoration' },
-  { href: '/community', label: 'Community' },
+  { href: '/#dashboard', label: 'Overview' },
+  { href: '/#map', label: 'Map' },
+  { href: '/#data', label: 'Data' },
+  { href: '/#reports', label: 'Reports & Alerts' },
+  { href: '/#biodiversity', label: 'Biodiversity' },
 ] as const;
 
 export default async function PublicNav() {
-  const user = await getCurrentUser();
-
   return (
     <header className="public-nav">
       <Link className="public-brand" href="/">
@@ -31,25 +27,12 @@ export default async function PublicNav() {
       </nav>
 
       <div className="nav-actions">
-        <Link className="text-link" href="/data">
-          Explore data
+        <Link className="button ghost" href="/login">
+          Sign in
         </Link>
-        {user ? (
-          <div className="nav-user">
-            <Link className="text-link" href="/profile">
-              Hi, {user.displayName}
-            </Link>
-            <form action={logoutAction}>
-              <button className="button ghost" type="submit">
-                Sign out
-              </button>
-            </form>
-          </div>
-        ) : (
-          <Link className="button ghost" href="/login">
-            Sign in
-          </Link>
-        )}
+        <Link className="button" href="/register">
+          Register
+        </Link>
       </div>
     </header>
   );

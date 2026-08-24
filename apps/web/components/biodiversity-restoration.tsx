@@ -50,6 +50,7 @@ export default async function BiodiversityRestoration() {
 
   return (
     <section
+      id="biodiversity"
       className="public-grid public-section"
       aria-label="Biodiversity and restoration"
     >
@@ -60,7 +61,7 @@ export default async function BiodiversityRestoration() {
             <h2>Biodiversity highlights</h2>
             <p>Research-grade observations and habitat signals.</p>
           </div>
-          <Link className="button ghost" href="/biodiversity">
+          <Link className="button ghost" href="/login">
             Explore
           </Link>
         </div>
@@ -79,10 +80,10 @@ export default async function BiodiversityRestoration() {
         </p>
 
         <div className="button-row" style={{ marginTop: '14px' }}>
-          <Link className="button ghost" href="/biodiversity">
+          <Link className="button ghost" href="/login">
             Species records
           </Link>
-          <Link className="button ghost" href="/observations">
+          <Link className="button ghost" href="/login">
             All observations
           </Link>
         </div>
@@ -95,7 +96,7 @@ export default async function BiodiversityRestoration() {
             <h2>Restoration and community</h2>
             <p>Projects and campaigns show action, not only problems.</p>
           </div>
-          <Link className="button ghost" href="/restoration">
+          <Link className="button ghost" href="/login">
             View projects
           </Link>
         </div>
@@ -110,7 +111,7 @@ export default async function BiodiversityRestoration() {
           ))}
         </div>
 
-        <Link className="button ghost gated-action" href="/profile">
+        <Link className="button ghost gated-action" href="/login">
           Sign in to participate
         </Link>
       </article>

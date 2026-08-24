@@ -199,10 +199,10 @@ export default async function MapSection() {
         </div>
 
         <div className="button-row" style={{ marginTop: '14px' }}>
-          <Link className="button ghost" href="/alerts">
+          <Link className="button ghost" href="/#reports">
             All alerts
           </Link>
-          <Link className="button ghost" href="/reports">
+          <Link className="button ghost" href="/#reports">
             All verified reports
           </Link>
         </div>
@@ -235,7 +235,7 @@ export default async function MapSection() {
 
         <Link
           className="button ghost"
-          href="/data"
+          href="/#data"
           style={{ width: '100%', marginTop: '12px', justifyContent: 'center' }}
         >
           Explore all datasets

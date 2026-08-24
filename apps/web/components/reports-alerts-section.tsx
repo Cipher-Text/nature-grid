@@ -61,6 +61,7 @@ export default async function ReportsAlertsSection() {
 
   return (
     <section
+      id="reports"
       className="public-grid public-section"
       aria-label="Reports and alerts"
     >
@@ -71,7 +72,7 @@ export default async function ReportsAlertsSection() {
             <h2>Verified reports</h2>
             <p>Public users see only reviewed environmental issues.</p>
           </div>
-          <Link className="button ghost" href="/reports">
+          <Link className="button ghost" href="/login">
             View all
           </Link>
         </div>
@@ -98,7 +99,7 @@ export default async function ReportsAlertsSection() {
             <h2>Active alerts</h2>
             <p>Public warnings, concise and easy to scan.</p>
           </div>
-          <Link className="button ghost" href="/alerts">
+          <Link className="button ghost" href="/#map">
             Alert map
           </Link>
         </div>
@@ -113,7 +114,7 @@ export default async function ReportsAlertsSection() {
           ))}
         </div>
 
-        <Link className="button ghost" href="/alerts" style={{ marginTop: '14px', width: '100%', justifyContent: 'center' }}>
+        <Link className="button ghost" href="/#map" style={{ marginTop: '14px', width: '100%', justifyContent: 'center' }}>
           See all alerts
         </Link>
       </article>
