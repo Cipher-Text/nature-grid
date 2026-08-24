@@ -200,11 +200,11 @@ Note the controller prefix is `restoration/projects`, not `restoration`. `PATCH`
 
 ## weather ✓
 
-Owns OpenMeteo integration: HTTP client, fetch/persist service, cron scheduler, and read endpoints. Self-contained — not built under `ingestion/` (see `docs/ingestion-plan.md` "Implementation status" for why).
+Owns OpenMeteo integration: HTTP client, fetch/persist service, cron scheduler, and read endpoints. Provider-specific field and endpoint details live in `docs/integrations/openmeteo.md`.
 
 Tables: `CurrentWeatherReading`, `HourlyWeatherForecast`, `DailyWeatherForecast`, `HourlyAirQuality` — all keyed by `districtId` (not raw lat/lng proximity matching), unique on `(districtId, time)`.
 
-Scheduler cadence: current every 15 min (`0 */15 * * * *`), hourly + air quality every 2h (`0 0 */2 * * *`), daily every 12h (`0 0 */12 * * *`). Per-district fetch failures are caught and logged via NestJS `Logger` without stopping the run for other districts — no job queue, retry tracking, or audit trail.
+Scheduler cadence: current every 15 min (`0 */15 * * * *`), hourly + air quality every 2h (`0 0 */2 * * *`), daily every 12h (`0 0 */12 * * *`). Per-district fetch failures are caught and logged via NestJS `Logger` without stopping the run for other districts. Each outer scheduler run creates an `IngestionJob` when the `OpenMeteo` provider exists and marks it `SUCCEEDED` or `FAILED`.
 
 | Method | Path | Access |
 | --- | --- | --- |
@@ -233,11 +233,11 @@ Intended to own uploaded evidence and attachments for reports, observations, dat
 
 Status: **empty `@Module({})`** — no controller, service, or schema model. `MediaAsset` is a planned model (`architecture/data-model.md`, Phase 3).
 
-## ingestion ~
+## ingestion ✓
 
-Intended to own generic provider job lifecycle and retry logic — queueing, tracking, and auditing external data fetches across providers, using the `IngestionJob` model (`QUEUED | RUNNING | SUCCEEDED | FAILED | CANCELLED`).
+Owns provider job visibility for scheduled external data fetches, using the `IngestionJob` model (`QUEUED | RUNNING | SUCCEEDED | FAILED | CANCELLED`).
 
-Status: **empty `@Module({})`** — no service implementation. **Used by neither `weather` nor `biodiversity`.** Both were built with direct per-request try/catch logging instead of job tracking, so no cross-provider failure history exists anywhere. `IngestionJob` rows are never written. Revisit before adding a third provider (WAQI, BMD) so ingestion failures stay visible.
+Status: implemented service + read controller. `WeatherScheduler` and `BiodiversityScheduler` call `IngestionService.startJob`, `completeJob`, and `failJob`; successful jobs update `Dataset.lastSyncedAt` for matching dataset categories. Admin/moderator routes expose `GET /ingestion/jobs` and `GET /ingestion/jobs/:id`. There is no queue worker, manual trigger endpoint, or retry endpoint yet; recurring cron jobs are the retry mechanism.
 
 ## audit (embedded)
 

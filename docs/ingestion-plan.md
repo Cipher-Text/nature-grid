@@ -19,7 +19,7 @@ OpenMeteo weather + air quality ingestion is **done**, but with a smaller, redes
 | Resilience4j-equivalent circuit breaker | Manual 3-attempt retry with fixed backoff, no circuit breaker | Trimmed for MVP; per-district failures are caught and logged without tripping the whole scheduler run. |
 | Read endpoints at `/ingestion/weather/latest` | `/weather/current`, `/weather/hourly/:districtId`, `/weather/daily/:districtId`, `/weather/air-quality` | Endpoints live under the module that owns the data. |
 
-The gap analysis, API research, and "what NOT to port" sections below are still accurate background — only the concrete implementation plan (models, module structure, tasks) has been superseded for OpenMeteo. It remains a reasonable template for the next provider (WAQI, GBIF).
+The gap analysis, API research, and "what NOT to port" sections below are still useful background, but provider-specific facts now live in `docs/integrations/`. The concrete implementation plan (models, module structure, tasks) has been superseded for OpenMeteo and GBIF.
 
 ---
 
@@ -118,10 +118,10 @@ Added these well-designed entities not yet in nature-grid:
 
 | Priority | API | Key | Data | Frequency | Notes |
 | --- | --- | --- | --- | --- | --- |
-| 1 | **OpenMeteo weather** | None | Temperature, humidity, pressure, wind, precipitation, UV, weather code | Every 1h (current), 2h (hourly), 12h (daily) | Free, open-nature already has working client and scheduler. Nature-grid re-implements in NestJS. |
-| 1 | **OpenMeteo air quality** | None | PM2.5, PM10, O3, NO2, SO2, CO, European AQI | Every 2h | Same API, different endpoint. `https://air-quality-api.open-meteo.com/v1/air-quality` |
+| 1 | **OpenMeteo weather** | None | Temperature, humidity, wind, precipitation, UV, weather code, cloud cover | Current every 15min, hourly every 2h, daily every 12h | Implemented. See `docs/integrations/openmeteo.md`. |
+| 1 | **OpenMeteo air quality** | None | PM2.5, PM10, O3, NO2, SO2, CO, UV index | Every 2h | Implemented. AQI fields are available from OpenMeteo but not requested/stored yet. See `docs/integrations/openmeteo.md`. |
 | 2 | **WAQI** | Free (register) | AQI per city station, dominant pollutant, health advice | Every 1h | More station-level granularity than OpenMeteo for urban AQI |
-| 3 | **GBIF** | None | Species occurrence records for Bangladesh | Daily | Feed into biodiversity module. Filter by `country=BD`. |
+| 3 | **GBIF** | None | Species taxonomy and occurrence records for Bangladesh | Daily | Implemented. Filter by `country=BD&hasCoordinate=true`. See `docs/integrations/gbif.md`. |
 | 4 | **BMD** | Gov approval | Bangladesh Met Dept — local station weather, cyclone bulletins | As available | May require official registration. Start with OpenMeteo for coverage. |
 | 5 | **FFWC** | Gov approval | Bangladesh Flood Forecasting Warning Centre — flood alerts | Real-time | `http://www.ffwc.gov.bd`. May need scraping if no public API. |
 
@@ -129,6 +129,7 @@ Two further sources are unscheduled:
 
 - **iNaturalist** occurrence ingestion. `apps/api/src/datasets/seed/catalog.ts` already lists iNaturalist as a dataset source, so the catalog advertises a source with no ingestion behind it.
 - **OpenWeatherMap** / **AirNow** as additional weather and AQ coverage.
+- Additional OpenMeteo APIs now documented as candidates: Climate, Flood, Marine Weather, and Satellite Radiation in `docs/integrations/`.
 
 ---
 

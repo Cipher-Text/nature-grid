@@ -44,12 +44,12 @@ apps/api/src/
 ├── metrics/               # ✓ live platform counters
 ├── media/                 # ~ stub
 ├── weather/               # ✓ OpenMeteo client, service, scheduler, current/hourly/daily/AQ
-└── ingestion/             # ~ stub — generic job tracking, unused by weather
+└── ingestion/             # ✓ provider job tracking for scheduled OpenMeteo + GBIF syncs
 ```
 
 Legend: ✓ Implemented | ~ Stub only
 
-`weather` is self-contained (not built under `ingestion/`) — see `docs/ingestion-plan.md` "Implementation status" for why. `ingestion` remains a stub reserved for future generic provider job tracking (WAQI, GBIF, etc.), which weather deliberately does not use.
+`weather` and `biodiversity` keep their provider clients and schedulers in their own modules. The shared `ingestion` module now tracks scheduled provider runs as `IngestionJob` records and updates dataset `lastSyncedAt` values on success. Provider-specific details live in `docs/integrations/`.
 
 ## Domain Map
 
@@ -77,4 +77,3 @@ Advanced domains (emissions tracking, climate forecasting, carbon accounting, re
 - Database schema and migration tooling belongs in `packages/database`.
 - The Python worker communicates through database records, queues, object storage, or API contracts. It should not import TypeScript app code.
 - A domain is extracted from the NestJS API only after operational pressure justifies it.
-

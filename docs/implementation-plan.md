@@ -112,7 +112,7 @@ apps/api/src/weather/
 8. Air quality persistence is part of the same service, not a separate ingestion service.
 9. `weather.scheduler.ts` — `@Cron('0 */15 * * * *')` for current weather.
 10. Same scheduler — `@Cron('0 0 */2 * * *')` for hourly weather + air quality; `@Cron('0 0 */12 * * *')` for daily.
-11. No `ingestion-job.service.ts` — `IngestionJob` model is unused by weather.
+11. `IngestionService` was added later (2026-08-24); weather scheduler runs now write `IngestionJob` records and update dataset `lastSyncedAt`.
 12. `WeatherModule` wired into `AppModule`; also imported by `DatasetsModule` so the pre-existing `GET /datasets/weather/current` and `GET /datasets/air-quality/current` placeholders now return real data instead of their "Connect OpenMeteo ingestion worker" stub text.
 13. Read endpoints live at `/weather/*`, not `/ingestion/*`: `GET /weather/current[/:districtId]`, `GET /weather/hourly/:districtId`, `GET /weather/daily/:districtId`, `GET /weather/air-quality[/:districtId]`.
 
@@ -206,7 +206,7 @@ Environmental observations by citizens and researchers with trust levels.
 
 Connect to GBIF API for species occurrence data for Bangladesh.
 
-**Target (as built):** self-contained `apps/api/src/biodiversity/`, not `apps/api/src/ingestion/` — same design deviation already made and documented for OpenMeteo (M6): no generic `ApiCallLog`/`IngestionJob` wiring, just a client + service + scheduler + controller in one module.
+**Target (as built):** self-contained `apps/api/src/biodiversity/`, not `apps/api/src/ingestion/` for provider-specific client/service/controller code. Shared job tracking was added later through `IngestionService`; the GBIF scheduler now writes `IngestionJob` records.
 
 **Status (2026-08-19):** All 6 tasks done. `apps/web/app/biodiversity/page.tsx` upgraded from an honest empty state (M15) to real species/occurrence data in the same pass. See `docs/progress.md` "Biodiversity + GBIF Module" for full detail.
 

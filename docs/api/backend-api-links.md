@@ -87,7 +87,7 @@ Refresh tokens are opaque, Postgres-backed, and rotated on use — not Redis, no
 | GET | `/weather/air-quality` | Public | ✓ | Latest air quality reading for every district |
 | GET | `/weather/air-quality/:districtId` | Public | ✓ | Latest air quality reading for one district |
 
-Source: OpenMeteo, via a `@nestjs/schedule` cron scheduler (current every 15min, hourly + AQ every 2h, daily every 12h). See `docs/architecture/modules.md` "weather" for design notes.
+Source: OpenMeteo, via a `@nestjs/schedule` cron scheduler (current every 15min, hourly + AQ every 2h, daily every 12h). See `docs/architecture/modules.md` "weather" for design notes and `docs/integrations/openmeteo.md` for provider details.
 
 ## Reports
 
@@ -150,17 +150,17 @@ Controller prefix is `restoration/projects`, not `restoration`.
 | GET | `/biodiversity/habitats` | Public | ✗ | Habitat catalog — no `Habitat` model yet |
 | POST | `/biodiversity/species` | Researcher / Admin | ✗ | Create species record — species are GBIF-sourced only today |
 
-Populated by a daily GBIF sync (`country=BD&hasCoordinate=true`). `iucnStatus` is stored but unpopulated — GBIF's occurrence search does not return it.
+Populated by a daily GBIF sync (`country=BD&hasCoordinate=true`). `iucnStatus` is stored but unpopulated — GBIF's occurrence search does not return it. See `docs/integrations/gbif.md` for provider details.
 
 ## Ingestion
 
-Generic job-tracking API — none of this is implemented, and OpenMeteo sync does **not** go through it (see `## Weather` above; it runs its own cron scheduler with no job records). This table describes a future generic layer for tracking/retrying provider fetches once a second provider (WAQI, GBIF) is added.
+Provider job-tracking API for scheduled external syncs. Weather and GBIF schedulers create `IngestionJob` rows and update `Dataset.lastSyncedAt` on successful runs.
 
 | Method | Path | Access | Status | Purpose |
 | --- | --- | --- | --- | --- |
-| GET | `/ingestion/jobs` | Admin | ✗ | List ingestion jobs |
-| POST | `/ingestion/jobs` | Admin | ✗ | Create ingestion job |
-| GET | `/ingestion/jobs/:id` | Admin | ✗ | Job detail |
+| GET | `/ingestion/jobs` | Moderator / Admin | ✓ | List ingestion jobs (`?status`, `?providerId`, `?page`, `?pageSize`) |
+| POST | `/ingestion/jobs` | Admin | ✗ | Create ingestion job manually |
+| GET | `/ingestion/jobs/:id` | Moderator / Admin | ✓ | Job detail |
 | POST | `/ingestion/jobs/:id/retry` | Admin | ✗ | Retry failed job |
 | POST | `/ingestion/providers/openmeteo/sync` | Admin | ✗ | Trigger OpenMeteo sync — superseded by the cron scheduler in `weather`, likely unnecessary now |
 
