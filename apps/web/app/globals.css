@@ -1565,6 +1565,67 @@ a {
   background: var(--surface-2);
 }
 
+.dataset-detail-header {
+  margin: 20px 0;
+}
+
+.dataset-detail-header h1 {
+  margin: 8px 0 6px;
+}
+
+.dataset-detail-header p {
+  max-width: 760px;
+  color: var(--muted);
+}
+
+.dataset-detail-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dataset-detail-panel {
+  margin-bottom: 16px;
+}
+
+.dataset-detail-meta {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.dataset-detail-meta div {
+  display: grid;
+  gap: 5px;
+}
+
+.dataset-detail-meta span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.endpoint-list {
+  display: grid;
+  gap: 8px;
+}
+
+.endpoint-list code {
+  display: block;
+  overflow-wrap: anywhere;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-2);
+  padding: 10px 12px;
+  color: var(--foreground);
+}
+
+@media (max-width: 700px) {
+  .dataset-detail-meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 /* ── Alert strip info/warning variants ── */
 .alert-strip.info {
   background: var(--data-soft);

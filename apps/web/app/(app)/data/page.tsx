@@ -70,14 +70,14 @@ export default async function DataPage({
         {datasetsRes.data.map((d) => {
           const access = ACCESS_LABEL[d.accessPolicy];
           return (
-            <div className="table-row" role="row" key={d.id}>
+            <Link className="table-row table-row-link" role="row" key={d.id} href={`/data/${d.id}`}>
               <strong>{d.name}</strong>
               <span className="tag info">{titleCase(d.category)}</span>
               <span>{d.provider?.name ?? '—'}</span>
               <span className={`tag ${access?.variant ?? 'muted'}`}>
                 {access?.label ?? d.accessPolicy}
               </span>
-            </div>
+            </Link>
           );
         })}
         {datasetsRes.data.length === 0 && (

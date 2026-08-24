@@ -136,6 +136,11 @@ export const routes = {
     airQualityByDistrict: (districtId: string) => `${apiPrefix}/weather/air-quality/${districtId}`,
   },
 
+  flood: {
+    forecast: `${apiPrefix}/flood/forecast`,
+    forecastByDistrict: (districtId: string) => `${apiPrefix}/flood/forecast/${districtId}`,
+  },
+
   users: {
     list: `${apiPrefix}/users`,
     detail: (id: string) => `${apiPrefix}/users/${id}`,
@@ -513,6 +518,23 @@ export interface HourlyAirQualityReading {
   sulphurDioxide: number | null;
   ozone: number | null;
   uvIndex: number | null;
+  district?: { id: string; name: string };
+}
+
+export interface FloodForecast {
+  id: string;
+  districtId: string;
+  lat: number;
+  lng: number;
+  forecastDate: string;
+  riverDischarge: number | null;
+  riverDischargeMean: number | null;
+  riverDischargeMedian: number | null;
+  riverDischargeMax: number | null;
+  riverDischargeMin: number | null;
+  riverDischargeP25: number | null;
+  riverDischargeP75: number | null;
+  createdAt: string;
   district?: { id: string; name: string };
 }
 
