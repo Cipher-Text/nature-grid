@@ -1031,14 +1031,20 @@ a {
 .sidebar nav {
   flex: 1;
   overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+  display: grid;
+  align-content: start;
+  gap: 8px;
   margin-top: 20px;
   padding-bottom: 8px;
 }
 
+.sidebar nav > div {
+  display: grid;
+  gap: 2px;
+}
+
 .sidebar nav a {
+  display: block;
   border-radius: 7px;
   color: #425249;
   padding: 10px 12px;
@@ -1080,6 +1086,17 @@ a {
   gap: 10px;
   margin-bottom: 10px;
   min-width: 0;
+}
+
+.sidebar-profile-link {
+  border-radius: 8px;
+  color: inherit;
+  padding: 6px;
+  text-decoration: none;
+}
+
+.sidebar-profile-link:hover {
+  background: var(--surface-2);
 }
 
 .sidebar-avatar {

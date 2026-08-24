@@ -19,10 +19,6 @@ const NAV_SECTIONS = [
       { href: '/community', label: 'Community' },
     ],
   },
-  {
-    label: 'Account',
-    links: [{ href: '/profile', label: 'Profile' }],
-  },
 ] as const;
 
 const ROLE_SHORT: Record<string, string> = {
@@ -121,7 +117,7 @@ export default function AppSidebar({ user }: { user: CurrentUser }) {
 
         {/* User footer */}
         <div className="sidebar-footer">
-          <div className="sidebar-user">
+          <Link className="sidebar-user sidebar-profile-link" href="/profile" onClick={close}>
             <div className="sidebar-avatar" aria-hidden="true">
               {initials(user.displayName)}
             </div>
@@ -129,7 +125,7 @@ export default function AppSidebar({ user }: { user: CurrentUser }) {
               <strong>{user.displayName}</strong>
               <span>{ROLE_SHORT[user.role] ?? user.role}</span>
             </div>
-          </div>
+          </Link>
           <form action={logoutAction}>
             <button className="sidebar-logout-btn" type="submit">
               Sign out
