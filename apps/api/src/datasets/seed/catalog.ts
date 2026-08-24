@@ -15,6 +15,13 @@ export const SEED_DATASETS: {
     description: 'Hourly and daily weather forecasts for all districts via OpenMeteo API.',
   },
   {
+    name: 'OpenMeteo Flood Forecasts',
+    category: DatasetCategory.WATER,
+    accessPolicy: DatasetAccessPolicy.PUBLIC,
+    source: 'openmeteo-flood',
+    description: 'Daily simulated river discharge forecasts for Bangladesh districts via OpenMeteo and GloFAS.',
+  },
+  {
     name: 'District Air Quality Index',
     category: DatasetCategory.AIR_QUALITY,
     accessPolicy: DatasetAccessPolicy.RESEARCHER,

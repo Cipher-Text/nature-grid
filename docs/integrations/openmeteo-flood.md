@@ -2,9 +2,9 @@
 
 ## Status
 
-Not implemented.
+Implemented.
 
-Nature Grid currently integrates OpenMeteo forecast and air-quality APIs only. The OpenMeteo Flood API is a separate candidate source for river-discharge forecasts and historical river flow context.
+Nature Grid fetches a 30-day daily river-discharge forecast for every seeded Bangladesh district. This is modelled GloFAS discharge context, not an official Bangladesh flood warning.
 
 ## Provider
 
@@ -14,9 +14,10 @@ Nature Grid currently integrates OpenMeteo forecast and air-quality APIs only. T
 | API key | Not required for non-commercial use |
 | Official docs | `https://open-meteo.com/en/docs/flood-api` |
 | Endpoint | `https://flood-api.open-meteo.com/v1/flood` |
-| Current client | None |
-| Current scheduler | None |
-| Current storage | None |
+| Current client | `apps/api/src/flood/flood-openmeteo.client.ts` |
+| Current scheduler | Every 6 hours at minute 30 |
+| Current storage | `FloodForecast` Prisma model |
+| Public routes | `GET /flood/forecast`, `GET /flood/forecast/:districtId` |
 
 ## Available Data
 
@@ -62,11 +63,10 @@ Candidate use cases:
 - Historical river-flow context for restoration and water-body monitoring.
 - A supporting source alongside official FFWC data if FFWC is later integrated.
 
-## Implementation Needed
+## Implementation Notes
 
-- Add a flood or hydrology schema; current `Alert` records and weather tables do not store river-discharge time series.
-- Decide monitoring coordinates for Bangladesh rivers instead of using district centroids blindly.
-- Add an OpenMeteo flood client under `apps/api/src/weather/`, `apps/api/src/alerts/`, or a new `hydrology` module.
-- Add scheduler and ingestion job tracking.
-- Add public API routes and dataset catalog entries.
+- The `flood` module is separate from `weather`, with its own client, service, scheduler, controller, and DTO.
+- District coordinates are the initial monitoring points. OpenMeteo may select the nearest supported river/grid cell, so river-specific coordinates should be added later for high-value basins.
+- Each scheduler run creates an `IngestionJob` for the shared `OpenMeteo` provider.
+- The dataset catalog includes `OpenMeteo Flood Forecasts` under `WATER`.
 - Keep official alert authority separate from model-derived discharge data.

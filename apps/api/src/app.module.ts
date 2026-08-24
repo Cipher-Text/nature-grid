@@ -19,6 +19,7 @@ import { RestorationModule } from './restoration/restoration.module';
 import { MediaModule } from './media/media.module';
 import { IngestionModule } from './ingestion/ingestion.module';
 import { WeatherModule } from './weather/weather.module';
+import { FloodModule } from './flood/flood.module';
 import { MetricsModule } from './metrics/metrics.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { HealthController } from './health.controller';
@@ -46,6 +47,7 @@ import { SeedService } from './seed/seed.service';
     MediaModule,
     IngestionModule,
     WeatherModule,
+    FloodModule,
     MetricsModule,
     NotificationsModule,
   ],

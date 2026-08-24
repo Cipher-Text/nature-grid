@@ -89,6 +89,15 @@ Refresh tokens are opaque, Postgres-backed, and rotated on use — not Redis, no
 
 Source: OpenMeteo, via a `@nestjs/schedule` cron scheduler (current every 15min, hourly + AQ every 2h, daily every 12h). See `docs/architecture/modules.md` "weather" for design notes and `docs/integrations/openmeteo.md` for provider details.
 
+### Flood (OpenMeteo / GloFAS)
+
+| Method | Path | Access | Status | Notes |
+|---|---|---|---|---|
+| GET | `/flood/forecast` | Public | ✓ | Latest stored discharge forecast day for every district |
+| GET | `/flood/forecast/:districtId` | Public | ✓ | Daily 30-day forecast by default; accepts `from` and `to` |
+
+Source: OpenMeteo Flood API, persisted as `FloodForecast`, refreshed every six hours by the separate `flood` module. See `docs/integrations/openmeteo-flood.md`.
+
 ## Reports
 
 | Method | Path | Access | Status | Purpose |

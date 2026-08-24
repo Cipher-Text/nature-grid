@@ -2,7 +2,7 @@
 
 Nature Grid uses PostgreSQL as the primary database. The Prisma schema lives at `packages/database/prisma/schema.prisma`. The Prisma client is regenerated via `pnpm run db:generate` from the `packages/database` directory.
 
-Current state: **28 models, 17 enums, 14 migrations applied.**
+Current state: **29 models, 17 enums, 15 migrations applied.**
 
 ## Enums
 
@@ -130,6 +130,8 @@ Note `carbonMonoxide` on `HourlyAirQuality` is an OpenMeteo air-quality pollutan
 ## Geospatial
 
 `lat Float?` / `lng Float?` are used on `District` (populated for all 64), `CitizenReport`, and `Observation`. `Occurrence` and the 4 weather tables carry non-nullable `lat`/`lng`. Replace with PostGIS `geography(Point, 4326)` when the PostGIS extension is enabled — the Docker image already provides it, but no migration has enabled it yet.
+
+`FloodForecast` stores daily OpenMeteo/GloFAS river-discharge forecasts per district, including ensemble statistics where returned. The initial fetch uses district coordinates; these are monitoring proxies and should be replaced or supplemented with river-specific points for basin-level flood operations.
 
 Future candidates for proper geometry fields:
 

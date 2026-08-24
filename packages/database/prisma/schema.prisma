@@ -267,6 +267,7 @@ model District {
   hourlyWeatherForecasts HourlyWeatherForecast[]
   dailyWeatherForecasts  DailyWeatherForecast[]
   airQualityReadings     HourlyAirQuality[]
+  floodForecasts         FloodForecast[]
 
   @@unique([name, divisionId])
   @@index([divisionId])
@@ -590,6 +591,30 @@ model IngestionJob {
 
   @@index([providerId])
   @@index([status])
+}
+
+// ─── Flood (OpenMeteo / GloFAS) ─────────────────────────────────────────────
+// Daily simulated river discharge for the nearest supported river/grid cell.
+
+model FloodForecast {
+  id                    String   @id @default(cuid())
+  districtId            String
+  district              District @relation(fields: [districtId], references: [id])
+  lat                   Float
+  lng                   Float
+  forecastDate          DateTime
+  riverDischarge        Float?
+  riverDischargeMean    Float?
+  riverDischargeMedian  Float?
+  riverDischargeMax     Float?
+  riverDischargeMin     Float?
+  riverDischargeP25     Float?
+  riverDischargeP75     Float?
+  createdAt             DateTime @default(now())
+
+  @@unique([districtId, forecastDate])
+  @@index([districtId])
+  @@index([forecastDate])
 }
 
 // ─── Weather ──────────────────────────────────────────────────────────────────

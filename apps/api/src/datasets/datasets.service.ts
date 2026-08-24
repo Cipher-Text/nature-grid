@@ -38,6 +38,8 @@ export class DatasetsService implements OnModuleInit {
     const count = await this.prisma.dataset.count();
     if (count === 0) {
       await this.seed();
+    } else {
+      await this.ensureFloodDataset();
     }
   }
 
@@ -45,6 +47,19 @@ export class DatasetsService implements OnModuleInit {
     this.logger.log('Seeding dataset catalog…');
     await this.prisma.dataset.createMany({ data: SEED_DATASETS });
     this.logger.log(`Dataset catalog seeded: ${SEED_DATASETS.length} records`);
+  }
+
+  private async ensureFloodDataset() {
+    const exists = await this.prisma.dataset.findFirst({
+      where: { source: 'openmeteo-flood' },
+      select: { id: true },
+    });
+    if (exists) return;
+
+    const floodDataset = SEED_DATASETS.find((dataset) => dataset.source === 'openmeteo-flood');
+    if (!floodDataset) return;
+    await this.prisma.dataset.create({ data: floodDataset });
+    this.logger.log('Added dataset catalog entry: OpenMeteo Flood Forecasts');
   }
 
   list(category?: DatasetCategory, accessPolicy?: DatasetAccessPolicy, page = 1, pageSize = 20) {

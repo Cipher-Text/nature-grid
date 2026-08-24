@@ -97,7 +97,7 @@ Owns dataset catalog, metadata, access policy, and source references.
 
 Access policies: `PUBLIC | LOGIN_REQUIRED | RESEARCHER | APPROVED | GOVERNMENT`
 
-Seeded on first boot: 5 catalog records (OpenMeteo weather, District AQI, Water body registry, Biodiversity occurrences, Sundarbans monitoring).
+Seeded on first boot: 6 catalog records, including OpenMeteo flood forecasts. Existing installations add the flood catalog entry idempotently on the next API boot.
 
 | Method | Path | Access |
 | --- | --- | --- |
@@ -216,6 +216,17 @@ Scheduler cadence: current every 15 min (`0 */15 * * * *`), hourly + air quality
 | GET | `/weather/air-quality/:districtId` | Public |
 
 Also consumed by `DatasetsModule` to serve `/datasets/weather/current` and `/datasets/air-quality/current`, and by `apps/web`'s `map-section.tsx` (public homepage "Current conditions" sidebar, with fallback to static data if the API is unreachable).
+
+## flood ✓
+
+Owns the OpenMeteo Flood / GloFAS integration: provider client, daily discharge persistence, six-hour scheduler, ingestion tracking, and public read endpoints. District coordinates are initial monitoring proxies; the provider selects the nearest supported river/grid cell.
+
+| Method | Path | Access |
+| --- | --- | --- |
+| GET | `/flood/forecast` | Public — latest stored forecast day for every district |
+| GET | `/flood/forecast/:districtId` | Public — forecast rows (`?from`, `?to`) |
+
+The scheduler fetches a 30-day forecast for every district with coordinates at `0:30` every six hours. OpenMeteo Flood returns simulated river discharge, not an official Bangladesh flood warning; official FFWC integration remains a separate future source.
 
 ## metrics ✓
 
