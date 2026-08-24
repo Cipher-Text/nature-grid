@@ -1,0 +1,102 @@
+# GBIF
+
+## Status
+
+Implemented in `apps/api/src/biodiversity/`.
+
+GBIF provides biodiversity occurrence data for Bangladesh. The integration is owned by the `biodiversity` module and exposed through public species and occurrence endpoints.
+
+## Provider
+
+| Item | Value |
+| --- | --- |
+| Provider name | `GBIF` |
+| API key | Not required |
+| Endpoint | `https://api.gbif.org/v1/occurrence/search` |
+| Client | `apps/api/src/biodiversity/gbif.client.ts` |
+| Scheduler | `apps/api/src/biodiversity/biodiversity.scheduler.ts` |
+
+## Query
+
+The current query is:
+
+```text
+country=BD&hasCoordinate=true&limit=300&offset=<offset>
+```
+
+The sync uses GBIF occurrence search, filtered to Bangladesh records that have coordinates. Pagination uses GBIF's 300-record page size.
+
+## Fetched Data
+
+The service stores species taxonomy and occurrence records from the GBIF response.
+
+### Species
+
+Stored fields:
+
+- `gbifKey`
+- `canonicalName`
+- `vernacularName`
+- `kingdom`
+- `phylum`
+- `class`
+- `order`
+- `family`
+- `genus`
+- `iucnStatus`
+- `imageUrl`
+
+`iucnStatus` is nullable and intentionally unpopulated in v1. GBIF occurrence search does not return IUCN conservation status, and no separate per-species enrichment call is implemented yet.
+
+### Occurrences
+
+Stored fields:
+
+- `gbifOccurrenceKey`
+- `speciesId`
+- `districtId`
+- `lat`
+- `lng`
+- `observedAt`
+- `recordedBy`
+- `basisOfRecord`
+
+`gbifOccurrenceKey` is stored as `BigInt` because real GBIF occurrence keys can exceed the 32-bit integer range.
+
+## Storage
+
+GBIF data is stored in:
+
+- `Species`
+- `Occurrence`
+
+Species are upserted by `gbifKey`. Occurrences are upserted by `gbifOccurrenceKey`, which keeps daily re-syncs idempotent.
+
+GBIF gives coordinates, not Nature Grid district IDs. The current implementation assigns `districtId` by nearest seeded district centroid. This is an approximation until polygon boundary or PostGIS point-in-polygon matching is added.
+
+## Schedule
+
+| Job | Cron | Cadence |
+| --- | --- | --- |
+| GBIF occurrence sync | `EVERY_DAY_AT_MIDNIGHT` | Daily at midnight |
+
+Each scheduler run creates an ingestion job when the `GBIF` provider exists. Successful runs update biodiversity dataset `lastSyncedAt` values.
+
+## Public API
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET` | `/biodiversity/species` | Paginated species catalog, supports `?search` |
+| `GET` | `/biodiversity/species/:id` | Species detail |
+| `GET` | `/biodiversity/occurrences` | Paginated occurrences, supports `?speciesId` and `?districtId` |
+
+## Verification Notes
+
+The first completed live sync pulled 1000 real occurrence records across 285 species. A second run confirmed idempotency: the counts stayed stable and no duplicate rows were created.
+
+## Known Gaps
+
+- No IUCN enrichment call yet.
+- No habitat-pressure data yet.
+- No point-in-polygon district assignment yet.
+- Sync is capped at about 1000 records per run; it is not a full historical mirror of every GBIF record for Bangladesh.

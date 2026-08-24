@@ -26,6 +26,12 @@
 - [Initial API](api/initial-api.md)
 - [Backend API links](api/backend-api-links.md)
 
+## Integrations
+
+- [Third-party data sources](integrations/README.md)
+- [OpenMeteo](integrations/openmeteo.md)
+- [GBIF](integrations/gbif.md)
+
 ## Decisions
 
 - [Architecture decisions](decisions/README.md)
