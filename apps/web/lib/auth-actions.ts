@@ -18,7 +18,7 @@ export async function loginAction(formData: FormData) {
   }
 
   setSessionCookies(tokens.accessToken, tokens.refreshToken);
-  redirect('/profile');
+  redirect('/reports');
 }
 
 export async function registerAction(formData: FormData) {
@@ -35,7 +35,7 @@ export async function registerAction(formData: FormData) {
   }
 
   setSessionCookies(tokens.accessToken, tokens.refreshToken);
-  redirect('/profile');
+  redirect('/reports');
 }
 
 export async function logoutAction() {

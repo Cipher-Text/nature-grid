@@ -1,57 +1,142 @@
+'use client';
+
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { useState } from 'react';
+import { logoutAction } from '../lib/auth-actions';
+import type { CurrentUser } from '../lib/current-user';
 
 const NAV_SECTIONS = [
   {
-    label: 'Overview',
-    links: [{ key: 'board', href: '/', label: 'Public Board' }],
-  },
-  {
     label: 'Explore',
     links: [
-      { key: 'data', href: '/data', label: 'Data Hub' },
-      { key: 'observations', href: '/observations', label: 'Observations' },
-      { key: 'reports', href: '/reports', label: 'Citizen Reports' },
-      { key: 'alerts', href: '/alerts', label: 'Alerts' },
-      { key: 'biodiversity', href: '/biodiversity', label: 'Biodiversity' },
-      { key: 'restoration', href: '/restoration', label: 'Restoration' },
-      { key: 'community', href: '/community', label: 'Community' },
+      { href: '/data', label: 'Data Hub' },
+      { href: '/observations', label: 'Observations' },
+      { href: '/reports', label: 'Citizen Reports' },
+      { href: '/alerts', label: 'Alerts' },
+      { href: '/biodiversity', label: 'Biodiversity' },
+      { href: '/restoration', label: 'Restoration' },
+      { href: '/community', label: 'Community' },
     ],
   },
   {
     label: 'Account',
-    links: [{ key: 'profile', href: '/profile', label: 'Profile' }],
+    links: [{ href: '/profile', label: 'Profile' }],
   },
 ] as const;
 
-type NavKey = (typeof NAV_SECTIONS)[number]['links'][number]['key'];
+const ROLE_SHORT: Record<string, string> = {
+  CITIZEN: 'Citizen',
+  RESEARCHER: 'Researcher',
+  ORGANIZATION_ADMIN: 'Org Admin',
+  GOVERNMENT: 'Government',
+  MODERATOR: 'Moderator',
+  ADMIN: 'Admin',
+};
 
-/** Sidebar shell for the authenticated app pages (mirrors mocks/frontend-design's .app-shell). */
-export default function AppSidebar({ active }: { active: NavKey }) {
+function initials(displayName: string): string {
+  const parts = displayName.trim().split(/\s+/);
+  const first = parts[0]?.[0] ?? '';
+  const last = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? '') : '';
+  return (first + last).toUpperCase();
+}
+
+export default function AppSidebar({ user }: { user: CurrentUser }) {
+  const pathname = usePathname();
+  const [open, setOpen] = useState(false);
+
+  function isActive(href: string) {
+    if (href === '/') return pathname === '/';
+    return pathname === href || pathname.startsWith(href + '/');
+  }
+
+  function close() {
+    setOpen(false);
+  }
+
   return (
-    <aside className="sidebar">
-      <div className="brand">
-        <div className="brand-mark">NG</div>
-        <div>
-          <strong>Nature Grid</strong>
-          <span>Environmental intelligence</span>
-        </div>
+    <>
+      {/* Mobile top bar */}
+      <div className="mobile-header">
+        <Link className="mobile-brand" href="/reports" onClick={close}>
+          <span className="brand-mark">NG</span>
+          <span>Nature Grid</span>
+        </Link>
+        <button
+          className="mobile-menu-btn"
+          aria-label="Open navigation"
+          onClick={() => setOpen(true)}
+        >
+          <span className="hamburger-icon" />
+        </button>
       </div>
-      <nav aria-label="Main navigation">
-        {NAV_SECTIONS.flatMap((section) => [
-          <span className="nav-label" key={`${section.label}-label`}>
-            {section.label}
-          </span>,
-          ...section.links.map((link) => (
-            <Link
-              key={link.key}
-              className={link.key === active ? 'active' : undefined}
-              href={link.href}
-            >
-              {link.label}
-            </Link>
-          )),
-        ])}
-      </nav>
-    </aside>
+
+      {/* Backdrop */}
+      {open && (
+        <div
+          className="sidebar-overlay"
+          onClick={close}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside className={`sidebar${open ? ' sidebar-open' : ''}`}>
+        {/* Brand header */}
+        <div className="sidebar-header">
+          <Link className="sidebar-brand" href="/reports" onClick={close}>
+            <div className="brand-mark">NG</div>
+            <div className="sidebar-brand-text">
+              <strong>Nature Grid</strong>
+              <span>Environmental intelligence</span>
+            </div>
+          </Link>
+          <button
+            className="sidebar-close-btn"
+            aria-label="Close navigation"
+            onClick={close}
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Nav links */}
+        <nav aria-label="App navigation">
+          {NAV_SECTIONS.map((section) => (
+            <div key={section.label}>
+              <span className="nav-label">{section.label}</span>
+              {section.links.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={isActive(link.href) ? 'active' : undefined}
+                  onClick={close}
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </div>
+          ))}
+        </nav>
+
+        {/* User footer */}
+        <div className="sidebar-footer">
+          <div className="sidebar-user">
+            <div className="sidebar-avatar" aria-hidden="true">
+              {initials(user.displayName)}
+            </div>
+            <div className="sidebar-user-info">
+              <strong>{user.displayName}</strong>
+              <span>{ROLE_SHORT[user.role] ?? user.role}</span>
+            </div>
+          </div>
+          <form action={logoutAction}>
+            <button className="sidebar-logout-btn" type="submit">
+              Sign out
+            </button>
+          </form>
+        </div>
+      </aside>
+    </>
   );
 }
