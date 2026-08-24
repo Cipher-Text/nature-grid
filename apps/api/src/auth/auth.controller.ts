@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Req } from '@nestjs/common';
+import { Body, Controller, Get, Patch, Post, Req } from '@nestjs/common';
 import type { Request } from 'express';
 import { AuthService, DeviceMeta } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
@@ -7,6 +7,7 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { CurrentUser, JwtPayload } from '../common/decorators/current-user.decorator';
 import { Public } from '../common/decorators/roles.decorator';
 import { Throttle } from '@nestjs/throttler';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 
 function deviceMetaFrom(req: Request): DeviceMeta {
   return {
@@ -53,5 +54,10 @@ export class AuthController {
   @Get('profile')
   profile(@CurrentUser() user: JwtPayload) {
     return this.authService.getProfile(user.sub);
+  }
+
+  @Patch('profile')
+  updateProfile(@CurrentUser() user: JwtPayload, @Body() dto: UpdateProfileDto) {
+    return this.authService.updateProfile(user.sub, dto);
   }
 }

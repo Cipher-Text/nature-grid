@@ -158,3 +158,10 @@ Rules:
 - The `organizations.manage` RBAC permission controls organization management. Organization membership does not currently grant platform management access.
 - Organizations can own projects, datasets, campaigns, and observations.
 - Sensitive capabilities such as issuing alerts need explicit permission, not only organization membership.
+
+## Profile Logic
+
+- `User` stores authentication and account identity; extended personal and professional information lives in `UserProfile`.
+- Social and research links are stored as separate `UserSocialLink` records, one per platform.
+- Phone/contact information defaults to private. Profile and link visibility can be public, members-only, or private.
+- Organization memberships are shown on the general frontend profile/workspace; organization creation and membership assignment remain platform-admin operations in the Admin Console.

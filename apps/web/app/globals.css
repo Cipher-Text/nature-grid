@@ -428,6 +428,27 @@ a {
 .card-kicker { color: var(--accent); font-size: 0.74rem; font-weight: 800; text-transform: uppercase; }
 .card-meta { margin-top: 18px; font-size: 0.82rem; font-weight: 700; }
 
+.profile-edit-panel { margin-top: 20px; }
+.profile-form { display: grid; gap: 16px; }
+.profile-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.profile-form label { display: grid; gap: 6px; color: var(--muted); font-size: 0.8rem; font-weight: 700; }
+.profile-form input, .profile-form textarea, .profile-form select {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  padding: 10px 11px;
+  font: inherit;
+  font-weight: 400;
+}
+.profile-form input:read-only { background: var(--surface-2); color: var(--muted); }
+.profile-form h3 { margin-top: 4px; font-size: 0.95rem; }
+
+@media (max-width: 680px) {
+  .profile-form-grid { grid-template-columns: 1fr; }
+}
+
 .public-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

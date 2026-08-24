@@ -12,6 +12,7 @@ import {
 } from '@nature-grid/contracts';
 import { titleCase, relativeTime } from '../../../lib/format';
 import { ACCESS_TOKEN_COOKIE } from '../../../lib/session-constants';
+import { updateProfileAction } from '../../../lib/profile-actions';
 
 const ROLE_LABELS: Record<string, string> = {
   CITIZEN:           'Citizen contributor',
@@ -67,7 +68,7 @@ function monthYear(iso: string): string {
 export default async function ProfilePage({
   searchParams,
 }: {
-  searchParams: { subscribed?: string; unsubscribed?: string; sub_error?: string };
+  searchParams: { subscribed?: string; unsubscribed?: string; sub_error?: string; profileSaved?: string; profileError?: string };
 }) {
   const user = await getCurrentUser();
   const accessToken = cookies().get(ACCESS_TOKEN_COOKIE)?.value ?? '';
@@ -84,6 +85,8 @@ export default async function ProfilePage({
     ),
     apiGet<DistrictOption[]>(routes.locations.districts),
   ]);
+  const profile = user?.profile;
+  const social = Object.fromEntries((user?.socialLinks ?? []).map((link) => [link.platform, link.url]));
 
   return (
     <>
@@ -112,6 +115,52 @@ export default async function ProfilePage({
           </div>
         </div>
       </header>
+
+      {searchParams.profileSaved && <div className="flash flash-success">Profile updated.</div>}
+      {searchParams.profileError && <div className="flash flash-error">{searchParams.profileError}</div>}
+
+      <article className="panel profile-edit-panel">
+        <div className="panel-header">
+          <div>
+            <h2>Profile information</h2>
+            <p>Keep your professional identity and public links up to date.</p>
+          </div>
+        </div>
+        <form action={updateProfileAction} className="profile-form">
+          <div className="profile-form-grid">
+            <label>Name<input name="displayName" defaultValue={user?.displayName} required /></label>
+            <label>Email<input value={user?.email} readOnly /></label>
+            <label>Phone<input name="phone" defaultValue={profile?.phone ?? ''} placeholder="Optional" /></label>
+            <label>Occupation<input name="occupation" defaultValue={profile?.occupation ?? ''} placeholder="Researcher, ecologist..." /></label>
+            <label>Education<input name="education" defaultValue={profile?.education ?? ''} placeholder="Degree or qualification" /></label>
+            <label>Institution<input name="institution" defaultValue={profile?.institution ?? ''} placeholder="University or employer" /></label>
+            <label>Location<input name="locationDistrict" defaultValue={profile?.locationDistrict ?? ''} placeholder="District or city" /></label>
+            <label>Country<input value={profile?.locationCountry ?? 'Bangladesh'} readOnly /></label>
+          </div>
+          <label>Biography<textarea name="bio" defaultValue={profile?.bio ?? ''} rows={3} placeholder="A short introduction" /></label>
+          <div className="profile-form-grid">
+            <label>Expertise<input name="expertise" defaultValue={profile?.expertise.join(', ') ?? ''} placeholder="Wetlands, birds, GIS" /></label>
+            <label>Research interests<input name="researchInterests" defaultValue={profile?.researchInterests.join(', ') ?? ''} placeholder="Separate topics with commas" /></label>
+          </div>
+          <h3>Professional and social links</h3>
+          <div className="profile-form-grid">
+            <label>Google Scholar<input name="googleScholar" defaultValue={social.googleScholar ?? ''} placeholder="https://scholar.google.com/..." /></label>
+            <label>ResearchGate<input name="researchGate" defaultValue={social.researchGate ?? ''} placeholder="https://researchgate.net/..." /></label>
+            <label>ORCID<input name="orcid" defaultValue={social.orcid ?? ''} placeholder="https://orcid.org/..." /></label>
+            <label>LinkedIn<input name="linkedin" defaultValue={social.linkedin ?? ''} placeholder="https://linkedin.com/in/..." /></label>
+            <label>Personal website<input name="website" defaultValue={social.website ?? ''} placeholder="https://..." /></label>
+            <label>GitHub<input name="github" defaultValue={social.github ?? ''} placeholder="https://github.com/..." /></label>
+            <label>Facebook<input name="facebook" defaultValue={social.facebook ?? ''} placeholder="https://facebook.com/..." /></label>
+          </div>
+          <h3>Visibility</h3>
+          <div className="profile-form-grid">
+            <label>Profile visibility<select name="profileVisibility" defaultValue={profile?.profileVisibility ?? 'PUBLIC'}><option value="PUBLIC">Public</option><option value="MEMBERS_ONLY">Members only</option><option value="PRIVATE">Private</option></select></label>
+            <label>Contact visibility<select name="contactVisibility" defaultValue={profile?.contactVisibility ?? 'PRIVATE'}><option value="PUBLIC">Public</option><option value="MEMBERS_ONLY">Members only</option><option value="PRIVATE">Private</option></select></label>
+            <label>Links visibility<select name="linksVisibility" defaultValue={profile?.linksVisibility ?? 'PUBLIC'}><option value="PUBLIC">Public</option><option value="MEMBERS_ONLY">Members only</option><option value="PRIVATE">Private</option></select></label>
+          </div>
+          <button className="button" type="submit">Save profile</button>
+        </form>
+      </article>
 
       {/* ── My reports ── */}
       <article className="panel" style={{ marginTop: 20 }}>

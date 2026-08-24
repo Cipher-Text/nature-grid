@@ -2,7 +2,7 @@
 
 Nature Grid uses PostgreSQL as the primary database. The Prisma schema lives at `packages/database/prisma/schema.prisma`. The Prisma client is regenerated via `pnpm run db:generate` from the `packages/database` directory.
 
-Current state: **30 models, 19 enums, 17 migrations applied.**
+Current state: **32 models, 20 enums, 18 migrations applied.**
 
 ## Enums
 
@@ -34,6 +34,8 @@ Current state: **30 models, 19 enums, 17 migrations applied.**
 | Model | Key Fields | Relations |
 | --- | --- | --- |
 | `User` | `id cuid`, `email unique`, `displayName`, `passwordHash`, `role UserRole`, `isActive`, `lastLoginAt?` | → `CitizenReport[]`, `Observation[]`, `AuditEvent[]`, `RefreshToken[]`, `RestorationProject[]` (created), `RestorationParticipant[]`, `DatasetAccessRequest[]` (as requester and as decider) |
+| `UserProfile` | `userId unique`, contact/professional fields, location, profile/contact/link visibility | → `User` |
+| `UserSocialLink` | `userId`, `platform`, `url`, unique `(userId, platform)` | → `User` |
 | `RefreshToken` | `id`, `userId`, `tokenHash unique`, `expiresAt`, `revokedAt?`, `deviceId?`, `ipAddress?`, `userAgent?` | → `User` |
 
 `RefreshToken` stores a SHA-256 hash, never the raw token. Tokens are opaque random strings (not JWTs) so they can only be redeemed via `POST /auth/refresh`. Refresh rotates: the old row is revoked and a new pair issued. See `docs/progress.md` "Auth Refresh/Logout" for the rationale (Postgres rather than Redis).
@@ -213,7 +215,7 @@ pnpm run db:generate          # Regenerate Prisma client after schema changes
 pnpm run db:studio            # Open Prisma Studio at localhost:5555
 ```
 
-**Migrations applied (17, in order):**
+**Migrations applied (18, in order):**
 
 | Migration | Adds |
 | --- | --- |
@@ -234,7 +236,8 @@ pnpm run db:studio            # Open Prisma Studio at localhost:5555
 | `20260825120000_add_flood_forecasts` | `FloodForecast` |
 | `20260825130000_split_organization_type` | Dedicated `OrganizationType` enum for organizations |
 | `20260825140000_add_organization_memberships` | `OrganizationMemberRole`, `OrganizationMembership` |
+| `20260825150000_add_user_profiles` | `ProfileVisibility`, `UserProfile`, `UserSocialLink` |
 
-30 tables live.
+32 tables live.
 
 The `LocationsService`, `DatasetsService`, and `ProvidersService` auto-seed geography, catalog, and provider data on first boot via `OnModuleInit`. `LocationsService` also backfills district coordinates if missing. No separate seed script is required for those tables.

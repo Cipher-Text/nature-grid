@@ -23,6 +23,12 @@ enum OrganizationMemberRole {
   MEMBER
 }
 
+enum ProfileVisibility {
+  PUBLIC
+  MEMBERS_ONLY
+  PRIVATE
+}
+
 enum AlertSeverity {
   INFO
   WATCH
@@ -198,9 +204,47 @@ model User {
   reportComments ReportComment[]
   reportMedia    ReportMedia[]
   organizationMemberships OrganizationMembership[]
+  profile UserProfile?
+  socialLinks UserSocialLink[]
 
   @@index([email])
   @@index([role])
+}
+
+model UserProfile {
+  id                 String            @id @default(cuid())
+  userId             String            @unique
+  phone              String?
+  preferredLanguage  String            @default("en")
+  occupation         String?
+  bio                String?
+  expertise          String[]          @default([])
+  researchInterests  String[]          @default([])
+  education          String?
+  institution        String?
+  locationDistrict   String?
+  locationCountry    String            @default("Bangladesh")
+  profileVisibility  ProfileVisibility @default(PUBLIC)
+  contactVisibility  ProfileVisibility @default(PRIVATE)
+  linksVisibility    ProfileVisibility @default(PUBLIC)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UserSocialLink {
+  id        String   @id @default(cuid())
+  userId    String
+  platform  String
+  url       String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, platform])
+  @@index([userId])
 }
 
 model RefreshToken {

@@ -94,3 +94,17 @@ export async function apiPostAuthed<T>(path: string, body: unknown, accessToken:
   }
   return res.json() as Promise<T>;
 }
+
+export async function apiPatchAuthed<T>(path: string, body: unknown, accessToken: string): Promise<T> {
+  const res = await fetch(`${API_BASE_URL}${path}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify(body),
+    cache: 'no-store',
+  });
+  if (!res.ok) {
+    const errorBody = await res.json().catch(() => null);
+    throw new ApiError(res.status, extractErrorMessage(errorBody, `API request failed: ${res.status} ${path}`));
+  }
+  return res.json() as Promise<T>;
+}

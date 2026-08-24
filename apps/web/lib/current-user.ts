@@ -18,6 +18,22 @@ export interface CurrentUser {
     isVerified: boolean;
     membershipRole: 'ADMIN' | 'MEMBER';
   }>;
+  profile: {
+    phone: string | null;
+    preferredLanguage: string;
+    occupation: string | null;
+    bio: string | null;
+    expertise: string[];
+    researchInterests: string[];
+    education: string | null;
+    institution: string | null;
+    locationDistrict: string | null;
+    locationCountry: string;
+    profileVisibility: string;
+    contactVisibility: string;
+    linksVisibility: string;
+  } | null;
+  socialLinks: Array<{ platform: string; url: string }>;
 }
 
 /**

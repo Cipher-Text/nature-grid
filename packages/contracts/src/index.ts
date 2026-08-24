@@ -393,6 +393,27 @@ export interface Organization {
   providers?: Array<{ id: string; name: string; type: ProviderType; isActive: boolean }>;
 }
 
+export interface UserProfile {
+  phone: string | null;
+  preferredLanguage: string;
+  occupation: string | null;
+  bio: string | null;
+  expertise: string[];
+  researchInterests: string[];
+  education: string | null;
+  institution: string | null;
+  locationDistrict: string | null;
+  locationCountry: string;
+  profileVisibility: 'PUBLIC' | 'MEMBERS_ONLY' | 'PRIVATE';
+  contactVisibility: 'PUBLIC' | 'MEMBERS_ONLY' | 'PRIVATE';
+  linksVisibility: 'PUBLIC' | 'MEMBERS_ONLY' | 'PRIVATE';
+}
+
+export interface UserSocialLink {
+  platform: string;
+  url: string;
+}
+
 export interface Provider {
   id: string;
   name: string;

@@ -12,6 +12,7 @@ import { LoginDto } from './dto/login.dto';
 import type { JwtPayload } from '../common/decorators/current-user.decorator';
 import { generateRefreshToken, hashRefreshToken } from './refresh-token.util';
 import { permissionsForRole } from '../common/auth/permissions';
+import type { UpdateProfileDto } from './dto/update-profile.dto';
 
 const SALT_ROUNDS = 12;
 const REFRESH_TOKEN_TTL_DAYS = 7;
@@ -101,6 +102,8 @@ export class AuthService {
           },
           orderBy: { organization: { name: 'asc' } },
         },
+        profile: true,
+        socialLinks: { select: { platform: true, url: true }, orderBy: { platform: 'asc' } },
       },
     }).then((user) => {
       if (!user) return null;
@@ -110,6 +113,30 @@ export class AuthService {
       }
       return { ...user, organizations: user.organizationMemberships.map((membership) => ({ ...membership.organization, membershipRole: membership.role })), permissions };
     });
+  }
+
+  async updateProfile(userId: string, dto: UpdateProfileDto) {
+    const { socialLinks, displayName, ...profileData } = dto;
+    await this.prisma.$transaction(async (tx) => {
+      if (displayName !== undefined) {
+        await tx.user.update({ where: { id: userId }, data: { displayName } });
+      }
+      await tx.userProfile.upsert({
+        where: { userId },
+        create: { userId, ...profileData },
+        update: profileData,
+      });
+      if (socialLinks) {
+        await tx.userSocialLink.deleteMany({ where: { userId } });
+        const links = Object.entries(socialLinks).filter(([, url]) => url.trim());
+        if (links.length) {
+          await tx.userSocialLink.createMany({
+            data: links.map(([platform, url]) => ({ userId, platform, url: url.trim() })),
+          });
+        }
+      }
+    });
+    return this.getProfile(userId);
   }
 
   /** Validates a refresh token, revokes it, and issues a brand new access+refresh pair. */

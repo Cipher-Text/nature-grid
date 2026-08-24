@@ -23,6 +23,7 @@ export type {
   ProviderType,
   OrganizationType,
   OrganizationMemberRole,
+  ProfileVisibility,
   IngestionStatus,
   AuditAction,
 } from '@prisma/client';
