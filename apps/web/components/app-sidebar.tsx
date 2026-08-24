@@ -14,7 +14,6 @@ const NAV_SECTIONS = [
       { key: 'alerts', href: '/alerts', label: 'Alerts' },
       { key: 'biodiversity', href: '/biodiversity', label: 'Biodiversity' },
       { key: 'restoration', href: '/restoration', label: 'Restoration' },
-      { key: 'community', href: '/community', label: 'Community' },
     ],
   },
   {
