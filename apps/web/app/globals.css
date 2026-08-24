@@ -327,6 +327,7 @@ a {
 
 .public-section {
   margin-top: 20px;
+  scroll-margin-top: 86px;
 }
 
 .metric {
@@ -731,6 +732,27 @@ a {
   .public-shell {
     padding-left: 16px;
     padding-right: 16px;
+    overflow-x: hidden;
+  }
+
+  .public-nav {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .public-brand,
+  .nav-actions,
+  .public-hero,
+  .public-hero h1 {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .public-hero > p {
+    max-width: 34ch;
+    min-width: 0;
+    font-size: 1rem;
   }
 
   .metric-grid {
@@ -738,7 +760,18 @@ a {
   }
 
   .public-nav nav {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px;
+    overflow-x: visible;
+    flex-wrap: initial;
     justify-content: flex-start;
+  }
+
+  .public-nav nav a {
+    padding-left: 0;
+    padding-right: 0;
   }
 
   .map-canvas {

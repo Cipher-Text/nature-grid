@@ -10,7 +10,9 @@ const nextConfig = {
 
   // Point file tracing at the monorepo root so standalone output includes
   // workspace package files (@nature-grid/shared, @nature-grid/contracts).
-  outputFileTracingRoot: path.join(__dirname, '../../'),
+  experimental: {
+    outputFileTracingRoot: path.join(__dirname, '../../'),
+  },
 
   // Compile workspace TypeScript packages — they ship source, not pre-built JS.
   transpilePackages: ['@nature-grid/shared', '@nature-grid/contracts'],
