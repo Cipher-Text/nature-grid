@@ -13,6 +13,8 @@ import {
 import { titleCase, relativeTime } from '../../../lib/format';
 import { ACCESS_TOKEN_COOKIE } from '../../../lib/session-constants';
 import { updateProfileAction } from '../../../lib/profile-actions';
+import { ENVIRONMENTAL_EXPERTISE, ENVIRONMENTAL_RESEARCH_INTERESTS } from '@nature-grid/shared';
+import TagInput from '../../../components/tag-input';
 
 const ROLE_LABELS: Record<string, string> = {
   CITIZEN:           'Citizen contributor',
@@ -134,13 +136,18 @@ export default async function ProfilePage({
             <label>Occupation<input name="occupation" defaultValue={profile?.occupation ?? ''} placeholder="Researcher, ecologist..." /></label>
             <label>Education<input name="education" defaultValue={profile?.education ?? ''} placeholder="Degree or qualification" /></label>
             <label>Institution<input name="institution" defaultValue={profile?.institution ?? ''} placeholder="University or employer" /></label>
-            <label>Location<input name="locationDistrict" defaultValue={profile?.locationDistrict ?? ''} placeholder="District or city" /></label>
+            <label>District<select name="locationDistrict" defaultValue={profile?.locationDistrict ?? ''}>
+              <option value="">Select district</option>
+              {districts.map((district) => (
+                <option key={district.id} value={district.name}>{district.name}</option>
+              ))}
+            </select></label>
             <label>Country<input value={profile?.locationCountry ?? 'Bangladesh'} readOnly /></label>
           </div>
           <label>Biography<textarea name="bio" defaultValue={profile?.bio ?? ''} rows={3} placeholder="A short introduction" /></label>
           <div className="profile-form-grid">
-            <label>Expertise<input name="expertise" defaultValue={profile?.expertise.join(', ') ?? ''} placeholder="Wetlands, birds, GIS" /></label>
-            <label>Research interests<input name="researchInterests" defaultValue={profile?.researchInterests.join(', ') ?? ''} placeholder="Separate topics with commas" /></label>
+            <TagInput name="expertise" label="Expertise" initialValues={profile?.expertise ?? []} suggestions={ENVIRONMENTAL_EXPERTISE} placeholder="Add expertise" />
+            <TagInput name="researchInterests" label="Research interests" initialValues={profile?.researchInterests ?? []} suggestions={ENVIRONMENTAL_RESEARCH_INTERESTS} placeholder="Add research interest" />
           </div>
           <h3>Professional and social links</h3>
           <div className="profile-form-grid">

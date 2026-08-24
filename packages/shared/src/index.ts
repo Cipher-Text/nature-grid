@@ -87,6 +87,56 @@ export type OrganizationMemberRole = 'ADMIN' | 'MEMBER';
 
 export type Permission = 'organizations.access' | 'organizations.manage';
 
+export const ENVIRONMENTAL_EXPERTISE = [
+  'Biodiversity monitoring',
+  'Bird identification',
+  'Wildlife conservation',
+  'Species identification',
+  'Water quality',
+  'Air quality',
+  'Climate science',
+  'Flood risk',
+  'Weather analysis',
+  'Remote sensing',
+  'GIS and mapping',
+  'Land-use analysis',
+  'Forest conservation',
+  'Wetland restoration',
+  'Mangrove restoration',
+  'River and watershed management',
+  'Waste management',
+  'Environmental policy',
+  'Citizen science',
+  'Environmental education',
+] as const;
+
+export type EnvironmentalExpertise = typeof ENVIRONMENTAL_EXPERTISE[number];
+
+export const ENVIRONMENTAL_RESEARCH_INTERESTS = [
+  'Biodiversity conservation',
+  'Species distribution and habitat',
+  'Wildlife population trends',
+  'Wetland ecosystems',
+  'River and watershed health',
+  'Groundwater and water security',
+  'Air pollution and public health',
+  'Climate change impacts',
+  'Extreme weather and flood risk',
+  'Sea-level rise and coastal resilience',
+  'Deforestation and land-use change',
+  'Mangrove and blue carbon ecosystems',
+  'Urban ecology',
+  'Agricultural sustainability',
+  'Environmental restoration',
+  'Waste and plastic pollution',
+  'Environmental justice',
+  'Community-based conservation',
+  'Citizen science methods',
+  'Environmental governance',
+] as const;
+
+export type EnvironmentalResearchInterest = typeof ENVIRONMENTAL_RESEARCH_INTERESTS[number];
+
 // ─── Observation Enums ────────────────────────────────────────────────────────
 // No Prisma model exists yet (Observations module is a stub) — uppercased now
 // to follow the same convention as every other enum, avoiding this same bug
