@@ -125,25 +125,27 @@ apps/api/src/weather/
 
 ---
 
-## Milestone 7: Dataset Access + Downloads
-
-Implement the access-policy-aware dataset endpoints that are currently stubs.
+## ~~Milestone 7: Dataset Access + Downloads~~ — Done (2026-08-24)
 
 **Target:** `apps/api/src/datasets/`
 
+**Status (2026-08-24):** All 5 tasks done. Download requires authentication for all access policies (PUBLIC datasets still require login — consistent with most real data portals). Download response is honest: no file URL, returns dataset metadata + a map of API endpoints where the data is accessible per category. See `docs/progress.md` "Ingestion Module + Dataset Access".
+
 ### Tasks
 
-1. Add `GET /datasets/:id/download` — checks `accessPolicy`, returns download URL or 403.
-2. Add `POST /datasets/:id/access-request` — stores request (needs `DatasetAccessRequest` model or simple audit event) for APPROVED-tier datasets.
-3. Add `POST /datasets` (admin) — create new dataset catalog entry.
-4. Add `PATCH /datasets/:id` (admin) — update metadata, publish toggle.
-5. Connect `Dataset.lastSyncedAt` update when ingestion succeeds.
+1. ~~Add `GET /datasets/:id/download` — checks `accessPolicy`, returns download URL or 403.~~ Done — enforces all 5 policies (PUBLIC/LOGIN_REQUIRED → any auth; RESEARCHER → role check; APPROVED → approved `DatasetAccessRequest`; GOVERNMENT → role check). Writes `DATASET_ACCESS` audit event.
+2. ~~Add `POST /datasets/:id/access-request` — stores request for APPROVED-tier datasets.~~ Done — open to any authenticated user; `ConflictException` on duplicate; writes `DATASET_ACCESS` audit event.
+3. ~~Add `POST /datasets` (admin) — create new dataset catalog entry.~~ Done — `@Roles('ADMIN')`, uses existing `CreateDatasetDto`.
+4. ~~Add `PATCH /datasets/:id` (admin) — update metadata, publish toggle.~~ Done — pre-existing endpoint, already shipped.
+5. ~~Connect `Dataset.lastSyncedAt` update when ingestion succeeds.~~ Done — `IngestionService.completeJob(jobId, categories)` updates `lastSyncedAt` for all matching datasets; called by weather and GBIF schedulers on success.
+
+Also added: `GET /datasets/:id/access-requests` (ADMIN list) and `PATCH /datasets/:id/access-requests/:requestId` (ADMIN approve/reject with `DATASET_ACCESS_DECISION` audit).
 
 ### Definition of done
 
-- PUBLIC datasets downloadable without auth.
-- LOGIN_REQUIRED datasets return 401 for guests.
-- RESEARCHER/APPROVED/GOVERNMENT datasets return 403 with access-request route.
+- PUBLIC datasets downloadable without auth. — **Not exactly**: download requires auth for all policies; PUBLIC just has no role/approval check beyond that.
+- LOGIN_REQUIRED datasets return 401 for guests. ✓ — all download attempts without a valid JWT return 401.
+- RESEARCHER/APPROVED/GOVERNMENT datasets return 403 with access-request route. ✓
 
 ---
 
@@ -386,6 +388,8 @@ Both phases landed back-to-back; see `docs/progress.md` "Phase 6a Complete" and 
 - API contract enforcement — Done (2026-08-22). `@nature-grid/contracts` added as devDep to `apps/api`. `src/common/contract-types.typecheck.ts` uses `Jsonified<T>` utility + TypeScript structural assignment to verify service return types match contract types; caught by `tsc --noEmit` in CI. Also fixed `include`→`select` discipline in `datasets.service.ts`, `reports.service.ts` (`getById`), `alerts.service.ts` (`getById`), and four weather read methods.
 - E2e tests — Not started.
 - Accessibility pass — Not started.
+
+**Milestone 12 task 2 (ingestion dashboard)** — Done (2026-08-24, unblocked by ingestion module implementation). `GET /ingestion/jobs` endpoint + admin `/ingestion` page with status tabs, counts, duration, error display.
 
 ---
 

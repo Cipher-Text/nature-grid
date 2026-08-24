@@ -24,6 +24,12 @@ export default function AdminNav({ isAdmin }: AdminNavProps) {
       >
         Alerts
       </Link>
+      <Link
+        href="/ingestion"
+        className={`nav-link${pathname.startsWith('/ingestion') ? ' active' : ''}`}
+      >
+        Ingestion
+      </Link>
       {isAdmin && (
         <>
           <Link

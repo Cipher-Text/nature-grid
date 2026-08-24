@@ -105,14 +105,14 @@ Exit criteria:
 
 ## Phase 4: Data and Ingestion
 
-Status: In Progress
+Status: Largely done — job lifecycle and dataset access both landed 2026-08-24; `ApiCallLog` and Python data-worker remain deferred.
 
 Goal: Bring real environmental data into the platform.
 
 Deliverables:
 
 - OpenMeteo ingestion job ✓ (2026-08-16 — weather + air quality, see `docs/progress.md` "Weather Ingestion"; scope was redesigned from the original ingestion-plan, notably without job lifecycle or response logging — see below)
-- Ingestion job lifecycle (queue, track, retry, audit) — not done; deliberately skipped for the weather module, `IngestionJob` model remains unused
+- ~~Ingestion job lifecycle (queue, track, retry, audit)~~ ✓ Done (2026-08-24) — `IngestionService` + `IngestionController` implemented; weather and GBIF schedulers write `IngestionJob` records per run; `Dataset.lastSyncedAt` updated on success. No retry queue (cron re-runs serve as retry). See `docs/progress.md` "Ingestion Module + Dataset Access".
 - Provider response logging — not done; deliberately skipped, no `ApiCallLog` model was built
 - Dataset version/distribution records
 - Weather and air quality summaries populated from ingestion ✓ (`GET /datasets/weather/current`, `GET /datasets/air-quality/current` now return live data)
@@ -120,7 +120,7 @@ Deliverables:
 
 Exit criteria:
 
-- Ingestion jobs can be queued, tracked, retried, and audited. — **Not met.** Weather ingestion runs on a cron scheduler with per-district try/catch logging, but there is no job queue, retry tracking, or audit trail.
+- Ingestion jobs can be queued, tracked, retried, and audited. — **Partially met** (2026-08-24). Jobs are tracked (RUNNING → SUCCEEDED/FAILED) and auditable via `GET /ingestion/jobs`. No explicit retry queue — scheduled crons serve as periodic retry. `ApiCallLog` per-HTTP-call logging still not built.
 - Public dataset summaries use real backend records. ✓ — weather/AQ summaries are live; other dataset categories still static.
 - Data lineage is stored for imported/derived datasets. — Not yet; would need the response-logging deliverable above.
 

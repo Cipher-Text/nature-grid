@@ -12,6 +12,7 @@ const PROVIDER_SELECT = {
 } as const;
 
 export const OPENMETEO_PROVIDER_NAME = 'OpenMeteo';
+export const GBIF_PROVIDER_NAME = 'GBIF';
 
 @Injectable()
 export class ProvidersService implements OnModuleInit {
@@ -21,19 +22,15 @@ export class ProvidersService implements OnModuleInit {
 
   /** Seed well-known data providers on first boot. */
   async onModuleInit() {
-    const existing = await this.prisma.provider.findFirst({
-      where: { name: OPENMETEO_PROVIDER_NAME },
-    });
-    if (existing) return;
+    await this.upsertProvider(OPENMETEO_PROVIDER_NAME, 'INTERNATIONAL_ORG', 'Germany');
+    await this.upsertProvider(GBIF_PROVIDER_NAME, 'INTERNATIONAL_ORG', 'Denmark');
+  }
 
-    await this.prisma.provider.create({
-      data: {
-        name: OPENMETEO_PROVIDER_NAME,
-        type: 'INTERNATIONAL_ORG',
-        country: 'Germany',
-      },
-    });
-    this.logger.log(`Seeded provider: ${OPENMETEO_PROVIDER_NAME}`);
+  private async upsertProvider(name: string, type: ProviderType, country: string) {
+    const existing = await this.prisma.provider.findFirst({ where: { name } });
+    if (existing) return;
+    await this.prisma.provider.create({ data: { name, type, country } });
+    this.logger.log(`Seeded provider: ${name}`);
   }
 
   list(type?: ProviderType, page = 1, pageSize = 20) {
