@@ -30,6 +30,10 @@
 
 - [Third-party data sources](integrations/README.md)
 - [OpenMeteo](integrations/openmeteo.md)
+- [OpenMeteo Climate](integrations/openmeteo-climate.md)
+- [OpenMeteo Flood](integrations/openmeteo-flood.md)
+- [OpenMeteo Marine Weather](integrations/openmeteo-marine.md)
+- [OpenMeteo Satellite Radiation](integrations/openmeteo-satellite-radiation.md)
 - [GBIF](integrations/gbif.md)
 
 ## Decisions

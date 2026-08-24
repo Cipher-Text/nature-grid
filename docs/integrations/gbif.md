@@ -13,6 +13,7 @@ GBIF provides biodiversity occurrence data for Bangladesh. The integration is ow
 | Provider name | `GBIF` |
 | API key | Not required |
 | Endpoint | `https://api.gbif.org/v1/occurrence/search` |
+| Official API reference | `https://techdocs.gbif.org/en/openapi/v1/occurrence` |
 | Client | `apps/api/src/biodiversity/gbif.client.ts` |
 | Scheduler | `apps/api/src/biodiversity/biodiversity.scheduler.ts` |
 
@@ -24,7 +25,16 @@ The current query is:
 country=BD&hasCoordinate=true&limit=300&offset=<offset>
 ```
 
-The sync uses GBIF occurrence search, filtered to Bangladesh records that have coordinates. Pagination uses GBIF's 300-record page size.
+The sync uses GBIF occurrence search, filtered to Bangladesh records that have coordinates. The bare endpoint URL returns global records, so it should not be used as the Nature Grid production query without these filters.
+
+Query parameters:
+
+- `country=BD` limits records to Bangladesh.
+- `hasCoordinate=true` keeps only records with latitude and longitude.
+- `limit=300` uses GBIF's maximum page size for occurrence search.
+- `offset=<offset>` pages through results.
+
+GBIF's occurrence search API has a 300-record maximum page size and a 100,000-record hard limit for offset-based paging. Larger complete exports should use GBIF's asynchronous download service instead of this live search endpoint.
 
 ## Fetched Data
 

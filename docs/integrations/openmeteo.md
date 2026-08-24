@@ -79,6 +79,18 @@ Requested for 3 forecast days:
 - `ozone`
 - `uv_index`
 
+These pollutant fields are returned as hourly values. OpenMeteo documents PM, CO, NO2, SO2, and ozone concentrations in `ug/m3`-style units, and UV index as an index value.
+
+### Air-Quality Fields Not Requested Yet
+
+OpenMeteo also exposes air-quality variables that Nature Grid does not currently request or store:
+
+- European AQI: `european_aqi`, `european_aqi_pm2_5`, `european_aqi_pm10`, `european_aqi_nitrogen_dioxide`, `european_aqi_ozone`, `european_aqi_sulphur_dioxide`
+- United States AQI: `us_aqi`, `us_aqi_pm2_5`, `us_aqi_pm10`, `us_aqi_nitrogen_dioxide`, `us_aqi_ozone`, `us_aqi_sulphur_dioxide`, `us_aqi_carbon_monoxide`
+- Other pollutants and atmospheric fields: `carbon_dioxide`, `aerosol_optical_depth`, `dust`, `methane`, `uv_index_clear_sky`, and several Europe-only pollen fields
+
+The OpenMeteo air-quality API also supports `current=` variables. Nature Grid currently uses only `hourly=` air-quality requests and then serves latest rows from stored hourly data.
+
 ## Storage
 
 OpenMeteo data is stored in:
@@ -115,6 +127,7 @@ OpenMeteo forecast docs allow weather forecasts up to 16 days. OpenMeteo air-qua
 - Weather forecast data is requested with `timezone=auto`, so returned timestamps are local to the requested district coordinates.
 - OpenMeteo says current weather conditions are based on 15-minute model data.
 - OpenMeteo air quality is based on CAMS forecasts. For Bangladesh, this generally means the global CAMS domain rather than the European CAMS domain.
+- OpenMeteo notes that the returned latitude and longitude identify the selected weather or air-quality grid cell, which may be a few kilometres away from the requested district coordinate.
 
 ## Public API
 
@@ -133,5 +146,10 @@ OpenMeteo forecast docs allow weather forecasts up to 16 days. OpenMeteo air-qua
 
 - No BMD local-station integration yet.
 - No WAQI station-level AQI integration yet.
+- No OpenMeteo AQI fields are requested or stored yet.
+- No OpenMeteo Climate integration yet; see [OpenMeteo Climate](openmeteo-climate.md).
+- No OpenMeteo Flood integration yet; see [OpenMeteo Flood](openmeteo-flood.md).
+- No OpenMeteo Marine Weather integration yet; see [OpenMeteo Marine Weather](openmeteo-marine.md).
+- No OpenMeteo Satellite Radiation integration yet; see [OpenMeteo Satellite Radiation](openmeteo-satellite-radiation.md).
 - No soil temperature, soil moisture, or multi-height wind fields are stored.
 - `HourlyAirQuality` has no provider/source column yet, so adding another AQ provider will need a schema decision.
