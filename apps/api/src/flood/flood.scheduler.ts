@@ -1,17 +1,23 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { FloodService } from './flood.service';
 import { IngestionService } from '../ingestion/ingestion.service';
 import { OPENMETEO_PROVIDER_NAME } from '../providers/providers.service';
 
 @Injectable()
-export class FloodScheduler {
+export class FloodScheduler implements OnModuleInit {
   private readonly logger = new Logger(FloodScheduler.name);
 
   constructor(
     private readonly floodService: FloodService,
     private readonly ingestionService: IngestionService,
   ) {}
+
+  async onModuleInit() {
+    if (await this.floodService.hasForecasts()) return;
+    this.logger.log('No stored flood forecasts found; starting initial sync');
+    void this.syncFloodForecasts();
+  }
 
   @Cron('0 30 */6 * * *')
   async syncFloodForecasts() {

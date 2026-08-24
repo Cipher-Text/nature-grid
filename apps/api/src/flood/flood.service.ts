@@ -20,6 +20,10 @@ export class FloodService {
     }) as Promise<DistrictWithCoords[]>;
   }
 
+  async hasForecasts(): Promise<boolean> {
+    return (await this.prisma.floodForecast.count()) > 0;
+  }
+
   async syncDistrict(district: DistrictWithCoords) {
     const response = await this.client.fetch(district.lat, district.lng);
     const daily = response.daily;

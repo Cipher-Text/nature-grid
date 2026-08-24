@@ -44,6 +44,7 @@ apps/api/src/
 ├── metrics/               # ✓ live platform counters
 ├── media/                 # ~ stub
 ├── weather/               # ✓ OpenMeteo client, service, scheduler, current/hourly/daily/AQ
+├── flood/                 # ✓ OpenMeteo Flood/GloFAS client, daily discharge, scheduler
 └── ingestion/             # ✓ provider job tracking for scheduled OpenMeteo + GBIF syncs
 ```
 
@@ -59,7 +60,7 @@ Legend: ✓ Implemented | ~ Stub only
 | Users and roles | `users` | 6 roles (CITIZEN → ADMIN), role updates, deactivation |
 | Organizations | `organizations` | Org records linked to providers and restoration projects |
 | Geography | `locations` | 8 divisions, 64 districts (with lat/lng), upazilas, unions — auto-seeded |
-| Environmental data | `datasets`, `weather` | Dataset catalog, access policy, OpenMeteo weather/AQ ingestion |
+| Environmental data | `datasets`, `weather`, `flood` | Dataset catalog, access policy, OpenMeteo weather/AQ and Flood/GloFAS ingestion |
 | Biodiversity | `biodiversity` | GBIF species and occurrence records, daily sync |
 | Citizen engagement | `reports`, `observations`, `restoration` | Reports (status workflow + comments + media), observations (trust levels), restoration projects |
 | Alerts and notifications | `alerts`, `notifications` | Severity-tiered alerts, email delivery, subscription by district/nationwide |

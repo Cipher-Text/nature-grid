@@ -25,7 +25,7 @@
 | PostgreSQL | Primary transactional database |
 | PostGIS | Geospatial storage and queries |
 | Prisma | Database schema, migrations, typed client |
-| `@nestjs/schedule` | Cron scheduling for weather, GBIF, and token cleanup jobs — the only background-job mechanism actually in use |
+| `@nestjs/schedule` | Cron scheduling for weather, GBIF, Flood, and token cleanup jobs — the only background-job mechanism actually in use |
 | Redis / BullMQ | **Planned, not installed.** A Redis container runs in `docker-compose.yml` and `REDIS_URL` is set, but no client or queue library is in any manifest. Revisit when a job needs retry, concurrency control, or worker isolation. |
 | JWT | API authentication |
 | OpenAPI | API documentation and frontend contract source |
@@ -61,4 +61,3 @@
 | Redis | Container runs locally but is unused — see the Backend table above |
 
 Kafka and Kubernetes are explicitly later-stage choices, not part of the initial architecture.
-

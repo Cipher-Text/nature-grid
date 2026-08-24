@@ -71,10 +71,10 @@ Refresh tokens are opaque, Postgres-backed, and rotated on use — not Redis, no
 | GET | `/datasets/:id` | Public | ✓ | Dataset detail |
 | GET | `/datasets/weather/current` | Public | ✓ | Live current weather for all districts, via `weather` module |
 | GET | `/datasets/air-quality/current` | Public | ✓ | Live current air quality for all districts, via `weather` module |
-| GET | `/datasets/:id/download` | Role-gated | ✗ | Download dataset |
-| POST | `/datasets/:id/access-request` | Authenticated | ✗ | Request access |
-| POST | `/datasets` | Researcher / Admin | ✗ | Create dataset record |
-| PATCH | `/datasets/:id` | Owner / Admin | ✗ | Update metadata |
+| GET | `/datasets/:id/download` | Role-gated | ✓ | Policy-checked API access information |
+| POST | `/datasets/:id/access-request` | Authenticated | ✓ | Request access |
+| POST | `/datasets` | Admin | ✓ | Create dataset record |
+| PATCH | `/datasets/:id` | Admin | ✓ | Update metadata |
 
 ## Weather
 
@@ -96,7 +96,7 @@ Source: OpenMeteo, via a `@nestjs/schedule` cron scheduler (current every 15min,
 | GET | `/flood/forecast` | Public | ✓ | Latest stored discharge forecast day for every district |
 | GET | `/flood/forecast/:districtId` | Public | ✓ | Daily 30-day forecast by default; accepts `from` and `to` |
 
-Source: OpenMeteo Flood API, persisted as `FloodForecast`, refreshed every six hours by the separate `flood` module. See `docs/integrations/openmeteo-flood.md`.
+Source: OpenMeteo Flood API, persisted as `FloodForecast`. An empty table triggers an initial sync; normal refresh runs every six hours. See `docs/integrations/openmeteo-flood.md`.
 
 ## Reports
 
@@ -163,7 +163,7 @@ Populated by a daily GBIF sync (`country=BD&hasCoordinate=true`). `iucnStatus` i
 
 ## Ingestion
 
-Provider job-tracking API for scheduled external syncs. Weather and GBIF schedulers create `IngestionJob` rows and update `Dataset.lastSyncedAt` on successful runs.
+Provider job-tracking API for scheduled external syncs. Weather, GBIF, and Flood schedulers create `IngestionJob` rows and update `Dataset.lastSyncedAt` on successful runs.
 
 | Method | Path | Access | Status | Purpose |
 | --- | --- | --- | --- | --- |

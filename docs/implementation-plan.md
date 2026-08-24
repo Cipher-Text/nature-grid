@@ -32,7 +32,7 @@ Build persistence and ingestion before features. Real environmental data in the 
 
 Extend the Prisma schema with all models needed for ingestion, reports enrichment, and auth completeness. No logic yet — schema only.
 
-**Status (2026-08-19):** Task 10 (`District.lat`/`lng`, done via Milestone 6 as a prerequisite, with real per-district coordinates rather than the divisional-capital placeholder originally scoped) and the auth refresh endpoint (tasks 1, 12, 13 — done, with a different design than specified here, see below) are complete. Task 9 (`RestorationProject`) is also done — built as part of Milestone 11 (2026-08-19), with a simplified field set (see M11 below), not in the original M5 pass as scoped. `ReportMedia`, `ReportComment` are still not implemented. The ingestion-specific models below (`WeatherReading`, `AirQualityReading`, `WeatherAggregate`, `AqiAggregate`, `ApiCallLog`) were superseded by a different, smaller design — see Milestone 6.
+**Status (2026-08-25):** Task 10 (`District.lat`/`lng`, done via Milestone 6 as a prerequisite, with real per-district coordinates rather than the divisional-capital placeholder originally scoped) and the auth refresh endpoint (tasks 1, 12, 13 — done, with a different design than specified here, see below) are complete. Task 9 (`RestorationProject`) is also done — built as part of Milestone 11 with a simplified field set. `ReportMedia` and `ReportComment` were implemented on 2026-08-22. The ingestion-specific models below (`WeatherReading`, `AirQualityReading`, `WeatherAggregate`, `AqiAggregate`, `ApiCallLog`) were superseded by a different, smaller design — see Milestone 6.
 
 **Target:** `packages/database/prisma/schema.prisma`
 
@@ -269,12 +269,12 @@ Task 1's premise was wrong: **the `RestorationProject` model had NOT actually be
 
 Basic internal console for the operational views most needed first.
 
-**Status (2026-08-22):** Tasks 1, 3–6 done. Task 2 blocked — the `ingestion` module is an empty stub with no `IngestionJob` records ever written; there is nothing to display. See `docs/progress.md` "M12 Admin Console + M5 Report Enrichment" for full implementation detail.
+**Status (2026-08-25):** Tasks 1–6 done. The ingestion dashboard now reads real `IngestionJob` records created by the weather, biodiversity, and Flood schedulers. See `docs/progress.md` "Ingestion Module + Dataset Access" and "OpenMeteo Flood".
 
 ### Tasks
 
 1. ~~Wire admin app to API — auth flow, token storage.~~ Done — separate httpOnly cookies (`nga_access`/`nga_refresh`), Edge-compatible middleware with auto-refresh, login enforces MODERATOR/ADMIN role at application layer.
-2. Ingestion status dashboard — live `IngestionJob` list, ApiCallLog failures. — **Blocked.** `IngestionModule` is `@Module({})` only; `IngestionJob` model exists in schema but no service writes to it. Cannot build a dashboard over empty tables.
+2. ~~Ingestion status dashboard — live `IngestionJob` list, ApiCallLog failures.~~ Done — live `IngestionJob` list for scheduled provider runs; `ApiCallLog` remains intentionally unimplemented.
 3. ~~Report moderation queue — filterable, inline status transitions.~~ Done — 5-status tabs (SUBMITTED/UNDER_REVIEW/VERIFIED/REJECTED/RESOLVED) with per-tab counts, inline `PATCH /reports/:id/status` forms with note textarea.
 4. ~~User management — list, role change, deactivate.~~ Done — role selector (hidden for ADMIN accounts to prevent privilege lock-out), `<details>/<summary>` confirm for deactivate, self-deactivation prevented via JWT `sub` decode.
 5. ~~Alert management — create/update/cancel alerts.~~ Done — collapsible create panel, ACTIVE/CANCELLED/EXPIRED status tabs, per-severity left-border colour, cancel confirm.
@@ -355,7 +355,7 @@ Built the `apps/web` routes that the nav (`public-nav.tsx`, `app-sidebar.tsx`) a
 
 ### Tasks
 
-1. ~~`/data` — wire to `GET /datasets`, using the `AppSidebar` shell.~~ Done — category filter is query-string driven (real, not decorative); mock's fake "Provider health" panel replaced with a real `GET /providers` panel; mock's chart omitted (no data to back it); gated downloads shown as a tag only, no working button (download endpoint doesn't exist).
+1. ~~`/data` — wire to `GET /datasets`, using the `AppSidebar` shell.~~ Done — category filter is query-string driven; provider list is live; dataset rows link to `/data/:id`, where metadata, API endpoints, and live OpenMeteo/Flood/GBIF previews are shown.
 2. ~~`/reports` — wire to `GET /reports`. Public list only, matching what's already enforced server-side.~~ Done — metric cards deliberately show only Verified/Resolved counts, not the mock's Under-review/Submitted-today (those would leak status info the public API intentionally hides); submission form replaced with a sign-in CTA.
 3. ~~`/alerts` — wire to `GET /alerts`.~~ Done — required a small backend fix first (`ALERT_SELECT` wasn't projecting `description`); role-conditional "Issue alert" badge added (real role check, but reads "coming soon" since no creation page exists); "Warning zones" reuses the homepage's existing decorative map placeholder.
 4. ~~`/observations` — no backend yet: honest "not available yet" empty state (same pattern as `/profile`'s activity feed), not fabricated records. Revisit once M9 ships.~~ Done (2026-08-17) — also links to `/reports` as the nearest real thing citizens can do today. **Revisited the same day once M9 shipped**: upgraded to real data + a working submission form, see Milestone 9 above.

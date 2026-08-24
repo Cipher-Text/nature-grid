@@ -15,7 +15,7 @@ Nature Grid fetches a 30-day daily river-discharge forecast for every seeded Ban
 | Official docs | `https://open-meteo.com/en/docs/flood-api` |
 | Endpoint | `https://flood-api.open-meteo.com/v1/flood` |
 | Current client | `apps/api/src/flood/flood-openmeteo.client.ts` |
-| Current scheduler | Every 6 hours at minute 30 |
+| Current scheduler | Initial sync on empty table; then every 6 hours at minute 30 |
 | Current storage | `FloodForecast` Prisma model |
 | Public routes | `GET /flood/forecast`, `GET /flood/forecast/:districtId` |
 

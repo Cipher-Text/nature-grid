@@ -57,7 +57,7 @@ What the code actually enforces today, for cross-checking against the matrix abo
 | All `/users/*` routes | `ADMIN` (controller-level `@Roles('ADMIN')`) |
 | `POST /reports`, `POST /observations`, `POST /restoration/projects/:id/join` | any authenticated user |
 
-Everything else public-facing is `@Public()`. Dataset download/access-request gating is not implemented yet, so the "Download datasets" and "Access advanced dataset filters" rows above are still aspirational.
+Everything else public-facing is `@Public()`. Dataset downloads and access requests are implemented with policy checks; advanced filters and API-key management remain future work.
 - Government alert permissions should be configurable per organization or agency before production use.
 
 ## Future Scopes

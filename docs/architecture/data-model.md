@@ -60,7 +60,7 @@ Current state: **29 models, 17 enums, 15 migrations applied.**
 | `Dataset` | `id`, `name`, `category DatasetCategory`, `accessPolicy DatasetAccessPolicy`, `source`, `providerId?`, `description?`, `recordCount?`, `lastSyncedAt?`, `isPublished` | → `Provider?`, `DatasetAccessRequest[]` |
 | `DatasetAccessRequest` | `id`, `datasetId`, `userId`, `status DatasetAccessRequestStatus`, `decidedById?`, `decidedAt?` | → `Dataset`, `User` (requester), `User?` (decider); unique `(datasetId, userId)` |
 
-**`DatasetAccessRequest` is schema-only.** The model and its migration (`20260819173836_add_dataset_access_requests`) are applied, but no service or controller consumes it — `POST /datasets/:id/access-request` and `GET /datasets/:id/download` are still unimplemented. The unique constraint on `(datasetId, userId)` means one request per user per dataset, so a re-request after rejection needs an explicit decision on whether to update in place or relax the constraint.
+`DatasetAccessRequest` is implemented by `DatasetsService` and `DatasetsController`. `POST /datasets/:id/access-request` creates a request, admins can list and decide requests, and `GET /datasets/:id/download` applies the dataset policy before returning API access information. The unique constraint on `(datasetId, userId)` means one request per user per dataset; re-requesting after rejection still needs an explicit product decision.
 
 ## Reports
 

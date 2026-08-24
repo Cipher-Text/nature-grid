@@ -1,6 +1,6 @@
 # Progress
 
-Last updated: 2026-08-25 (OpenMeteo Flood integration — separate Flood module, daily GloFAS discharge persistence for all district coordinates, six-hour scheduler, public forecast routes, ingestion tracking, Prisma migration; see "OpenMeteo Flood" below. Previously: 2026-08-24 ingestion module + dataset access — `IngestionService`/`IngestionController` implemented, both weather and GBIF schedulers now write `IngestionJob` records, `Dataset.lastSyncedAt` now updated on every successful sync, GBIF provider seeded, admin ingestion dashboard live; dataset download endpoint with full 5-policy access enforcement, access-request flow, admin approve/reject, all three previously-unwritten `DATASET_*` audit actions now written; see "Ingestion Module + Dataset Access" below.)
+Last updated: 2026-08-25 (OpenMeteo Flood integration — separate Flood module, initial sync on an empty table, daily GloFAS discharge persistence for all district coordinates, six-hour scheduler, public forecast routes, ingestion tracking, Prisma migration, and Data Hub detail preview; see "OpenMeteo Flood" below. Previously: 2026-08-24 ingestion module + dataset access — `IngestionService`/`IngestionController` implemented, weather, GBIF, and Flood schedulers now write `IngestionJob` records, `Dataset.lastSyncedAt` now updated on successful syncs, GBIF provider seeded, admin ingestion dashboard live; dataset download endpoint with full 5-policy access enforcement, access-request flow, admin approve/reject, and dataset detail pages live.)
 
 ## Status Legend
 
@@ -44,7 +44,7 @@ Last updated: 2026-08-25 (OpenMeteo Flood integration — separate Flood module,
 | Biodiversity module — M10 | Done | Daily GBIF sync + public species/occurrence endpoints live (2026-08-19) — see "Biodiversity + GBIF Module" below. `/biodiversity` now shows real species and occurrence data with a working search. |
 | Report media (M5) | Done | `ReportMedia` schema + `POST/GET /reports/:id/media` endpoints done (2026-08-22). File upload still deferred — clients register an external URL; no MinIO/S3 wired yet. The `media` module stub is separate and unrelated. |
 | Weather ingestion (OpenMeteo) | Done | Live `weather` module — see "Weather ingestion" below |
-| Flood ingestion (OpenMeteo/GloFAS) | Done | Daily river-discharge forecasts persisted per district; public `/flood/forecast` routes and six-hour scheduler live — see "OpenMeteo Flood" below |
+| Flood ingestion (OpenMeteo/GloFAS) | Done | Initial sync on an empty table, daily river-discharge forecasts persisted per district; public `/flood/forecast` routes and six-hour scheduler live — see "OpenMeteo Flood" below |
 | Ingestion module (generic) | Done | 2026-08-24 — `IngestionService` + `IngestionController` implemented; weather and GBIF schedulers now write `IngestionJob` records per run (RUNNING → SUCCEEDED/FAILED); `Dataset.lastSyncedAt` updated on every successful sync; GBIF provider seeded; admin ingestion dashboard live at `/ingestion`. See "Ingestion Module + Dataset Access" below. |
 | Environmental monitoring model | Planned | OGC SensorThings-style or simplified internal model — decision pending |
 | Dataset downloads / access requests | Done | 2026-08-24 — `GET /datasets/:id/download` (5-policy access enforcement), `POST /datasets/:id/access-request`, `GET/PATCH /datasets/:id/access-requests/:requestId` (admin approve/reject), `POST /datasets` (admin create). See "Ingestion Module + Dataset Access" below. |
@@ -205,7 +205,7 @@ Full internal console at `apps/admin` (port 3002), built entirely with Next.js 1
 - `schema.prisma` — `DATASET_UPDATE` added to `AuditAction` enum
 - Migration `20260822100000_add_dataset_update_audit_action` — `ALTER TYPE "AuditAction" ADD VALUE 'DATASET_UPDATE'`
 
-**Task 2 (Ingestion dashboard) remains blocked** — the `ingestion` module is an empty stub (`@Module({})` only); there is nothing to display.
+**Task 2 (Ingestion dashboard) is complete** — the dashboard reads `IngestionJob` rows created by the weather, GBIF, and Flood schedulers. `ApiCallLog` remains intentionally unimplemented.
 
 ---
 
@@ -647,7 +647,7 @@ Verified live across both passes: with an empty DB, all sections correctly showe
 
 ### Database
 
-- `packages/database/prisma/schema.prisma` — full domain schema (15 enums, 24 models, incl. `Observation` (2026-08-17), `RestorationProject`/`RestorationParticipant`/`Species`/`Occurrence` (2026-08-19), `DatasetAccessRequest` (2026-08-19, schema-only — no endpoint consumes it), and `AuditAction.USER_DEACTIVATE` (2026-08-20))
+- `packages/database/prisma/schema.prisma` — full domain schema (current state is documented at the top of `docs/architecture/data-model.md`; this historical milestone entry predates the later dataset-access and Flood additions)
 
 ### API (`apps/api/src/`)
 

@@ -108,7 +108,7 @@ Seeded on first boot: 6 catalog records, including OpenMeteo flood forecasts. Ex
 
 `@Public()` is applied at the controller level, so every implemented dataset route is public.
 
-**Not implemented:** `GET /datasets/:id/download` and `POST /datasets/:id/access-request`. Both are defined in `packages/contracts`, and the `DatasetAccessRequest` model plus its migration are applied, but no service or controller consumes them. The `DATASET_ACCESS_DECISION` audit action is likewise declared and unused.
+Dataset access is implemented: `GET /datasets/:id/download` applies the dataset access policy, `POST /datasets/:id/access-request` creates a request, and admins can list and approve/reject requests. Dataset detail pages live at `/data/:id` in `apps/web`; they show metadata, API endpoints, and live previews for OpenMeteo, Flood, and GBIF datasets.
 
 ## reports ✓
 
@@ -226,7 +226,7 @@ Owns the OpenMeteo Flood / GloFAS integration: provider client, daily discharge 
 | GET | `/flood/forecast` | Public — latest stored forecast day for every district |
 | GET | `/flood/forecast/:districtId` | Public — forecast rows (`?from`, `?to`) |
 
-The scheduler fetches a 30-day forecast for every district with coordinates at `0:30` every six hours. OpenMeteo Flood returns simulated river discharge, not an official Bangladesh flood warning; official FFWC integration remains a separate future source.
+When `FloodForecast` is empty, the module starts an initial sync on application boot. It then fetches a 30-day forecast for every district with coordinates at `0:30` every six hours. The stored data has daily resolution. OpenMeteo Flood returns simulated river discharge, not an official Bangladesh flood warning; official FFWC integration remains a separate future source.
 
 ## metrics ✓
 
@@ -265,7 +265,7 @@ Services that write audit events:
 | `reports` | `REPORT_SUBMIT`, `REPORT_STATUS_CHANGE` |
 | `restoration` | `RESTORATION_PROJECT_CREATE`, `RESTORATION_PROJECT_UPDATE`, `RESTORATION_PROJECT_JOIN` |
 
-`AuditAction` declares 17 values; 14 are written. The only unwritten values are `DATASET_ACCESS`, `DATASET_DOWNLOAD`, and `DATASET_ACCESS_DECISION`, all pending the dataset download/access-request endpoints — so audit coverage is complete for every implemented mutating endpoint.
+`AuditAction` declares 21 values and all 21 are written. Dataset access, access decisions, dataset updates, report enrichment, authentication, moderation, observations, and restoration actions are covered.
 
 `auth` is the only service that populates `AuditEvent.ipAddress`, because it already captures request metadata for `RefreshToken` rows. The others leave it null.
 
@@ -275,4 +275,4 @@ If audit event volume grows, extract to a dedicated `AuditModule` with its own s
 
 ## Coverage note
 
-`app.module.ts` registers 16 modules: `database` plus 15 feature modules, of which 13 are implemented and 2 (`media`, `ingestion`) are empty stubs. Advanced domains not yet represented by a module — satellite ingestion, climate prediction, emissions, carbon accounting, research publications, structured surveys — are planned for Phase 7. See `docs/roadmap.md` and `docs/architecture/feature-map.md`.
+`app.module.ts` registers 17 modules: `database` plus 16 feature modules. All are implemented except the `media` stub; `ingestion` now owns provider job tracking. Advanced domains not yet represented by a module — satellite ingestion, climate prediction, emissions, carbon accounting, research publications, structured surveys — are planned for Phase 7. See `docs/roadmap.md` and `docs/architecture/feature-map.md`.

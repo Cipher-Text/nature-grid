@@ -6,7 +6,7 @@ Source analysis: `open-nature/apps/backend` (partial implementation, Spring Boot
 
 ## Implementation status (2026-08-16)
 
-OpenMeteo weather + air quality ingestion is **done**, but with a smaller, redesigned scope than this document originally planned. Read this before treating the sections below as current:
+OpenMeteo weather, air quality, and Flood ingestion are **done**, but with a smaller, redesigned scope than this document originally planned. GBIF ingestion is also implemented in the separate `biodiversity` module. Read this before treating the sections below as current:
 
 | Planned (this doc) | Actually built | Why |
 | --- | --- | --- |
@@ -129,7 +129,7 @@ Two further sources are unscheduled:
 
 - **iNaturalist** occurrence ingestion. `apps/api/src/datasets/seed/catalog.ts` already lists iNaturalist as a dataset source, so the catalog advertises a source with no ingestion behind it.
 - **OpenWeatherMap** / **AirNow** as additional weather and AQ coverage.
-- Additional OpenMeteo APIs now documented as candidates: Climate, Flood, Marine Weather, and Satellite Radiation in `docs/integrations/`.
+- Additional OpenMeteo APIs now documented in `docs/integrations/`: Flood is implemented; Climate, Marine Weather, and Satellite Radiation remain candidates.
 
 ---
 
