@@ -88,7 +88,7 @@ Deliverables:
 
 - ~~Observations module (schema in place; service/controller needed)~~ Done (2026-08-17) — full CRUD + trust-level workflow (`RESEARCHER`/`ADMIN` promote `UNVERIFIED` → `RESEARCH_GRADE`/etc.), wired to a real `/observations` page with a working submission form. See `docs/progress.md` "Observations Module".
 - ~~Restoration projects module~~ Done (2026-08-19) — full CRUD, `ORGANIZATION_ADMIN`/`ADMIN`-gated creation, ownership-gated updates, idempotent citizen "join," wired to a real `/restoration` page. See `docs/progress.md` "Restoration Projects Module". (Not separately tracked as a Phase 3 deliverable before this — added here now that it's done.)
-- ~~Biodiversity records~~ Done (2026-08-19) — daily GBIF sync (self-contained in `apps/api/src/biodiversity/`, not the generic `ingestion` module, same design deviation as weather), public species/occurrence endpoints, wired to a real `/biodiversity` page with name search. IUCN conservation-status enrichment deliberately skipped for v1 (no per-species API call built yet). See `docs/progress.md` "Biodiversity + GBIF Module".
+- ~~Biodiversity records~~ Done (2026-08-19) — daily GBIF sync (self-contained in `apps/api/src/biodiversity/`, not the generic `ingestion` module, same design deviation as weather), public species/occurrence endpoints, wired to a real `/biodiversity` page with name search. IUCN conservation-status enrichment deliberately skipped for v1 (no per-species API call built yet). See `docs/progress.md` "Biodiversity + GBIF Module". Community sidebar nav link removed (2026-08-24) — `/community` page remains but is no longer reachable via navigation.
 - ~~Media/evidence records~~ Partially done (2026-08-22) — `ReportComment` and `ReportMedia` schema + `POST/GET /reports/:id/comments` and `POST/GET /reports/:id/media` endpoints live. File upload transport (MinIO/S3) and nested comment replies deliberately deferred. See M8 in `implementation-plan.md`.
 - ~~Moderation queue~~ Done (2026-08-22) — admin console report moderation queue (`apps/admin`) with full 5-status workflow. See M12 in `implementation-plan.md`.
 - Dataset download and access-request endpoints
@@ -182,7 +182,7 @@ Remaining gap: no SMS channel (EMAIL only). Government agency and emergency broa
 
 ### 6d. Operations
 
-- ~~Dockerfile for `apps/api`, `apps/web`, `apps/admin`.~~ Done (2026-08-22) — multi-stage Dockerfiles for all three, standalone Next.js output, `prisma migrate deploy` entrypoint, `docker-compose.prod.yml` with healthcheck-gated startup.
+- ~~Dockerfile for `apps/api`, `apps/web`, `apps/admin`.~~ Done (2026-08-22) — multi-stage Dockerfiles for all three, standalone Next.js output, `prisma migrate deploy` entrypoint, `docker-compose.prod.yml` with healthcheck-gated startup. Bug fix (2026-08-24): admin service was missing `API_URL` in `docker-compose.prod.yml` — would have caused all admin API calls to silently fail in production.
 - ~~Deployment documentation and a repeatable path.~~ Done (`infrastructure/docker/README.md`). Single-host compose only; multi-host deferred.
 - Backup/restore plan. — Not done.
 - Observability. Audit *writes* are complete; a dashboard over `AuditEvent` is still missing.
