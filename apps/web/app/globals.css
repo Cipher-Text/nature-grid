@@ -850,6 +850,58 @@ a {
   text-align: center;
 }
 
+.seed-login {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.seed-login-title {
+  margin: 0 0 10px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.seed-login-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.seed-login-button {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 10px 12px;
+  background: var(--surface);
+  color: var(--foreground);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.seed-login-button:hover {
+  border-color: var(--primary);
+}
+
+.seed-login-button span,
+.seed-login-button small {
+  display: block;
+}
+
+.seed-login-button span {
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
+.seed-login-button small {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  overflow-wrap: anywhere;
+}
+
 .auth-switch a {
   color: var(--primary);
   font-weight: 700;

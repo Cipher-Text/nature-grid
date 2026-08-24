@@ -479,6 +479,60 @@ body {
   font-size: 13px;
 }
 
+.seed-login {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid #edf1f2;
+}
+
+.seed-login-title {
+  margin: 0 0 10px;
+  color: #5b6d74;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.seed-login-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.seed-login-button {
+  width: 100%;
+  border: 1px solid #d4dcdf;
+  border-radius: 6px;
+  padding: 10px 12px;
+  background: #f8fafb;
+  color: #172026;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.seed-login-button:hover {
+  border-color: #3d9fa8;
+  background: #fff;
+}
+
+.seed-login-button span,
+.seed-login-button small {
+  display: block;
+}
+
+.seed-login-button span {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.seed-login-button small {
+  margin-top: 2px;
+  color: #5b6d74;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
 /* ── Forms ─────────────────────────────────────────────────── */
 
 .form {

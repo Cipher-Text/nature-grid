@@ -22,6 +22,7 @@ import { WeatherModule } from './weather/weather.module';
 import { MetricsModule } from './metrics/metrics.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { HealthController } from './health.controller';
+import { SeedService } from './seed/seed.service';
 
 @Module({
   imports: [
@@ -51,6 +52,6 @@ import { HealthController } from './health.controller';
   controllers: [HealthController],
   // ThrottlerGuard is registered here rather than in main.ts's useGlobalGuards
   // because it needs injected dependencies (storage service + reflector).
-  providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
+  providers: [SeedService, { provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule {}
