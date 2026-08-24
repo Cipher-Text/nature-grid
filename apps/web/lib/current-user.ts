@@ -10,6 +10,7 @@ export interface CurrentUser {
   role: string;
   createdAt: string;
   lastLoginAt: string | null;
+  permissions: string[];
 }
 
 /**

@@ -57,12 +57,16 @@ Both mutating routes audit in the same transaction as the update, recording the 
 
 ## organizations ✓
 
-Owns NGOs, research groups, public agencies, and institutions.
+Owns NGOs, research groups, public agencies, community groups, and institutions. Organization classification uses `OrganizationType`; `ProviderType` is reserved for data-source providers.
+
+Admin management uses `OrganizationMembership` as a many-to-many link between users and organizations. Each membership is either `ADMIN` or `MEMBER`; users may belong to multiple organizations. The management endpoints use the RBAC permission `organizations.manage`, currently granted to the platform `ADMIN` role.
 
 | Method | Path | Access |
 | --- | --- | --- |
 | GET | `/organizations` | Public (`?type`, `?page`, `?pageSize`) |
 | GET | `/organizations/:id` | Public |
+| GET/POST | `/admin/organizations` | `organizations.manage` |
+| POST/PATCH/DELETE | `/admin/organizations/:id/members[/:userId]` | `organizations.manage` |
 
 ## locations ✓
 

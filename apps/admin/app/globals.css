@@ -957,6 +957,39 @@ body {
 
 .inline-form { display: flex; }
 
+.admin-section {
+  background: #fff;
+  border: 1px solid #d7e1e4;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.admin-section h2 { font-size: 16px; margin-bottom: 5px; }
+.admin-section p { color: #6a8890; font-size: 13px; }
+.section-heading-row { display: flex; justify-content: space-between; margin-bottom: 16px; }
+.inline-form { gap: 8px; align-items: center; flex-wrap: wrap; }
+.text-input, .role-select {
+  min-height: 34px;
+  border: 1px solid #c7d5d8;
+  background: #fff;
+  padding: 6px 9px;
+  color: #172026;
+}
+.text-input { min-width: 190px; }
+.member-list { border-top: 1px solid #e5edef; margin-top: 14px; }
+.member-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 0;
+  border-bottom: 1px solid #e5edef;
+}
+.member-row > div:first-child { flex: 1; min-width: 180px; }
+.member-row strong, .member-row span { display: block; }
+.member-row span { color: #6a8890; font-size: 12px; }
+.member-add-form { margin-top: 14px; }
+.member-add-form .role-select:first-of-type { min-width: 260px; }
+
 /* Category badges */
 .cat-weather  { background: #e0f2fe; color: #0369a1; }
 .cat-air      { background: #fce7f3; color: #9d174d; }

@@ -154,7 +154,7 @@ Organizations can represent NGOs, academic groups, public agencies, community gr
 
 Rules:
 
-- Organization admins can manage organization profile and members.
+- Platform admins manage organizations and memberships through the admin console. A user can belong to multiple organizations through `OrganizationMembership`; each membership is either `ADMIN` or `MEMBER`.
+- The `organizations.manage` RBAC permission controls organization management. Organization membership does not currently grant platform management access.
 - Organizations can own projects, datasets, campaigns, and observations.
 - Sensitive capabilities such as issuing alerts need explicit permission, not only organization membership.
-

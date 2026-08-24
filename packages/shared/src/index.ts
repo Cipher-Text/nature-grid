@@ -73,6 +73,20 @@ export type ProviderType =
   | 'SATELLITE'
   | 'IOT_SENSOR';
 
+/** Organization classifications. ProviderType remains for data-source providers. */
+export type OrganizationType =
+  | 'GOVERNMENT_AGENCY'
+  | 'RESEARCH_INSTITUTION'
+  | 'NGO'
+  | 'COMMUNITY_GROUP'
+  | 'PRIVATE_COMPANY'
+  | 'INTERNATIONAL_ORG'
+  | 'OTHER';
+
+export type OrganizationMemberRole = 'ADMIN' | 'MEMBER';
+
+export type Permission = 'organizations.manage';
+
 // ─── Observation Enums ────────────────────────────────────────────────────────
 // No Prisma model exists yet (Observations module is a stub) — uppercased now
 // to follow the same convention as every other enum, avoiding this same bug

@@ -39,10 +39,15 @@ Refresh tokens are opaque, Postgres-backed, and rotated on use — not Redis, no
 
 | Method | Path | Access | Status | Purpose |
 | --- | --- | --- | --- | --- |
-| GET | `/organizations` | Public | ✓ | List organizations |
+| GET | `/organizations` | Public | ✓ | List organizations (`?type=OrganizationType`) |
 | GET | `/organizations/:id` | Public | ✓ | Organization detail + providers |
 | POST | `/organizations` | Authenticated | ✗ | Request org creation |
 | PATCH | `/organizations/:id` | Org admin / Admin | ✗ | Update org |
+| GET | `/admin/organizations` | `organizations.manage` | ✓ | Admin organization list with memberships |
+| POST | `/admin/organizations` | `organizations.manage` | ✓ | Create organization |
+| POST | `/admin/organizations/:id/members` | `organizations.manage` | ✓ | Attach or update a user membership |
+| PATCH | `/admin/organizations/:id/members/:userId` | `organizations.manage` | ✓ | Change membership role (`ADMIN` / `MEMBER`) |
+| DELETE | `/admin/organizations/:id/members/:userId` | `organizations.manage` | ✓ | Remove membership |
 
 ## Locations
 

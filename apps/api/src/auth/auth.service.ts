@@ -11,6 +11,7 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import type { JwtPayload } from '../common/decorators/current-user.decorator';
 import { generateRefreshToken, hashRefreshToken } from './refresh-token.util';
+import { permissionsForRole } from '../common/auth/permissions';
 
 const SALT_ROUNDS = 12;
 const REFRESH_TOKEN_TTL_DAYS = 7;
@@ -87,7 +88,7 @@ export class AuthService {
     return this.prisma.user.findUnique({
       where: { id: userId },
       select: { id: true, email: true, displayName: true, role: true, createdAt: true, lastLoginAt: true },
-    });
+    }).then((user) => user && { ...user, permissions: permissionsForRole(user.role) });
   }
 
   /** Validates a refresh token, revokes it, and issues a brand new access+refresh pair. */

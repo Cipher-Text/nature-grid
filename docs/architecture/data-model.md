@@ -2,7 +2,7 @@
 
 Nature Grid uses PostgreSQL as the primary database. The Prisma schema lives at `packages/database/prisma/schema.prisma`. The Prisma client is regenerated via `pnpm run db:generate` from the `packages/database` directory.
 
-Current state: **29 models, 17 enums, 15 migrations applied.**
+Current state: **30 models, 19 enums, 17 migrations applied.**
 
 ## Enums
 
@@ -21,6 +21,7 @@ Current state: **29 models, 17 enums, 15 migrations applied.**
 | `DatasetAccessPolicy` | `PUBLIC LOGIN_REQUIRED RESEARCHER APPROVED GOVERNMENT` |
 | `DatasetAccessRequestStatus` | `PENDING APPROVED REJECTED` |
 | `ProviderType` | `GOVERNMENT_AGENCY RESEARCH_INSTITUTION NGO INTERNATIONAL_ORG CITIZEN_SCIENCE SATELLITE IOT_SENSOR` |
+| `OrganizationType` | `GOVERNMENT_AGENCY RESEARCH_INSTITUTION NGO COMMUNITY_GROUP PRIVATE_COMPANY INTERNATIONAL_ORG OTHER` |
 | `IngestionStatus` | `QUEUED RUNNING SUCCEEDED FAILED CANCELLED` |
 | `NotificationChannel` | `EMAIL` |
 | `DeliveryStatus` | `PENDING SENT FAILED` |
@@ -41,7 +42,8 @@ Current state: **29 models, 17 enums, 15 migrations applied.**
 
 | Model | Key Fields | Relations |
 | --- | --- | --- |
-| `Organization` | `id`, `name`, `type ProviderType`, `description?`, `website?`, `country`, `isVerified` | → `Provider[]`, `RestorationProject[]` |
+| `Organization` | `id`, `name`, `type OrganizationType`, `description?`, `website?`, `country`, `isVerified` | → `Provider[]`, `RestorationProject[]` |
+| `OrganizationMembership` | `organizationId`, `userId`, `role OrganizationMemberRole` | → `Organization`, `User`; unique `(organizationId, userId)` |
 | `Provider` | `id`, `name`, `type ProviderType`, `country`, `organizationId?`, `isActive` | → `Organization?`, `Dataset[]`, `IngestionJob[]` |
 
 ## Geography
@@ -211,7 +213,7 @@ pnpm run db:generate          # Regenerate Prisma client after schema changes
 pnpm run db:studio            # Open Prisma Studio at localhost:5555
 ```
 
-**Migrations applied (14, in order):**
+**Migrations applied (17, in order):**
 
 | Migration | Adds |
 | --- | --- |
@@ -229,7 +231,10 @@ pnpm run db:studio            # Open Prisma Studio at localhost:5555
 | `20260821215250_add_notification_subscriptions_and_deliveries` | `AlertSubscription`, `NotificationDelivery`, `NotificationChannel`, `DeliveryStatus` enums |
 | `20260822100000_add_dataset_update_audit_action` | `AuditAction.DATASET_UPDATE` |
 | `20260822120000_add_report_comment_and_media` | `ReportComment`, `ReportMedia`, `AuditAction.REPORT_COMMENT_ADD`, `AuditAction.REPORT_MEDIA_ADD` |
+| `20260825120000_add_flood_forecasts` | `FloodForecast` |
+| `20260825130000_split_organization_type` | Dedicated `OrganizationType` enum for organizations |
+| `20260825140000_add_organization_memberships` | `OrganizationMemberRole`, `OrganizationMembership` |
 
-28 tables live.
+30 tables live.
 
 The `LocationsService`, `DatasetsService`, and `ProvidersService` auto-seed geography, catalog, and provider data on first boot via `OnModuleInit`. `LocationsService` also backfills district coordinates if missing. No separate seed script is required for those tables.

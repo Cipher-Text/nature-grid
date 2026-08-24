@@ -18,6 +18,11 @@ enum UserRole {
   ADMIN
 }
 
+enum OrganizationMemberRole {
+  ADMIN
+  MEMBER
+}
+
 enum AlertSeverity {
   INFO
   WATCH
@@ -76,6 +81,16 @@ enum ProviderType {
   CITIZEN_SCIENCE
   SATELLITE
   IOT_SENSOR
+}
+
+enum OrganizationType {
+  GOVERNMENT_AGENCY
+  RESEARCH_INSTITUTION
+  NGO
+  COMMUNITY_GROUP
+  PRIVATE_COMPANY
+  INTERNATIONAL_ORG
+  OTHER
 }
 
 enum IngestionStatus {
@@ -182,6 +197,7 @@ model User {
   notificationDeliveries NotificationDelivery[]
   reportComments ReportComment[]
   reportMedia    ReportMedia[]
+  organizationMemberships OrganizationMembership[]
 
   @@index([email])
   @@index([role])
@@ -208,7 +224,7 @@ model RefreshToken {
 model Organization {
   id          String       @id @default(cuid())
   name        String
-  type        ProviderType
+  type        OrganizationType
   description String?
   website     String?
   country     String       @default("Bangladesh")
@@ -218,6 +234,23 @@ model Organization {
 
   providers Provider[]
   restorationProjects RestorationProject[]
+  memberships OrganizationMembership[]
+}
+
+model OrganizationMembership {
+  id             String                  @id @default(cuid())
+  organizationId String
+  userId         String
+  role           OrganizationMemberRole @default(MEMBER)
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+  @@index([organizationId, role])
 }
 
 // ─── Providers ────────────────────────────────────────────────────────────────

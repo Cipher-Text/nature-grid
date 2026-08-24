@@ -65,7 +65,7 @@ Legend: ✓ Implemented | ~ Stub only
 | Citizen engagement | `reports`, `observations`, `restoration` | Reports (status workflow + comments + media), observations (trust levels), restoration projects |
 | Alerts and notifications | `alerts`, `notifications` | Severity-tiered alerts, email delivery, subscription by district/nationwide |
 | Platform metrics | `metrics` | Live counters for the public homepage |
-| Admin console | `apps/admin` | Moderation, user management, alert creation, dataset publishing |
+| Admin console | `apps/admin` | Moderation, user management, alert creation, dataset publishing, organization membership management |
 
 Advanced domains (emissions tracking, climate forecasting, carbon accounting, research publications, structured surveys, satellite remote sensing) are planned for Phase 7 — see `docs/roadmap.md` and `docs/architecture/feature-map.md`.
 

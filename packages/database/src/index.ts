@@ -21,6 +21,8 @@ export type {
   DatasetCategory,
   DatasetAccessPolicy,
   ProviderType,
+  OrganizationType,
+  OrganizationMemberRole,
   IngestionStatus,
   AuditAction,
 } from '@prisma/client';

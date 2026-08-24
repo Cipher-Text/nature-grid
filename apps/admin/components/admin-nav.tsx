@@ -4,10 +4,10 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 interface AdminNavProps {
-  isAdmin: boolean;
+  canManageOrganizations: boolean;
 }
 
-export default function AdminNav({ isAdmin }: AdminNavProps) {
+export default function AdminNav({ canManageOrganizations }: AdminNavProps) {
   const pathname = usePathname();
 
   return (
@@ -30,7 +30,7 @@ export default function AdminNav({ isAdmin }: AdminNavProps) {
       >
         Ingestion
       </Link>
-      {isAdmin && (
+      {canManageOrganizations && (
         <>
           <Link
             href="/datasets"
@@ -43,6 +43,12 @@ export default function AdminNav({ isAdmin }: AdminNavProps) {
             className={`nav-link${pathname.startsWith('/users') ? ' active' : ''}`}
           >
             Users
+          </Link>
+          <Link
+            href="/organizations"
+            className={`nav-link${pathname.startsWith('/organizations') ? ' active' : ''}`}
+          >
+            Organizations
           </Link>
         </>
       )}

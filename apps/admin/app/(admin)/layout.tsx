@@ -10,6 +10,7 @@ interface AdminUser {
   email: string;
   displayName: string;
   role: string;
+  permissions: string[];
 }
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -19,7 +20,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   let user: AdminUser;
   try {
     user = await apiGet<AdminUser>('/api/v1/auth/profile', accessToken);
-    if (!['MODERATOR', 'ADMIN'].includes(user.role)) redirect('/login');
+    if (!user.permissions?.length && !['MODERATOR', 'ADMIN'].includes(user.role)) redirect('/login');
   } catch {
     redirect('/login');
   }
@@ -32,7 +33,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <h2>Admin Console</h2>
         </div>
 
-        <AdminNav isAdmin={user.role === 'ADMIN'} />
+        <AdminNav canManageOrganizations={user.permissions?.includes('organizations.manage') ?? false} />
 
         <div className="sidebar-footer">
           <p className="user-info">

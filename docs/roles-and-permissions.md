@@ -30,6 +30,7 @@ Nature Grid starts with seven product roles. Keep the initial permission model s
 | Upload media | No | Yes | Yes | Yes | Yes | Yes | Yes |
 | Validate research observation | No | No | Yes | No | No | No | Yes |
 | Manage organization profile | No | No | No | Yes | Optional | No | Yes |
+| Manage organizations and memberships | No | No | No | No | No | No | Yes (`organizations.manage`) |
 | Review reports | No | No | No | No | Optional | Yes | Yes |
 | Issue public alerts | No | No | No | No | Optional | Yes | Yes |
 | Manage users and roles | No | No | No | No | No | No | Yes |
@@ -42,6 +43,7 @@ Nature Grid starts with seven product roles. Keep the initial permission model s
 - Dataset downloads, advanced dataset detail, exports, API keys, and dataset contribution require login and may require researcher, organization, government, moderator, or admin role depending on the dataset.
 - Moderation endpoints require `moderator` or `admin`.
 - Admin endpoints require `admin`.
+- The profile response includes effective permissions. `organizations.manage` controls the organization management menu and `/admin/organizations` API; it is currently granted to platform `ADMIN`, while organization membership roles (`ADMIN` and `MEMBER`) are stored separately for future scoped capabilities.
 
 ## Implemented Role Gates
 
@@ -56,6 +58,7 @@ What the code actually enforces today, for cross-checking against the matrix abo
 | `PATCH /restoration/projects/:id` | any authenticated user at the guard; creator-or-`ADMIN` enforced inside the service |
 | All `/users/*` routes | `ADMIN` (controller-level `@Roles('ADMIN')`) |
 | `POST /reports`, `POST /observations`, `POST /restoration/projects/:id/join` | any authenticated user |
+| `/admin/organizations*` | `organizations.manage` permission |
 
 Everything else public-facing is `@Public()`. Dataset downloads and access requests are implemented with policy checks; advanced filters and API-key management remain future work.
 - Government alert permissions should be configurable per organization or agency before production use.

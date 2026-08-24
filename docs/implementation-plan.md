@@ -250,7 +250,7 @@ Task 1's premise was wrong: **the `RestorationProject` model had NOT actually be
 ### Tasks
 
 1. ~~Add `RestorationModule` (model already added in M5).~~ Done — model was NOT actually pre-existing (see note above); built fresh, including wiring into `AppModule` (wasn't registered at all before this, unlike the `observations`/`biodiversity` stub modules).
-2. ~~Add `POST /restoration/projects` — ORGANIZATION_ADMIN or ADMIN.~~ Done — enforced as a bare role check; there's no `Organization`-membership link in the schema, so an org-admin can attach *any* real organization to a new project, not only one they're actually affiliated with. Flagged as a known limitation rather than building a membership system out of scope for this milestone.
+2. ~~Add `POST /restoration/projects` — ORGANIZATION_ADMIN or ADMIN.~~ Done — the global role gate remains; organization memberships are now modeled separately for admin-managed organization attachment. Applying membership-scoped ownership to restoration creation remains a follow-up.
 3. ~~Add `GET /restoration/projects` — public, filterable by category/status/districtId.~~ Done.
 4. ~~Add `GET /restoration/projects/:id`.~~ Done.
 5. ~~Add `PATCH /restoration/projects/:id` — owner or ADMIN.~~ Done — "owner" = `createdById`, enforced in the service (not via `@Roles`, since ownership isn't a role). Confirmed live: non-owner/non-admin gets 403, the creator gets 200.

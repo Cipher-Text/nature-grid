@@ -108,6 +108,7 @@ Legend: **Done** | **Partial** | *Planned* | ~~Deferred~~
 | User management (role change, deactivate) | `apps/admin` | **Done** |
 | Alert management (create, cancel, status tabs) | `apps/admin` | **Done** |
 | Dataset management (publish toggle, access policy) | `apps/admin` | **Done** |
+| Organization management and memberships | `apps/admin` | **Done** — RBAC permission `organizations.manage`; users can belong to multiple organizations |
 | Ingestion monitoring dashboard | `apps/admin` | *Planned* — blocked until ingestion module ships |
 
 ---

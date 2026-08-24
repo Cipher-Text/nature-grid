@@ -70,3 +70,16 @@ export async function apiPatch<T>(
   }
   return res.json() as Promise<T>;
 }
+
+export async function apiDelete<T>(path: string, accessToken: string): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${accessToken}` },
+    cache: 'no-store',
+  });
+  if (!res.ok) {
+    const errorBody = await res.json().catch(() => null);
+    throw new ApiError(res.status, extractErrorMessage(errorBody, `DELETE ${path} failed: ${res.status}`));
+  }
+  return res.json() as Promise<T>;
+}

@@ -1,5 +1,5 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { ProviderType, UserRole } from '@prisma/client';
+import { OrganizationType, UserRole } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../database/prisma.service';
 
@@ -25,7 +25,7 @@ const SEED_USERS: {
 
 const SEED_ORGANIZATION = {
   name: 'Nature Grid Bangladesh',
-  type: 'NGO' as ProviderType,
+  type: 'NGO' as OrganizationType,
   description: 'Seed organization for local development and admin workflows.',
   website: 'https://naturegrid.bd',
   country: 'Bangladesh',
@@ -76,10 +76,30 @@ export class SeedService implements OnModuleInit {
         where: { id: existing.id },
         data: SEED_ORGANIZATION,
       });
+      const admin = await this.prisma.user.findUnique({
+        where: { email: 'organization.admin@naturegrid.bd' },
+        select: { id: true },
+      });
+      if (admin) {
+        await this.prisma.organizationMembership.upsert({
+          where: { organizationId_userId: { organizationId: existing.id, userId: admin.id } },
+          create: { organizationId: existing.id, userId: admin.id, role: 'ADMIN' },
+          update: { role: 'ADMIN' },
+        });
+      }
       return;
     }
 
-    await this.prisma.organization.create({ data: SEED_ORGANIZATION });
+    const organization = await this.prisma.organization.create({ data: SEED_ORGANIZATION });
+    const admin = await this.prisma.user.findUnique({
+      where: { email: 'organization.admin@naturegrid.bd' },
+      select: { id: true },
+    });
+    if (admin) {
+      await this.prisma.organizationMembership.create({
+        data: { organizationId: organization.id, userId: admin.id, role: 'ADMIN' },
+      });
+    }
     this.logger.log(`Seed organization ready: ${SEED_ORGANIZATION.name}`);
   }
 }

@@ -11,6 +11,9 @@ import type {
   ProjectStatus,
   RestorationCategory,
   ProviderType,
+  OrganizationType,
+  OrganizationMemberRole,
+  Permission,
   PlatformMetrics,
 } from '@nature-grid/shared';
 
@@ -28,6 +31,9 @@ export type {
   ProjectStatus,
   RestorationCategory,
   ProviderType,
+  OrganizationType,
+  OrganizationMemberRole,
+  Permission,
   PlatformMetrics,
 } from '@nature-grid/shared';
 
@@ -150,6 +156,10 @@ export const routes = {
   organizations: {
     list: `${apiPrefix}/organizations`,
     detail: (id: string) => `${apiPrefix}/organizations/${id}`,
+    manage: `${apiPrefix}/admin/organizations`,
+    members: (id: string) => `${apiPrefix}/admin/organizations/${id}/members`,
+    member: (organizationId: string, userId: string) =>
+      `${apiPrefix}/admin/organizations/${organizationId}/members/${userId}`,
   },
 
   metrics: {
@@ -370,6 +380,18 @@ export interface ObservationListParams extends PaginationParams, LocationFilterP
 }
 
 // ─── Datasets ─────────────────────────────────────────────────────────────────
+
+export interface Organization {
+  id: string;
+  name: string;
+  type: OrganizationType;
+  description: string | null;
+  website: string | null;
+  country: string;
+  isVerified: boolean;
+  createdAt: string;
+  providers?: Array<{ id: string; name: string; type: ProviderType; isActive: boolean }>;
+}
 
 export interface Provider {
   id: string;

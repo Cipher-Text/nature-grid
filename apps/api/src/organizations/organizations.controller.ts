@@ -1,5 +1,5 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
-import { ProviderType } from '@prisma/client';
+import { OrganizationType } from '@prisma/client';
 import { OrganizationsService } from './organizations.service';
 import { Public } from '../common/decorators/roles.decorator';
 
@@ -11,7 +11,7 @@ export class OrganizationsController {
   @Get()
   list(@Query('type') type?: string, @Query('page') page?: string, @Query('pageSize') pageSize?: string) {
     return this.organizationsService.list(
-      type as ProviderType | undefined,
+      type as OrganizationType | undefined,
       Number(page ?? 1),
       Number(pageSize ?? 20),
     );
