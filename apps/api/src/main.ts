@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import { NestFactory, Reflector } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
@@ -33,9 +34,21 @@ async function bootstrap() {
   const reflector = app.get(Reflector);
   app.useGlobalGuards(new JwtAuthGuard(reflector), new RolesGuard(reflector));
 
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle('Nature Grid API')
+    .setDescription('API reference for Nature Grid services')
+    .setVersion('0.1.0')
+    .addBearerAuth()
+    .build();
+  const swaggerDocument = SwaggerModule.createDocument(app, swaggerConfig);
+  SwaggerModule.setup('api/docs', app, swaggerDocument, {
+    jsonDocumentUrl: 'api/docs-json',
+  });
+
   const port = Number(process.env.PORT ?? 3001);
   await app.listen(port);
   logger.log(`API running on http://localhost:${port}/api/v1`);
+  logger.log(`API docs running on http://localhost:${port}/api/docs`);
 }
 
 void bootstrap();
