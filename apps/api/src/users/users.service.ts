@@ -1,7 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import type { JwtPayload } from '../common/decorators/current-user.decorator';
+import { clampPagination } from '../common/pagination';
 
 const USER_SELECT = {
   id: true,
@@ -17,7 +18,8 @@ const USER_SELECT = {
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
-  list(page = 1, pageSize = 20) {
+  list(rawPage = 1, rawPageSize = 20) {
+    const { page, pageSize } = clampPagination(rawPage, rawPageSize);
     const skip = (page - 1) * pageSize;
     return Promise.all([
       this.prisma.user.findMany({ skip, take: pageSize, select: USER_SELECT, orderBy: { createdAt: 'desc' } }),
@@ -50,6 +52,7 @@ export class UsersService {
   }
 
   async deactivate(id: string, actor: JwtPayload) {
+    if (id === actor.sub) throw new BadRequestException('Cannot deactivate yourself');
     const user = await this.getById(id);
 
     const [updated] = await this.prisma.$transaction([

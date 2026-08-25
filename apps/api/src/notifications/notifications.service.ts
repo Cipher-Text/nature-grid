@@ -3,6 +3,7 @@ import { AlertSeverity, AlertStatus, DeliveryStatus, NotificationChannel } from 
 import { PrismaService } from '../database/prisma.service';
 import { EmailService, type AlertForEmail } from './email.service';
 import { CreateSubscriptionDto } from './dto/create-subscription.dto';
+import { assertDistrictExists } from '../common/validate-district';
 
 /**
  * Which subscription minSeverity values qualify for a given alert severity.
@@ -40,6 +41,8 @@ export class NotificationsService {
   ) {}
 
   async subscribe(userId: string, dto: CreateSubscriptionDto) {
+    if (dto.districtId) await assertDistrictExists(this.prisma, dto.districtId);
+
     const channel = dto.channel ?? NotificationChannel.EMAIL;
     const districtId = dto.districtId ?? null;
 

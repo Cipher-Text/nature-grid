@@ -6,6 +6,8 @@ import { UpdateReportStatusDto } from './dto/update-status.dto';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { AddMediaDto } from './dto/add-media.dto';
 import type { JwtPayload } from '../common/decorators/current-user.decorator';
+import { clampPagination } from '../common/pagination';
+import { assertDistrictExists } from '../common/validate-district';
 
 /** Allowed status transitions per role. */
 const STATUS_TRANSITIONS: Record<ReportStatus, ReportStatus[]> = {
@@ -37,6 +39,8 @@ export class ReportsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(dto: CreateReportDto, user: JwtPayload) {
+    if (dto.districtId) await assertDistrictExists(this.prisma, dto.districtId);
+
     const report = await this.prisma.citizenReport.create({
       data: {
         title: dto.title,
@@ -65,7 +69,8 @@ export class ReportsService {
     return report;
   }
 
-  listMine(userId: string, page = 1, pageSize = 10) {
+  listMine(userId: string, rawPage = 1, rawPageSize = 10) {
+    const { page, pageSize } = clampPagination(rawPage, rawPageSize);
     const skip = (page - 1) * pageSize;
     return Promise.all([
       this.prisma.citizenReport.findMany({
@@ -79,7 +84,8 @@ export class ReportsService {
     ]).then(([data, total]) => ({ data, total, page, pageSize }));
   }
 
-  list(status?: ReportStatus, category?: ReportCategory, districtId?: string, page = 1, pageSize = 20) {
+  list(status?: ReportStatus, category?: ReportCategory, districtId?: string, rawPage = 1, rawPageSize = 20) {
+    const { page, pageSize } = clampPagination(rawPage, rawPageSize);
     const skip = (page - 1) * pageSize;
     // Public view: only verified/resolved reports
     const where = {

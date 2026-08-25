@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { DatasetCategory, IngestionStatus } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
+import { clampPagination } from '../common/pagination';
 
 const JOB_SELECT = {
   id: true,
@@ -56,7 +57,8 @@ export class IngestionService {
     return provider?.id ?? null;
   }
 
-  list(status?: IngestionStatus, providerId?: string, page = 1, pageSize = 20) {
+  list(status?: IngestionStatus, providerId?: string, rawPage = 1, rawPageSize = 20) {
+    const { page, pageSize } = clampPagination(rawPage, rawPageSize);
     const skip = (page - 1) * pageSize;
     const where = {
       ...(status ? { status } : {}),

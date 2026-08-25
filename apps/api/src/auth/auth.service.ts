@@ -31,13 +31,14 @@ export class AuthService {
   ) {}
 
   async register(dto: RegisterDto, deviceMeta: DeviceMeta = {}) {
-    const exists = await this.prisma.user.findUnique({ where: { email: dto.email } });
+    const email = dto.email.toLowerCase().trim();
+    const exists = await this.prisma.user.findUnique({ where: { email } });
     if (exists) throw new ConflictException('Email already registered');
 
     const passwordHash = await bcrypt.hash(dto.password, SALT_ROUNDS);
     const user = await this.prisma.user.create({
       data: {
-        email: dto.email,
+        email,
         displayName: dto.displayName,
         passwordHash,
       },
@@ -54,17 +55,18 @@ export class AuthService {
   }
 
   async login(dto: LoginDto, deviceMeta: DeviceMeta = {}) {
-    const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
+    const email = dto.email.toLowerCase().trim();
+    const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user || !user.isActive) {
       // No userId to attribute — record the attempted address instead, so a
       // spray across many unknown accounts is still visible.
-      await this.recordFailedLogin(user?.id, dto.email, deviceMeta);
+      await this.recordFailedLogin(user?.id, email, deviceMeta);
       throw new UnauthorizedException('Invalid credentials');
     }
 
     const valid = await bcrypt.compare(dto.password, user.passwordHash);
     if (!valid) {
-      await this.recordFailedLogin(user.id, dto.email, deviceMeta);
+      await this.recordFailedLogin(user.id, email, deviceMeta);
       throw new UnauthorizedException('Invalid credentials');
     }
 

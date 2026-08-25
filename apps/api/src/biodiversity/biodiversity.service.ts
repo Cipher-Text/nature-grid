@@ -2,6 +2,7 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { GbifClient } from './gbif.client';
 import { GbifOccurrenceRecord } from './dto/gbif-response.dto';
+import { clampPagination } from '../common/pagination';
 
 const MAX_RECORDS_PER_SYNC = 1000;
 
@@ -150,7 +151,8 @@ export class BiodiversityService {
     return species.id;
   }
 
-  list(search: string | undefined, page = 1, pageSize = 20) {
+  list(search: string | undefined, rawPage = 1, rawPageSize = 20) {
+    const { page, pageSize } = clampPagination(rawPage, rawPageSize);
     const skip = (page - 1) * pageSize;
     const where = search
       ? {
@@ -181,7 +183,8 @@ export class BiodiversityService {
     return species;
   }
 
-  listOccurrences(speciesId: string | undefined, districtId: string | undefined, page = 1, pageSize = 20) {
+  listOccurrences(speciesId: string | undefined, districtId: string | undefined, rawPage = 1, rawPageSize = 20) {
+    const { page, pageSize } = clampPagination(rawPage, rawPageSize);
     const skip = (page - 1) * pageSize;
     const where = {
       ...(speciesId ? { speciesId } : {}),

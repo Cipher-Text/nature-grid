@@ -10,6 +10,8 @@ import { CreateObservationDto } from './dto/create-observation.dto';
 import { UpdateObservationDto } from './dto/update-observation.dto';
 import { UpdateObservationTrustDto } from './dto/update-trust.dto';
 import type { JwtPayload } from '../common/decorators/current-user.decorator';
+import { clampPagination } from '../common/pagination';
+import { assertDistrictExists } from '../common/validate-district';
 
 const OBSERVATION_SELECT = {
   id: true,
@@ -27,25 +29,12 @@ const OBSERVATION_SELECT = {
   district: { select: { id: true, name: true, division: { select: { id: true, name: true } } } },
 } as const;
 
-/** Clamp page/pageSize to safe ranges to prevent negative skips or runaway queries. */
-function clampPagination(page: number, pageSize: number, maxPageSize = 100) {
-  return {
-    page: Math.max(1, isFinite(page) ? page : 1),
-    pageSize: Math.min(Math.max(1, isFinite(pageSize) ? pageSize : 20), maxPageSize),
-  };
-}
-
 @Injectable()
 export class ObservationsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  private async assertDistrictExists(districtId: string) {
-    const exists = await this.prisma.district.findUnique({ where: { id: districtId }, select: { id: true } });
-    if (!exists) throw new BadRequestException('District not found');
-  }
-
   async create(dto: CreateObservationDto, user: JwtPayload) {
-    if (dto.districtId) await this.assertDistrictExists(dto.districtId);
+    if (dto.districtId) await assertDistrictExists(this.prisma,dto.districtId);
 
     if (dto.observedAt && new Date(dto.observedAt) > new Date()) {
       throw new BadRequestException('observedAt cannot be in the future');
@@ -138,7 +127,7 @@ export class ObservationsService {
     if (observation.trustLevel !== ObservationTrustLevel.UNVERIFIED) {
       throw new ForbiddenException('Only UNVERIFIED observations can be edited');
     }
-    if (dto.districtId) await this.assertDistrictExists(dto.districtId);
+    if (dto.districtId) await assertDistrictExists(this.prisma,dto.districtId);
     if (dto.observedAt && new Date(dto.observedAt) > new Date()) {
       throw new BadRequestException('observedAt cannot be in the future');
     }

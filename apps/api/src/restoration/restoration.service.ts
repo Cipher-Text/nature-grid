@@ -1,9 +1,11 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, ProjectStatus, RestorationCategory } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { CreateRestorationProjectDto } from './dto/create-restoration-project.dto';
 import { UpdateRestorationProjectDto } from './dto/update-restoration-project.dto';
 import type { JwtPayload } from '../common/decorators/current-user.decorator';
+import { clampPagination } from '../common/pagination';
+import { assertDistrictExists } from '../common/validate-district';
 
 const PROJECT_SELECT = {
   id: true,
@@ -29,6 +31,12 @@ export class RestorationService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(dto: CreateRestorationProjectDto, user: JwtPayload) {
+    if (dto.districtId) await assertDistrictExists(this.prisma, dto.districtId);
+    if (dto.organizationId) {
+      const org = await this.prisma.organization.findUnique({ where: { id: dto.organizationId }, select: { id: true } });
+      if (!org) throw new BadRequestException('Organization not found');
+    }
+
     const project = await this.prisma.restorationProject.create({
       data: {
         title: dto.title,
@@ -56,7 +64,8 @@ export class RestorationService {
     return project;
   }
 
-  list(category?: RestorationCategory, status?: ProjectStatus, districtId?: string, page = 1, pageSize = 20) {
+  list(category?: RestorationCategory, status?: ProjectStatus, districtId?: string, rawPage = 1, rawPageSize = 20) {
+    const { page, pageSize } = clampPagination(rawPage, rawPageSize);
     const skip = (page - 1) * pageSize;
     const where = {
       ...(category ? { category } : {}),

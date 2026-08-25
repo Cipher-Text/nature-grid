@@ -43,6 +43,7 @@ export class RestorationController {
     return this.restorationService.create(dto, user);
   }
 
+  @Roles('ORGANIZATION_ADMIN', 'ADMIN')
   @Patch(':id')
   update(
     @Param('id') id: string,

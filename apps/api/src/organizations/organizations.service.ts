@@ -1,7 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { OrganizationMemberRole, OrganizationType } from '@prisma/client';
-import { BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
+import { clampPagination } from '../common/pagination';
 
 const ORG_SELECT = {
   id: true,
@@ -72,7 +72,16 @@ export class OrganizationsService {
     });
   }
 
-  list(type?: OrganizationType, page = 1, pageSize = 20) {
+  /** Public: returns only the total count (optionally filtered by type). */
+  count(type?: OrganizationType) {
+    return this.prisma.organization
+      .count({ where: type ? { type } : undefined })
+      .then((total) => ({ total }));
+  }
+
+  /** Authenticated: returns the full paginated list. */
+  list(type?: OrganizationType, rawPage = 1, rawPageSize = 20) {
+    const { page, pageSize } = clampPagination(rawPage, rawPageSize);
     const skip = (page - 1) * pageSize;
     return Promise.all([
       this.prisma.organization.findMany({

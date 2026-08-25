@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, OnModuleInit, Logger, ForbiddenException, ConflictException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, OnModuleInit, Logger, ForbiddenException, ConflictException } from '@nestjs/common';
 import { DatasetCategory, DatasetAccessPolicy, DatasetAccessRequestStatus } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { WeatherService } from '../weather/weather.service';
@@ -8,6 +8,7 @@ import { CreateDatasetDto } from './dto/create-dataset.dto';
 import { RequestDatasetAccessDto } from './dto/request-dataset-access.dto';
 import { DecideDatasetAccessDto } from './dto/decide-dataset-access.dto';
 import type { JwtPayload } from '../common/decorators/current-user.decorator';
+import { clampPagination } from '../common/pagination';
 
 const DATASET_SELECT = {
   id: true,
@@ -62,7 +63,8 @@ export class DatasetsService implements OnModuleInit {
     this.logger.log('Added dataset catalog entry: OpenMeteo Flood Forecasts');
   }
 
-  list(category?: DatasetCategory, accessPolicy?: DatasetAccessPolicy, page = 1, pageSize = 20) {
+  list(category?: DatasetCategory, accessPolicy?: DatasetAccessPolicy, rawPage = 1, rawPageSize = 20) {
+    const { page, pageSize } = clampPagination(rawPage, rawPageSize);
     const skip = (page - 1) * pageSize;
     const where = {
       isPublished: true,
@@ -121,6 +123,11 @@ export class DatasetsService implements OnModuleInit {
   }
 
   async create(dto: CreateDatasetDto, actor: JwtPayload) {
+    if (dto.providerId) {
+      const provider = await this.prisma.provider.findUnique({ where: { id: dto.providerId }, select: { id: true } });
+      if (!provider) throw new BadRequestException('Provider not found');
+    }
+
     const dataset = await this.prisma.dataset.create({
       data: {
         name: dto.name,

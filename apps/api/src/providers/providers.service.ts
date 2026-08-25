@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, OnModuleInit, Logger } from '@nestjs/common';
 import { ProviderType } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
+import { clampPagination } from '../common/pagination';
 
 const PROVIDER_SELECT = {
   id: true,
@@ -33,7 +34,8 @@ export class ProvidersService implements OnModuleInit {
     this.logger.log(`Seeded provider: ${name}`);
   }
 
-  list(type?: ProviderType, page = 1, pageSize = 20) {
+  list(type?: ProviderType, rawPage = 1, rawPageSize = 20) {
+    const { page, pageSize } = clampPagination(rawPage, rawPageSize);
     const skip = (page - 1) * pageSize;
     const where = {
       isActive: true,
