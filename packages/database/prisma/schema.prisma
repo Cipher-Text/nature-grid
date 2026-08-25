@@ -328,6 +328,20 @@ model Division {
   lng       Float?
   areaSqKm  Float?
   url       String?
+
+  // 30-day rolling climate averages (aggregated bottom-up from unions)
+  avgTemp30d       Float?
+  minTemp30d       Float?
+  maxTemp30d       Float?
+  avgHumidity30d   Float?
+  totalPrecip30d   Float?
+  avgWindSpeed30d  Float?
+  avgCloudCover30d Float?
+  avgPm25_30d      Float?
+  avgPm10_30d      Float?
+  avgUvIndex30d    Float?
+  climateUpdatedAt DateTime?
+
   districts District[]
 }
 
@@ -346,6 +360,19 @@ model District {
   boundary   Json?
   divisionId String
   division   Division @relation(fields: [divisionId], references: [id])
+
+  // 30-day rolling climate averages (aggregated bottom-up from unions)
+  avgTemp30d       Float?
+  minTemp30d       Float?
+  maxTemp30d       Float?
+  avgHumidity30d   Float?
+  totalPrecip30d   Float?
+  avgWindSpeed30d  Float?
+  avgCloudCover30d Float?
+  avgPm25_30d      Float?
+  avgPm10_30d      Float?
+  avgUvIndex30d    Float?
+  climateUpdatedAt DateTime?
 
   upazilas Upazila[]
   reports  CitizenReport[]
@@ -378,6 +405,19 @@ model Upazila {
   districtId String
   district   District @relation(fields: [districtId], references: [id])
 
+  // 30-day rolling climate averages (aggregated bottom-up from unions)
+  avgTemp30d       Float?
+  minTemp30d       Float?
+  maxTemp30d       Float?
+  avgHumidity30d   Float?
+  totalPrecip30d   Float?
+  avgWindSpeed30d  Float?
+  avgCloudCover30d Float?
+  avgPm25_30d      Float?
+  avgPm10_30d      Float?
+  avgUvIndex30d    Float?
+  climateUpdatedAt DateTime?
+
   unions Union[]
 
   @@unique([name, districtId])
@@ -396,8 +436,48 @@ model Union {
   upazilaId String
   upazila   Upazila @relation(fields: [upazilaId], references: [id])
 
+  // 30-day rolling climate averages (fetched directly from OpenMeteo at union lat/lng)
+  avgTemp30d       Float?
+  minTemp30d       Float?
+  maxTemp30d       Float?
+  avgHumidity30d   Float?
+  totalPrecip30d   Float?
+  avgWindSpeed30d  Float?
+  avgCloudCover30d Float?
+  avgPm25_30d      Float?
+  avgPm10_30d      Float?
+  avgUvIndex30d    Float?
+  climateUpdatedAt DateTime?
+
+  dailyClimate UnionDailyClimate[]
+
   @@unique([name, upazilaId])
   @@index([upazilaId])
+}
+
+// Daily climate history per union — used to compute 30-day rolling averages
+model UnionDailyClimate {
+  id           String   @id @default(cuid())
+  unionId      String
+  union        Union    @relation(fields: [unionId], references: [id], onDelete: Cascade)
+  date         DateTime @db.Date
+  avgTemp      Float?
+  minTemp      Float?
+  maxTemp      Float?
+  avgHumidity  Float?
+  totalPrecip  Float?
+  avgWindSpeed Float?
+  maxWindSpeed Float?
+  avgCloudCover Float?
+  avgPm25      Float?
+  avgPm10      Float?
+  avgUvIndex   Float?
+  avgOzone     Float?
+  fetchedAt    DateTime @default(now())
+
+  @@unique([unionId, date])
+  @@index([unionId])
+  @@index([date])
 }
 
 // ─── Datasets ─────────────────────────────────────────────────────────────────

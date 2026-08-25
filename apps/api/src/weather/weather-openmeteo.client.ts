@@ -4,6 +4,8 @@ import {
   OpenMeteoCurrentResponse,
   OpenMeteoDailyResponse,
   OpenMeteoHourlyResponse,
+  OpenMeteoUnionAirQualityResponse,
+  OpenMeteoUnionWeatherResponse,
 } from './dto/open-meteo-response.dto';
 
 const FORECAST_BASE_URL = 'https://api.open-meteo.com/v1/forecast';
@@ -44,6 +46,25 @@ export class WeatherOpenMeteoClient {
 
   fetchAirQuality(lat: number, lng: number): Promise<OpenMeteoAirQualityResponse> {
     const url = `${AIR_QUALITY_BASE_URL}?latitude=${lat}&longitude=${lng}&hourly=${AIR_QUALITY_PARAMS}&forecast_days=${HOURLY_FORECAST_DAYS}&timezone=auto`;
+    return this.getJson(url);
+  }
+
+  /** Fetch today's daily summary + hourly humidity/cloud for a single union. */
+  fetchUnionWeather(lat: number, lng: number): Promise<OpenMeteoUnionWeatherResponse> {
+    const url =
+      `${FORECAST_BASE_URL}?latitude=${lat}&longitude=${lng}` +
+      `&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max,uv_index_max` +
+      `&hourly=relative_humidity_2m,cloud_cover` +
+      `&forecast_days=1&timezone=auto`;
+    return this.getJson(url);
+  }
+
+  /** Fetch today's hourly air quality for a single union and return daily averages. */
+  fetchUnionAirQuality(lat: number, lng: number): Promise<OpenMeteoUnionAirQualityResponse> {
+    const url =
+      `${AIR_QUALITY_BASE_URL}?latitude=${lat}&longitude=${lng}` +
+      `&hourly=pm10,pm2_5,ozone,uv_index` +
+      `&forecast_days=1&timezone=auto`;
     return this.getJson(url);
   }
 

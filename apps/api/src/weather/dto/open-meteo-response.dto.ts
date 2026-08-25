@@ -1,5 +1,31 @@
 /** Shapes for the subset of the OpenMeteo API responses this module consumes. */
 
+export interface OpenMeteoUnionWeatherResponse {
+  daily: {
+    time: string[];
+    temperature_2m_max?: (number | null)[];
+    temperature_2m_min?: (number | null)[];
+    precipitation_sum?: (number | null)[];
+    wind_speed_10m_max?: (number | null)[];
+    uv_index_max?: (number | null)[];
+  };
+  hourly: {
+    time: string[];
+    relative_humidity_2m?: (number | null)[];
+    cloud_cover?: (number | null)[];
+  };
+}
+
+export interface OpenMeteoUnionAirQualityResponse {
+  hourly: {
+    time: string[];
+    pm10?: (number | null)[];
+    pm2_5?: (number | null)[];
+    ozone?: (number | null)[];
+    uv_index?: (number | null)[];
+  };
+}
+
 export interface OpenMeteoCurrentResponse {
   latitude: number;
   longitude: number;

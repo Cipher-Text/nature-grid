@@ -9,6 +9,6 @@ import { WeatherOpenMeteoClient } from './weather-openmeteo.client';
   imports: [IngestionModule],
   controllers: [WeatherController],
   providers: [WeatherService, WeatherScheduler, WeatherOpenMeteoClient],
-  exports: [WeatherService],
+  exports: [WeatherService, WeatherOpenMeteoClient],
 })
 export class WeatherModule {}
