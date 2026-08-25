@@ -100,7 +100,28 @@ export class OrganizationsService {
   async getById(id: string) {
     const org = await this.prisma.organization.findUnique({
       where: { id },
-      include: { providers: { select: { id: true, name: true, type: true, isActive: true } } },
+      select: {
+        ...ORG_SELECT,
+        providers: { select: { id: true, name: true, type: true, isActive: true } },
+        memberships: {
+          orderBy: { createdAt: 'asc' },
+          select: {
+            role: true,
+            user: { select: { id: true, displayName: true } },
+          },
+        },
+        restorationProjects: {
+          orderBy: { createdAt: 'desc' },
+          select: {
+            id: true,
+            title: true,
+            category: true,
+            status: true,
+            district: { select: { id: true, name: true } },
+          },
+        },
+        _count: { select: { memberships: true, restorationProjects: true } },
+      },
     });
     if (!org) throw new NotFoundException('Organization not found');
     return org;
