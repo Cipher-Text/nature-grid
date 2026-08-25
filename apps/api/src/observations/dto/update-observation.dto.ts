@@ -1,6 +1,5 @@
 import {
   IsDateString,
-  IsEnum,
   IsNumber,
   IsOptional,
   IsString,
@@ -9,16 +8,13 @@ import {
   Min,
   MinLength,
 } from 'class-validator';
-import { ObservationCategory } from '@prisma/client';
 
-export class CreateObservationDto {
-  @IsEnum(ObservationCategory)
-  category!: ObservationCategory;
-
+export class UpdateObservationDto {
+  @IsOptional()
   @IsString()
   @MinLength(20)
   @MaxLength(2000)
-  description!: string;
+  description?: string;
 
   @IsOptional()
   @IsString()
@@ -36,13 +32,11 @@ export class CreateObservationDto {
   @Max(180)
   lng?: number;
 
-  /** Species name — relevant for BIODIVERSITY observations. */
   @IsOptional()
   @IsString()
   @MaxLength(100)
   species?: string;
 
-  /** ISO 8601 datetime of when the observation was made. Defaults to submission time. */
   @IsOptional()
   @IsDateString()
   observedAt?: string;

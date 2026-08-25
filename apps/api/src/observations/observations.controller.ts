@@ -1,7 +1,20 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { ObservationCategory, ObservationTrustLevel } from '@prisma/client';
 import { ObservationsService } from './observations.service';
 import { CreateObservationDto } from './dto/create-observation.dto';
+import { UpdateObservationDto } from './dto/update-observation.dto';
 import { UpdateObservationTrustDto } from './dto/update-trust.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
@@ -31,7 +44,7 @@ export class ObservationsController {
     );
   }
 
-  /** Authenticated: returns the caller's own observations across all trust levels. */
+  /** Returns the caller's own observations across all trust levels. */
   @Get('mine')
   listMine(
     @CurrentUser() user: JwtPayload,
@@ -56,6 +69,17 @@ export class ObservationsController {
     return this.observationsService.create(dto, user);
   }
 
+  /** Owner only: edit description, location, species, or observedAt while still UNVERIFIED. */
+  @Patch(':id')
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateObservationDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.observationsService.update(id, dto, user);
+  }
+
+  /** RESEARCHER/ADMIN: change the trust level of an observation. */
   @Roles('RESEARCHER', 'ADMIN')
   @Patch(':id/trust')
   updateTrust(
@@ -64,5 +88,13 @@ export class ObservationsController {
     @CurrentUser() user: JwtPayload,
   ) {
     return this.observationsService.updateTrust(id, dto, user);
+  }
+
+  /** MODERATOR/ADMIN: permanently remove an observation. */
+  @Roles('MODERATOR', 'ADMIN')
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  delete(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    return this.observationsService.delete(id, user);
   }
 }
