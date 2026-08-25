@@ -81,5 +81,6 @@ export async function apiDelete<T>(path: string, accessToken: string): Promise<T
     const errorBody = await res.json().catch(() => null);
     throw new ApiError(res.status, extractErrorMessage(errorBody, `DELETE ${path} failed: ${res.status}`));
   }
+  if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
 }

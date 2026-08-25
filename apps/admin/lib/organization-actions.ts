@@ -24,12 +24,57 @@ export async function createOrganizationAction(formData: FormData) {
       type: String(formData.get('type') ?? 'OTHER'),
       description: String(formData.get('description') ?? '') || undefined,
       website: String(formData.get('website') ?? '') || undefined,
+      country: String(formData.get('country') ?? '') || undefined,
     }, token);
   } catch (err) {
     redirect(`/organizations?error=${encodeURIComponent(errorMessage(err))}`);
   }
   revalidatePath('/organizations');
   redirect('/organizations?success=created');
+}
+
+export async function updateOrganizationAction(formData: FormData) {
+  const token = tokenOrRedirect();
+  const id = String(formData.get('id') ?? '');
+  const payload: Record<string, unknown> = {};
+
+  const name = String(formData.get('name') ?? '');
+  if (name) payload.name = name;
+
+  const type = String(formData.get('type') ?? '');
+  if (type) payload.type = type;
+
+  const description = String(formData.get('description') ?? '');
+  payload.description = description || null;
+
+  const website = String(formData.get('website') ?? '');
+  payload.website = website || null;
+
+  const country = String(formData.get('country') ?? '');
+  if (country) payload.country = country;
+
+  const isVerified = formData.get('isVerified');
+  payload.isVerified = isVerified === 'true';
+
+  try {
+    await apiPatch(`/api/v1/admin/organizations/${id}`, payload, token);
+  } catch (err) {
+    redirect(`/organizations?error=${encodeURIComponent(errorMessage(err))}`);
+  }
+  revalidatePath('/organizations');
+  redirect('/organizations?success=updated');
+}
+
+export async function deleteOrganizationAction(formData: FormData) {
+  const token = tokenOrRedirect();
+  const id = String(formData.get('id') ?? '');
+  try {
+    await apiDelete(`/api/v1/admin/organizations/${id}`, token);
+  } catch (err) {
+    redirect(`/organizations?error=${encodeURIComponent(errorMessage(err))}`);
+  }
+  revalidatePath('/organizations');
+  redirect('/organizations?success=deleted');
 }
 
 export async function upsertMembershipAction(formData: FormData) {

@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { OrganizationMemberRole, OrganizationType } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { clampPagination } from '../common/pagination';
+import { UpdateOrganizationDto } from './dto/update-organization.dto';
 
 const ORG_SELECT = {
   id: true,
@@ -12,6 +13,7 @@ const ORG_SELECT = {
   country: true,
   isVerified: true,
   createdAt: true,
+  updatedAt: true,
 } as const;
 
 @Injectable()
@@ -102,5 +104,26 @@ export class OrganizationsService {
     });
     if (!org) throw new NotFoundException('Organization not found');
     return org;
+  }
+
+  async update(id: string, dto: UpdateOrganizationDto) {
+    await this.getById(id);
+    return this.prisma.organization.update({
+      where: { id },
+      data: {
+        ...(dto.name !== undefined && { name: dto.name }),
+        ...(dto.type !== undefined && { type: dto.type }),
+        ...(dto.description !== undefined && { description: dto.description }),
+        ...(dto.website !== undefined && { website: dto.website }),
+        ...(dto.country !== undefined && { country: dto.country }),
+        ...(dto.isVerified !== undefined && { isVerified: dto.isVerified }),
+      },
+      select: ORG_SELECT,
+    });
+  }
+
+  async delete(id: string) {
+    await this.getById(id);
+    await this.prisma.organization.delete({ where: { id } });
   }
 }

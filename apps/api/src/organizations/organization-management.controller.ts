@@ -1,7 +1,8 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { OrganizationMemberRole } from '@prisma/client';
 import { OrganizationsService } from './organizations.service';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
+import { UpdateOrganizationDto } from './dto/update-organization.dto';
 import { UpsertMembershipDto } from './dto/upsert-membership.dto';
 import { UpdateMembershipDto } from './dto/update-membership.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
@@ -27,6 +28,17 @@ export class OrganizationManagementController {
   @Post()
   create(@Body() dto: CreateOrganizationDto) {
     return this.organizationsService.create(dto);
+  }
+
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() dto: UpdateOrganizationDto) {
+    return this.organizationsService.update(id, dto);
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  delete(@Param('id') id: string) {
+    return this.organizationsService.delete(id);
   }
 
   @Post(':id/members')
