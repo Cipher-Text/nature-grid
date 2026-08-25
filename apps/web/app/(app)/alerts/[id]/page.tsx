@@ -69,7 +69,7 @@ export default async function AlertDetailPage({
         </div>
         <h1>{alert.title}</h1>
         <div className="report-detail-meta">
-          <span>{alert.district ? `${alert.district.name}, ${alert.district.division.name}` : 'Nationwide'}</span>
+          <span>{alert.district ? `${alert.district.name}, ${alert.district.division?.name}` : 'Nationwide'}</span>
           <span>Issued {formatDate(alert.issuedAt)}</span>
           {alert.expiresAt && <span>Expires {formatDate(alert.expiresAt)}</span>}
         </div>

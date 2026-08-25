@@ -62,7 +62,7 @@ export default async function ObservationDetailPage({
           )}
           {observation.district && (
             <span>
-              {observation.district.name}, {observation.district.division.name}
+              {observation.district.name}, {observation.district.division?.name}
             </span>
           )}
           <span>Observed {formatDate(observation.observedAt)}</span>
@@ -99,7 +99,7 @@ export default async function ObservationDetailPage({
             <span>Location</span>
             <strong>
               {observation.district
-                ? `${observation.district.name}, ${observation.district.division.name}`
+                ? `${observation.district.name}, ${observation.district.division?.name}`
                 : observation.lat != null
                   ? `${observation.lat.toFixed(4)}, ${observation.lng!.toFixed(4)}`
                   : 'Not specified'}

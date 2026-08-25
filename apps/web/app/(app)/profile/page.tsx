@@ -15,6 +15,7 @@ import { ACCESS_TOKEN_COOKIE } from '../../../lib/session-constants';
 import { updateProfileAction } from '../../../lib/profile-actions';
 import { ENVIRONMENTAL_EXPERTISE, ENVIRONMENTAL_RESEARCH_INTERESTS } from '@nature-grid/shared';
 import TagInput from '../../../components/tag-input';
+import DistrictSelect, { type DistrictWithDivision } from '../../../components/district-select';
 
 const ROLE_LABELS: Record<string, string> = {
   CITIZEN:           'Citizen contributor',
@@ -54,7 +55,7 @@ const SEVERITY_VARIANT: Record<string, string> = {
   EMERGENCY: 'danger',
 };
 
-interface DistrictOption { id: string; name: string; }
+type DistrictOption = DistrictWithDivision;
 
 function initials(displayName: string): string {
   const parts = displayName.trim().split(/\s+/);
@@ -298,12 +299,7 @@ export default async function ProfilePage({
             <div className="subscription-form-fields">
               <div className="field" style={{ margin: 0 }}>
                 <label htmlFor="districtId">Location</label>
-                <select id="districtId" name="districtId" className="select-field">
-                  <option value="">Nationwide (all districts)</option>
-                  {districts.map((d) => (
-                    <option key={d.id} value={d.id}>{d.name}</option>
-                  ))}
-                </select>
+                <DistrictSelect districts={districts} emptyLabel="Nationwide (all districts)" />
               </div>
               <div className="field" style={{ margin: 0 }}>
                 <label htmlFor="minSeverity">Minimum severity</label>

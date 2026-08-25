@@ -4,6 +4,7 @@ import { getCurrentUser } from '../../../lib/current-user';
 import { submitObservationAction } from '../../../lib/observation-actions';
 import { routes, type Observation, type PaginatedEnvelope } from '@nature-grid/contracts';
 import { titleCase, relativeTime } from '../../../lib/format';
+import DistrictSelect, { type DistrictWithDivision } from '../../../components/district-select';
 
 const CATEGORIES = [
   'BIODIVERSITY',
@@ -20,10 +21,7 @@ const TRUST_VARIANT: Record<string, string> = {
   FLAGGED: 'danger',
 };
 
-interface DistrictOption {
-  id: string;
-  name: string;
-}
+type DistrictOption = DistrictWithDivision;
 
 export default async function ObservationsPage({
   searchParams,
@@ -115,12 +113,7 @@ export default async function ObservationsPage({
           </div>
           <div className="field">
             <label htmlFor="districtId">District (optional)</label>
-            <select id="districtId" name="districtId" className="select-field">
-              <option value="">Not specified</option>
-              {districts.map((d) => (
-                <option key={d.id} value={d.id}>{d.name}</option>
-              ))}
-            </select>
+            <DistrictSelect districts={districts} />
           </div>
           <div className="field">
             <label htmlFor="description">Description</label>

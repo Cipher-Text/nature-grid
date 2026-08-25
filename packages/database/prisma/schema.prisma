@@ -322,6 +322,12 @@ model Division {
   id        String     @id @default(cuid())
   name      String     @unique
   bnName    String?
+  slug      String?
+  pcode     String?    @unique
+  lat       Float?
+  lng       Float?
+  areaSqKm  Float?
+  url       String?
   districts District[]
 }
 
@@ -329,8 +335,15 @@ model District {
   id         String   @id @default(cuid())
   name       String
   bnName     String?
+  slug       String?
+  pcode      String?  @unique
   lat        Float?
   lng        Float?
+  centerLat  Float?
+  centerLng  Float?
+  areaSqKm   Float?
+  url        String?
+  boundary   Json?
   divisionId String
   division   Division @relation(fields: [divisionId], references: [id])
 
@@ -356,6 +369,12 @@ model Upazila {
   id         String   @id @default(cuid())
   name       String
   bnName     String?
+  slug       String?
+  pcode      String?  @unique
+  lat        Float?
+  lng        Float?
+  areaSqKm   Float?
+  url        String?
   districtId String
   district   District @relation(fields: [districtId], references: [id])
 
@@ -369,6 +388,11 @@ model Union {
   id        String  @id @default(cuid())
   name      String
   bnName    String?
+  slug      String?
+  pcode     String? @unique
+  lat       Float?
+  lng       Float?
+  url       String?
   upazilaId String
   upazila   Upazila @relation(fields: [upazilaId], references: [id])
 

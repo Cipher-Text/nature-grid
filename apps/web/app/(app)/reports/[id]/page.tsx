@@ -62,7 +62,7 @@ export default async function ReportDetailPage({
           {report.reporter && <span>By {report.reporter.displayName}</span>}
           {report.district && (
             <span>
-              {report.district.name}, {report.district.division.name}
+              {report.district.name}, {report.district.division?.name}
             </span>
           )}
           <span>{relativeTime(report.createdAt)}</span>

@@ -27,8 +27,18 @@ export class LocationsController {
     return this.locationsService.getUpazilas(districtId);
   }
 
+  @Get('upazilas/:id')
+  getUpazila(@Param('id') id: string) {
+    return this.locationsService.getUpazila(id);
+  }
+
   @Get('unions')
   getUnions(@Query('upazilaId') upazilaId?: string) {
     return this.locationsService.getUnions(upazilaId);
+  }
+
+  @Get('unions/:id')
+  getUnion(@Param('id') id: string) {
+    return this.locationsService.getUnion(id);
   }
 }

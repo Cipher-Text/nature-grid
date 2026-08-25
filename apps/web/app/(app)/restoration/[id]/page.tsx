@@ -56,7 +56,7 @@ export default async function RestorationDetailPage({
         <div className="report-detail-meta">
           {project.organization && <span>{project.organization.name}</span>}
           {project.district && (
-            <span>{project.district.name}, {project.district.division.name}</span>
+            <span>{project.district.name}, {project.district.division?.name}</span>
           )}
           <span>Posted {relativeTime(project.createdAt)}</span>
         </div>
@@ -104,7 +104,7 @@ export default async function RestorationDetailPage({
           {project.district && (
             <div className="obs-detail-row">
               <span>Location</span>
-              <strong>{project.district.name}, {project.district.division.name}</strong>
+              <strong>{project.district.name}, {project.district.division?.name}</strong>
             </div>
           )}
           {formatDate(project.startDate) && (

@@ -4,6 +4,7 @@ import { getCurrentUser } from '../../../lib/current-user';
 import { submitReportAction } from '../../../lib/report-actions';
 import { routes, type CitizenReport, type PaginatedEnvelope } from '@nature-grid/contracts';
 import { titleCase, relativeTime } from '../../../lib/format';
+import DistrictSelect, { type DistrictWithDivision } from '../../../components/district-select';
 
 const CATEGORIES = [
   'WATER_POLLUTION',
@@ -21,10 +22,7 @@ const STATUS_VARIANT: Record<string, string> = {
   REJECTED: 'danger',
 };
 
-interface DistrictOption {
-  id: string;
-  name: string;
-}
+type DistrictOption = DistrictWithDivision;
 
 export default async function ReportsPage({
   searchParams,
@@ -145,14 +143,7 @@ export default async function ReportsPage({
           </div>
           <div className="field">
             <label htmlFor="districtId">District (optional)</label>
-            <select id="districtId" name="districtId" className="select-field">
-              <option value="">Not specified</option>
-              {districts.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name}
-                </option>
-              ))}
-            </select>
+            <DistrictSelect districts={districts} />
           </div>
           <div className="field">
             <label htmlFor="description">Description</label>

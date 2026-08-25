@@ -4,6 +4,7 @@ import { getCurrentUser } from '../../../lib/current-user';
 import { createRestorationProjectAction, joinRestorationProjectAction } from '../../../lib/restoration-actions';
 import { routes, type RestorationProject, type PaginatedEnvelope } from '@nature-grid/contracts';
 import { titleCase, relativeTime } from '../../../lib/format';
+import DistrictSelect, { type DistrictWithDivision } from '../../../components/district-select';
 
 const CATEGORIES = [
   'TREE_PLANTING',
@@ -23,10 +24,7 @@ const STATUS_VARIANT: Record<string, string> = {
 
 const CREATOR_ROLES = new Set(['ORGANIZATION_ADMIN', 'ADMIN']);
 
-interface DistrictOption {
-  id: string;
-  name: string;
-}
+type DistrictOption = DistrictWithDivision;
 
 interface OrganizationOption {
   id: string;
@@ -153,12 +151,7 @@ export default async function RestorationPage({
             </div>
             <div className="field">
               <label htmlFor="districtId">District (optional)</label>
-              <select id="districtId" name="districtId" className="select-field">
-                <option value="">Not specified</option>
-                {districts.map((d) => (
-                  <option key={d.id} value={d.id}>{d.name}</option>
-                ))}
-              </select>
+              <DistrictSelect districts={districts} />
             </div>
             <div className="field">
               <label htmlFor="description">Description</label>

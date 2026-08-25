@@ -71,6 +71,7 @@ export const routes = {
     upazilas: `${apiPrefix}/locations/upazilas`,
     upazila: (id: string) => `${apiPrefix}/locations/upazilas/${id}`,
     unions: `${apiPrefix}/locations/unions`,
+    union: (id: string) => `${apiPrefix}/locations/unions/${id}`,
   },
 
   datasets: {
@@ -237,13 +238,58 @@ export interface LogoutRequest {
   refreshToken: string;
 }
 
-// ─── Reports ──────────────────────────────────────────────────────────────────
+// ─── Geography ────────────────────────────────────────────────────────────────
+
+export interface DivisionSummary {
+  id: string;
+  name: string;
+  bnName?: string | null;
+  slug?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  areaSqKm?: number | null;
+  _count?: { districts: number };
+}
 
 export interface DistrictSummary {
   id: string;
   name: string;
-  division: { id: string; name: string };
+  bnName?: string | null;
+  slug?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  areaSqKm?: number | null;
+  division?: { id: string; name: string };
+  _count?: { upazilas: number };
 }
+
+export interface UpazilaSummary {
+  id: string;
+  name: string;
+  bnName?: string | null;
+  slug?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  areaSqKm?: number | null;
+  district?: { id: string; name: string };
+  _count?: { unions: number };
+}
+
+export interface UnionSummary {
+  id: string;
+  name: string;
+  bnName?: string | null;
+  slug?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  upazila?: {
+    id: string;
+    name: string;
+    district: { id: string; name: string };
+  };
+}
+
+// ─── Reports ──────────────────────────────────────────────────────────────────
 
 export interface CitizenReport {
   id: string;

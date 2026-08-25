@@ -32,6 +32,7 @@ interface PaginatedResponse {
 interface District {
   id: string;
   name: string;
+  division?: { id: string; name: string };
 }
 
 const STATUS_TABS: { value: AlertStatus; label: string }[] = [
@@ -192,11 +193,21 @@ export default async function AlertsPage({
                 </label>
                 <select id="districtId" name="districtId" className="role-select">
                   <option value="">Nationwide (all districts)</option>
-                  {districts.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.name}
-                    </option>
-                  ))}
+                  {(() => {
+                    const grouped = new Map<string, District[]>();
+                    for (const d of districts) {
+                      const div = d.division?.name ?? 'Other';
+                      if (!grouped.has(div)) grouped.set(div, []);
+                      grouped.get(div)!.push(d);
+                    }
+                    return [...grouped.entries()].map(([divName, divDistricts]) => (
+                      <optgroup key={divName} label={divName}>
+                        {divDistricts.map((d) => (
+                          <option key={d.id} value={d.id}>{d.name}</option>
+                        ))}
+                      </optgroup>
+                    ));
+                  })()}
                 </select>
               </div>
               <div className="field field-fixed">
