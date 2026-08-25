@@ -1,6 +1,12 @@
 # ── Base ──────────────────────────────────────────────────────────────────────
 FROM node:20-alpine AS base
-RUN corepack enable pnpm
+# Suppress any corporate proxy injected by BuildKit so npm/pnpm reach
+# registry.npmjs.org directly (the proxy blocks their requests with 403).
+ARG HTTP_PROXY=""
+ARG HTTPS_PROXY=""
+ARG http_proxy=""
+ARG https_proxy=""
+RUN npm install -g pnpm@9.15.4
 
 # ── Builder ───────────────────────────────────────────────────────────────────
 FROM base AS builder
@@ -24,14 +30,19 @@ COPY apps/api/   ./apps/api/
 COPY tsconfig.base.json ./
 
 # Generate Prisma client for the builder's platform (linux/amd64 or arm64)
-RUN node_modules/.bin/prisma generate \
-      --schema=packages/database/prisma/schema.prisma
+RUN pnpm --filter @nature-grid/database run db:generate
 
 RUN pnpm --filter @nature-grid/api build
 
 # ── Runtime ───────────────────────────────────────────────────────────────────
 FROM base AS runner
 WORKDIR /repo
+
+# Suppress corporate proxy so npm can reach registry (same reason as in base stage)
+ARG HTTP_PROXY=""
+ARG HTTPS_PROXY=""
+ARG http_proxy=""
+ARG https_proxy=""
 
 # Install only production dependencies in a clean environment
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
@@ -49,9 +60,10 @@ COPY packages/database/prisma ./packages/database/prisma
 
 RUN pnpm install --frozen-lockfile --prod
 
-# Regenerate Prisma client for this runtime platform
-RUN node_modules/.bin/prisma generate \
-      --schema=packages/database/prisma/schema.prisma
+# prisma CLI is a devDep so it's absent after --prod install. Install it globally
+# just long enough to generate the client for this platform, then remove it.
+RUN npm install -g prisma@6 && \
+    pnpm --filter @nature-grid/database run db:generate
 
 # Copy compiled application from builder
 COPY --from=builder /repo/apps/api/dist ./apps/api/dist

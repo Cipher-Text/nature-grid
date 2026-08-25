@@ -3,7 +3,7 @@ set -e
 
 echo "Running database migrations…"
 # Schema path is absolute so this works regardless of WORKDIR
-npx prisma migrate deploy --schema=/repo/packages/database/prisma/schema.prisma
+prisma migrate deploy --schema=/repo/packages/database/prisma/schema.prisma
 
 echo "Starting API…"
 exec "$@"

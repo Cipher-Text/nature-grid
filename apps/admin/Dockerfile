@@ -1,6 +1,10 @@
 # ── Base ──────────────────────────────────────────────────────────────────────
 FROM node:20-alpine AS base
-RUN corepack enable pnpm
+ARG HTTP_PROXY=""
+ARG HTTPS_PROXY=""
+ARG http_proxy=""
+ARG https_proxy=""
+RUN npm install -g pnpm@9.15.4
 
 # ── Builder ───────────────────────────────────────────────────────────────────
 FROM base AS builder

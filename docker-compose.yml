@@ -9,12 +9,71 @@ services:
       - "5433:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nature_grid -d nature_grid"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   redis:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      DATABASE_URL: "postgresql://nature_grid:nature_grid@postgres:5432/nature_grid?schema=public"
+      REDIS_URL: "redis://redis:6379"
+      JWT_SECRET: "${JWT_SECRET}"
+      PORT: "3001"
+      CORS_ORIGIN: "http://localhost:3000,http://localhost:3002"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3001/api/v1/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      API_URL: "http://api:3001"
+      NEXT_PUBLIC_ENABLE_SEED_LOGIN: "false"
+    depends_on:
+      api:
+        condition: service_healthy
+
+  admin:
+    build:
+      context: .
+      dockerfile: apps/admin/Dockerfile
+    ports:
+      - "3002:3002"
+    environment:
+      API_URL: "http://api:3001"
+      NEXT_PUBLIC_ENABLE_SEED_LOGIN: "false"
+    depends_on:
+      api:
+        condition: service_healthy
 
 volumes:
   postgres-data:
-
