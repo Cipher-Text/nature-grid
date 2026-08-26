@@ -18,6 +18,21 @@ export class UsersController {
     return this.usersService.list(Number(page ?? 1), Number(pageSize ?? 20));
   }
 
+  @Get('audit-events')
+  listAuditEvents(
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+    @Query('action') action?: string,
+    @Query('userId') userId?: string,
+    @Query('entityType') entityType?: string,
+  ) {
+    return this.usersService.listAuditEvents(
+      Number(page ?? 1),
+      Number(pageSize ?? 50),
+      { action, userId, entityType },
+    );
+  }
+
   @Get(':id')
   getById(@Param('id') id: string) {
     return this.usersService.getById(id);
@@ -40,20 +55,5 @@ export class UsersController {
   @Patch(':id/reactivate')
   reactivate(@Param('id') id: string, @CurrentUser() actor: JwtPayload) {
     return this.usersService.reactivate(id, actor);
-  }
-
-  @Get('audit-events')
-  listAuditEvents(
-    @Query('page') page?: string,
-    @Query('pageSize') pageSize?: string,
-    @Query('action') action?: string,
-    @Query('userId') userId?: string,
-    @Query('entityType') entityType?: string,
-  ) {
-    return this.usersService.listAuditEvents(
-      Number(page ?? 1),
-      Number(pageSize ?? 50),
-      { action, userId, entityType },
-    );
   }
 }
