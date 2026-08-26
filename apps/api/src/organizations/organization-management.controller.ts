@@ -1,16 +1,13 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post } from '@nestjs/common';
 import { OrganizationMemberRole } from '@prisma/client';
 import { OrganizationsService } from './organizations.service';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
 import { UpdateOrganizationDto } from './dto/update-organization.dto';
 import { UpsertMembershipDto } from './dto/upsert-membership.dto';
 import { UpdateMembershipDto } from './dto/update-membership.dto';
-import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { Permissions } from '../common/decorators/permissions.decorator';
-import { PermissionsGuard } from '../common/guards/permissions.guard';
 
 @Controller('admin/organizations')
-@UseGuards(JwtAuthGuard, PermissionsGuard)
 @Permissions('organizations.manage')
 export class OrganizationManagementController {
   constructor(private readonly organizationsService: OrganizationsService) {}

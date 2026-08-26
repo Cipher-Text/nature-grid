@@ -6,7 +6,8 @@ import { UpdateAlertDto } from './dto/update-alert.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { CurrentUser, JwtPayload } from '../common/decorators/current-user.decorator';
-import { Public, Roles } from '../common/decorators/roles.decorator';
+import { Public } from '../common/decorators/roles.decorator';
+import { Permissions } from '../common/decorators/permissions.decorator';
 
 @Controller('alerts')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -37,13 +38,13 @@ export class AlertsController {
     return this.alertsService.getById(id);
   }
 
-  @Roles('GOVERNMENT', 'MODERATOR', 'ADMIN')
+  @Permissions('alerts.manage')
   @Post()
   create(@Body() dto: CreateAlertDto, @CurrentUser() user: JwtPayload) {
     return this.alertsService.create(dto, user);
   }
 
-  @Roles('GOVERNMENT', 'MODERATOR', 'ADMIN')
+  @Permissions('alerts.manage')
   @Patch(':id')
   update(
     @Param('id') id: string,

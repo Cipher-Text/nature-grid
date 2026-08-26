@@ -33,6 +33,12 @@ export default function AdminNav({ canManageOrganizations }: AdminNavProps) {
       {canManageOrganizations && (
         <>
           <Link
+            href="/permissions"
+            className={`nav-link${pathname.startsWith('/permissions') ? ' active' : ''}`}
+          >
+            Permissions
+          </Link>
+          <Link
             href="/datasets"
             className={`nav-link${pathname.startsWith('/datasets') ? ' active' : ''}`}
           >

@@ -131,6 +131,8 @@ enum AuditAction {
   RESTORATION_PROJECT_UPDATE
   RESTORATION_PROJECT_JOIN
   DATASET_ACCESS_DECISION
+  PERMISSION_GRANT
+  PERMISSION_REVOKE
 }
 
 enum DatasetAccessRequestStatus {
@@ -890,6 +892,27 @@ model HourlyAirQuality {
 
   @@unique([districtId, forecastTime])
   @@index([districtId])
+}
+
+// ─── Permissions ──────────────────────────────────────────────────────────────
+
+model Permission {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  description String
+  createdAt   DateTime @default(now())
+
+  rolePermissions RolePermission[]
+}
+
+model RolePermission {
+  id           String     @id @default(cuid())
+  role         UserRole
+  permissionId String
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([role, permissionId])
+  @@index([role])
 }
 
 // ─── Audit ────────────────────────────────────────────────────────────────────

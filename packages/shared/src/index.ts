@@ -85,7 +85,18 @@ export type OrganizationType =
 
 export type OrganizationMemberRole = 'ADMIN' | 'MEMBER';
 
-export type Permission = 'organizations.access' | 'organizations.manage';
+export type Permission =
+  | 'reports.create'       // Submit citizen reports
+  | 'reports.moderate'     // Verify, reject, and resolve citizen reports
+  | 'alerts.manage'        // Create, update, and cancel environmental alerts
+  | 'restoration.create'   // Register restoration projects
+  | 'restoration.join'     // Join restoration projects as a participant
+  | 'observations.create'  // Log wildlife and environmental observations
+  | 'observations.verify'  // Change trust level on observations
+  | 'observations.delete'  // Delete observations
+  | 'organizations.access' // View own organization memberships (granted dynamically)
+  | 'organizations.manage' // Full organization CRUD in admin console
+  | 'users.manage';        // Manage user roles and deactivate accounts
 
 export const ENVIRONMENTAL_EXPERTISE = [
   'Biodiversity monitoring',

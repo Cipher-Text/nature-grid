@@ -1004,3 +1004,111 @@ body {
 .policy-researcher  { background: #e0f2fe; color: #0369a1; }
 .policy-approved    { background: #fef3c7; color: #92400e; }
 .policy-government  { background: #f3f4f6; color: #374151; }
+
+/* ── Permissions matrix ────────────────────────────────────── */
+
+.perm-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.perm-table th {
+  padding: 11px 16px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #5b6d74;
+  background: #f8fafb;
+  border-bottom: 1px solid #d4dcdf;
+}
+
+.perm-table td {
+  padding: 0;
+  border-bottom: 1px solid #edf1f2;
+  vertical-align: middle;
+}
+
+.perm-table tr:last-child td {
+  border-bottom: none;
+}
+
+.perm-table tr:hover td {
+  background: #f8fafb;
+}
+
+.perm-col-key {
+  min-width: 280px;
+  padding: 14px 16px !important;
+}
+
+.perm-key {
+  display: block;
+  font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, monospace;
+  font-size: 12px;
+  font-weight: 600;
+  color: #172026;
+  margin-bottom: 3px;
+}
+
+.perm-desc {
+  display: block;
+  font-size: 11px;
+  color: #8a9fa8;
+  line-height: 1.4;
+}
+
+.perm-col-role {
+  width: 110px;
+  text-align: center !important;
+}
+
+.perm-col-role th {
+  text-align: center;
+}
+
+.perm-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.1s, border-color 0.1s, transform 0.05s;
+  margin: 10px auto;
+}
+
+.perm-toggle:active {
+  transform: scale(0.92);
+}
+
+.perm-granted {
+  background: #d1fae5;
+  color: #059669;
+  border-color: #a7f3d0;
+}
+
+.perm-granted:hover {
+  background: #fee2e2;
+  color: #dc2626;
+  border-color: #fca5a5;
+}
+
+.perm-denied {
+  background: #f3f4f6;
+  color: #9ca3af;
+  border-color: #e5e7eb;
+}
+
+.perm-denied:hover {
+  background: #d1fae5;
+  color: #059669;
+  border-color: #a7f3d0;
+}

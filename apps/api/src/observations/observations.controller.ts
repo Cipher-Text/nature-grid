@@ -19,7 +19,8 @@ import { UpdateObservationTrustDto } from './dto/update-trust.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { CurrentUser, JwtPayload } from '../common/decorators/current-user.decorator';
-import { Public, Roles } from '../common/decorators/roles.decorator';
+import { Public } from '../common/decorators/roles.decorator';
+import { Permissions } from '../common/decorators/permissions.decorator';
 
 @Controller('observations')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -64,6 +65,7 @@ export class ObservationsController {
     return this.observationsService.getById(id);
   }
 
+  @Permissions('observations.create')
   @Post()
   create(@Body() dto: CreateObservationDto, @CurrentUser() user: JwtPayload) {
     return this.observationsService.create(dto, user);
@@ -80,7 +82,7 @@ export class ObservationsController {
   }
 
   /** RESEARCHER/ADMIN: change the trust level of an observation. */
-  @Roles('RESEARCHER', 'ADMIN')
+  @Permissions('observations.verify')
   @Patch(':id/trust')
   updateTrust(
     @Param('id') id: string,
@@ -91,7 +93,7 @@ export class ObservationsController {
   }
 
   /** MODERATOR/ADMIN: permanently remove an observation. */
-  @Roles('MODERATOR', 'ADMIN')
+  @Permissions('observations.delete')
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   delete(@Param('id') id: string, @CurrentUser() user: JwtPayload) {

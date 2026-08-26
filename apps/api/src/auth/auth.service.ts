@@ -11,7 +11,7 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import type { JwtPayload } from '../common/decorators/current-user.decorator';
 import { generateRefreshToken, hashRefreshToken } from './refresh-token.util';
-import { permissionsForRole } from '../common/auth/permissions';
+import { PermissionsService } from '../permissions/permissions.service';
 import type { UpdateProfileDto } from './dto/update-profile.dto';
 
 const SALT_ROUNDS = 12;
@@ -28,6 +28,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
+    private readonly permissionsService: PermissionsService,
   ) {}
 
   async register(dto: RegisterDto, deviceMeta: DeviceMeta = {}) {
@@ -107,9 +108,12 @@ export class AuthService {
         profile: true,
         socialLinks: { select: { platform: true, url: true }, orderBy: { platform: 'asc' } },
       },
-    }).then((user) => {
+    }).then(async (user) => {
       if (!user) return null;
-      const permissions = permissionsForRole(user.role);
+      const permissions = await this.permissionsService.getPermissionsForRole(user.role);
+      // Dynamic addition: if the user has any org memberships and doesn't already
+      // hold organizations.access from their role grants, add it so the frontend
+      // shows their org data.
       if (user.organizationMemberships.length > 0 && !permissions.includes('organizations.access')) {
         permissions.push('organizations.access');
       }

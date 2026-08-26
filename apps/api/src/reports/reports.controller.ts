@@ -8,7 +8,8 @@ import { AddMediaDto } from './dto/add-media.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { CurrentUser, JwtPayload } from '../common/decorators/current-user.decorator';
-import { Public, Roles } from '../common/decorators/roles.decorator';
+import { Public } from '../common/decorators/roles.decorator';
+import { Permissions } from '../common/decorators/permissions.decorator';
 
 @Controller('reports')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -59,7 +60,7 @@ export class ReportsController {
     return this.reportsService.create(dto, user);
   }
 
-  @Roles('MODERATOR', 'ADMIN')
+  @Permissions('reports.moderate')
   @Patch(':id/status')
   updateStatus(
     @Param('id') id: string,
@@ -77,7 +78,7 @@ export class ReportsController {
   }
 
   /** Mod/admin: returns all comments including internal. */
-  @Roles('MODERATOR', 'ADMIN')
+  @Permissions('reports.moderate')
   @Get(':id/comments/all')
   listAllComments(@Param('id') id: string) {
     return this.reportsService.listComments(id, true);

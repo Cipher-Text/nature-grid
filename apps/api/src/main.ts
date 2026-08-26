@@ -6,6 +6,8 @@ import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
+import { PermissionsGuard } from './common/guards/permissions.guard';
+import { PermissionsService } from './permissions/permissions.service';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -30,9 +32,16 @@ async function bootstrap() {
     }),
   );
 
-  // Apply JWT guard globally; mark public routes with @Public()
+  // Apply guards globally. Execution order: JwtAuthGuard → RolesGuard → PermissionsGuard.
+  // PermissionsGuard is instantiated via app.get() so it receives the DI-managed
+  // PermissionsService (which holds the DB-backed cache).
   const reflector = app.get(Reflector);
-  app.useGlobalGuards(new JwtAuthGuard(reflector), new RolesGuard(reflector));
+  const permissionsService = app.get(PermissionsService);
+  app.useGlobalGuards(
+    new JwtAuthGuard(reflector),
+    new RolesGuard(reflector),
+    new PermissionsGuard(reflector, permissionsService),
+  );
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle('Nature Grid API')

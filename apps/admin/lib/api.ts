@@ -71,10 +71,13 @@ export async function apiPatch<T>(
   return res.json() as Promise<T>;
 }
 
-export async function apiDelete<T>(path: string, accessToken: string): Promise<T> {
+export async function apiDelete<T>(path: string, accessToken: string, body?: unknown): Promise<T> {
+  const headers: Record<string, string> = { Authorization: `Bearer ${accessToken}` };
+  if (body !== undefined) headers['Content-Type'] = 'application/json';
   const res = await fetch(`${API_BASE}${path}`, {
     method: 'DELETE',
-    headers: { Authorization: `Bearer ${accessToken}` },
+    headers,
+    body: body !== undefined ? JSON.stringify(body) : undefined,
     cache: 'no-store',
   });
   if (!res.ok) {

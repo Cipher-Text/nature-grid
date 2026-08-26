@@ -23,6 +23,7 @@ import { FloodModule } from './flood/flood.module';
 import { LocationClimateModule } from './locations/climate/location-climate.module';
 import { MetricsModule } from './metrics/metrics.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { PermissionsModule } from './permissions/permissions.module';
 import { HealthController } from './health.controller';
 import { SeedService } from './seed/seed.service';
 
@@ -52,6 +53,7 @@ import { SeedService } from './seed/seed.service';
     LocationClimateModule,
     MetricsModule,
     NotificationsModule,
+    PermissionsModule,
   ],
   controllers: [HealthController],
   // ThrottlerGuard is registered here rather than in main.ts's useGlobalGuards

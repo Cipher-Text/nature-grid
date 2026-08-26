@@ -6,7 +6,8 @@ import { UpdateRestorationProjectDto } from './dto/update-restoration-project.dt
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { CurrentUser, JwtPayload } from '../common/decorators/current-user.decorator';
-import { Public, Roles } from '../common/decorators/roles.decorator';
+import { Public } from '../common/decorators/roles.decorator';
+import { Permissions } from '../common/decorators/permissions.decorator';
 
 @Controller('restoration/projects')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -37,13 +38,13 @@ export class RestorationController {
     return this.restorationService.getById(id);
   }
 
-  @Roles('ORGANIZATION_ADMIN', 'ADMIN')
+  @Permissions('restoration.create')
   @Post()
   create(@Body() dto: CreateRestorationProjectDto, @CurrentUser() user: JwtPayload) {
     return this.restorationService.create(dto, user);
   }
 
-  @Roles('ORGANIZATION_ADMIN', 'ADMIN')
+  @Permissions('restoration.create')
   @Patch(':id')
   update(
     @Param('id') id: string,
@@ -53,6 +54,7 @@ export class RestorationController {
     return this.restorationService.update(id, dto, user);
   }
 
+  @Permissions('restoration.join')
   @Post(':id/join')
   join(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     return this.restorationService.join(id, user);

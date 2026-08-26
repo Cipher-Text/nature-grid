@@ -163,6 +163,11 @@ export const routes = {
       `${apiPrefix}/admin/organizations/${organizationId}/members/${userId}`,
   },
 
+  permissions: {
+    list: `${apiPrefix}/admin/permissions`,
+    roles: `${apiPrefix}/admin/permissions/roles`,
+  },
+
   metrics: {
     platform: `${apiPrefix}/metrics/platform`,
   },
@@ -520,6 +525,16 @@ export interface CreateRestorationProjectRequest {
   startDate?: string;
   endDate?: string;
   impactSummary?: string;
+}
+
+// ─── Permissions ──────────────────────────────────────────────────────────────
+
+export interface PermissionWithRoles {
+  id: string;
+  key: string;
+  description: string;
+  /** Roles that currently hold this permission. ADMIN is always excluded from this list. */
+  roles: string[];
 }
 
 export interface UpdateRestorationProjectRequest {
