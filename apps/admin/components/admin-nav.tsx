@@ -23,6 +23,7 @@ const ADMIN_ONLY_LINKS = [
   { href: '/organizations', label: 'Organizations' },
   { href: '/restoration', label: 'Restoration' },
   { href: '/audit', label: 'Audit Log' },
+  { href: '/settings', label: 'Layout' },
 ];
 
 export default function AdminNav({ role, canManageOrganizations }: AdminNavProps) {
