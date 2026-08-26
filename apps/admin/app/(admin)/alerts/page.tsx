@@ -2,7 +2,7 @@ import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { apiGet } from '../../../lib/api';
 import { ADMIN_ACCESS_TOKEN_COOKIE } from '../../../lib/session-constants';
-import { createAlertAction, cancelAlertAction } from '../../../lib/alert-actions';
+import { createAlertAction, cancelAlertAction, editAlertAction } from '../../../lib/alert-actions';
 
 const PAGE_SIZE = 20;
 
@@ -242,6 +242,9 @@ export default async function AlertsPage({
       {searchParams.success === 'cancelled' && (
         <div className="flash flash-success">Alert cancelled.</div>
       )}
+      {searchParams.success === 'edited' && (
+        <div className="flash flash-success">Alert updated.</div>
+      )}
 
       {/* ── Status tabs ── */}
       <div className="tab-bar">
@@ -291,6 +294,47 @@ export default async function AlertsPage({
 
               {alert.status === 'ACTIVE' && (
                 <div className="alert-actions">
+                  {/* Edit instructions / expiry */}
+                  <details className="deactivate-details">
+                    <summary className="btn btn-secondary btn-sm">Edit</summary>
+                    <div className="deactivate-confirm">
+                      <form action={editAlertAction} className="alert-edit-form">
+                        <input type="hidden" name="id" value={alert.id} />
+                        <input type="hidden" name="tab" value={activeTab} />
+                        <div className="field">
+                          <label htmlFor={`instructions-${alert.id}`}>Instructions</label>
+                          <textarea
+                            id={`instructions-${alert.id}`}
+                            name="instructions"
+                            rows={2}
+                            className="note-input"
+                            style={{ width: '100%' }}
+                            defaultValue={alert.instructions ?? ''}
+                            maxLength={2000}
+                          />
+                        </div>
+                        <div className="field">
+                          <label htmlFor={`expires-${alert.id}`}>Expiry (optional)</label>
+                          <input
+                            id={`expires-${alert.id}`}
+                            name="expiresAt"
+                            type="datetime-local"
+                            className="role-select"
+                            defaultValue={
+                              alert.expiresAt
+                                ? new Date(alert.expiresAt).toISOString().slice(0, 16)
+                                : ''
+                            }
+                          />
+                        </div>
+                        <button type="submit" className="btn btn-secondary btn-sm">
+                          Save changes
+                        </button>
+                      </form>
+                    </div>
+                  </details>
+
+                  {/* Cancel with confirmation */}
                   <details className="deactivate-details">
                     <summary className="btn btn-danger-outline btn-sm">Cancel alert</summary>
                     <div className="deactivate-confirm">

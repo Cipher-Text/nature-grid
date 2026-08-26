@@ -2,7 +2,11 @@ import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { apiGet } from '../../../lib/api';
 import { ADMIN_ACCESS_TOKEN_COOKIE } from '../../../lib/session-constants';
-import { updateRoleAction, deactivateUserAction } from '../../../lib/user-actions';
+import {
+  updateRoleAction,
+  deactivateUserAction,
+  reactivateUserAction,
+} from '../../../lib/user-actions';
 
 const PAGE_SIZE = 20;
 
@@ -31,7 +35,6 @@ interface PaginatedResponse {
   pageSize: number;
 }
 
-// Roles that can be assigned via the API (ADMIN is intentionally excluded).
 const ASSIGNABLE_ROLES: UserRole[] = [
   'CITIZEN',
   'RESEARCHER',
@@ -66,16 +69,12 @@ function relativeTime(dateStr: string) {
   const h = Math.floor(diffMs / 3_600_000);
   if (h < 1) return 'just now';
   if (h < 24) return `${h}h ago`;
-  const d = Math.floor(h / 24);
-  return `${d}d ago`;
+  return `${Math.floor(h / 24)}d ago`;
 }
 
-/** Decode JWT payload without signature verification — used only to read the sub claim. */
 function decodeJwtSub(token: string): string | null {
   try {
-    const base64Url = token.split('.')[1];
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const payload = JSON.parse(atob(base64)) as { sub?: string };
+    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))) as { sub?: string };
     return payload.sub ?? null;
   } catch {
     return null;
@@ -85,27 +84,33 @@ function decodeJwtSub(token: string): string | null {
 export default async function UsersPage({
   searchParams,
 }: {
-  searchParams: { page?: string; success?: string; error?: string };
+  searchParams: { page?: string; search?: string; success?: string; error?: string };
 }) {
   const accessToken = cookies().get(ADMIN_ACCESS_TOKEN_COOKIE)?.value ?? '';
   const page = Math.max(1, Number(searchParams.page ?? 1));
+  const search = searchParams.search ?? '';
   const currentUserId = decodeJwtSub(accessToken);
 
-  const result = await apiGet<PaginatedResponse>(
-    `/api/v1/users?page=${page}&pageSize=${PAGE_SIZE}`,
-    accessToken,
-  );
+  const qs = new URLSearchParams({
+    page: String(page),
+    pageSize: String(PAGE_SIZE),
+    ...(search ? { search } : {}),
+  });
 
+  const result = await apiGet<PaginatedResponse>(`/api/v1/users?${qs}`, accessToken);
   const totalPages = Math.ceil(result.total / PAGE_SIZE);
-  const activeCount = result.data.filter((u) => u.isActive).length;
+
+  function pageUrl(p: number) {
+    return `/users?page=${p}${search ? `&search=${encodeURIComponent(search)}` : ''}`;
+  }
 
   return (
     <>
       <div className="page-header">
-        <h1>User Management</h1>
-        <p>
-          {result.total} total users &mdash; {activeCount} active on this page
-        </p>
+        <div>
+          <h1>User Management</h1>
+          <p>{result.total} users total</p>
+        </div>
       </div>
 
       {searchParams.success === 'role' && (
@@ -114,18 +119,37 @@ export default async function UsersPage({
       {searchParams.success === 'deactivated' && (
         <div className="flash flash-success">User deactivated.</div>
       )}
+      {searchParams.success === 'reactivated' && (
+        <div className="flash flash-success">User reactivated.</div>
+      )}
       {searchParams.error && (
         <div className="flash flash-error">{searchParams.error}</div>
       )}
 
+      {/* Search */}
+      <form method="get" className="filter-bar">
+        <input
+          name="search"
+          type="search"
+          placeholder="Search by name or email…"
+          defaultValue={search}
+          className="filter-input"
+        />
+        <button type="submit" className="btn btn-secondary">Search</button>
+        {search && (
+          <Link href="/users" className="btn btn-ghost">Clear</Link>
+        )}
+      </form>
+
       <div className="table-wrapper">
         {result.data.length === 0 ? (
-          <div className="empty-state">No users found.</div>
+          <div className="empty-state">No users found{search ? ` matching "${search}"` : ''}.</div>
         ) : (
           result.data.map((user) => {
             const isSelf = user.id === currentUserId;
             const canChangeRole = user.role !== 'ADMIN';
             const canDeactivate = user.isActive && !isSelf;
+            const canReactivate = !user.isActive;
 
             return (
               <div key={user.id} className={`user-row${!user.isActive ? ' user-inactive' : ''}`}>
@@ -150,23 +174,19 @@ export default async function UsersPage({
                   </div>
 
                   <div className="user-actions">
-                    {canChangeRole ? (
+                    {canChangeRole && (
                       <form action={updateRoleAction} className="role-form">
                         <input type="hidden" name="id" value={user.id} />
                         <input type="hidden" name="returnPage" value={String(page)} />
                         <select name="role" className="role-select" defaultValue={user.role}>
                           {ASSIGNABLE_ROLES.map((r) => (
-                            <option key={r} value={r}>
-                              {titleCase(r)}
-                            </option>
+                            <option key={r} value={r}>{titleCase(r)}</option>
                           ))}
                         </select>
                         <button type="submit" className="btn btn-secondary btn-sm">
                           Update role
                         </button>
                       </form>
-                    ) : (
-                      <p className="role-fixed-note">Admin role cannot be changed via console.</p>
                     )}
 
                     {canDeactivate && (
@@ -174,8 +194,8 @@ export default async function UsersPage({
                         <summary className="btn btn-danger-outline btn-sm">Deactivate</summary>
                         <div className="deactivate-confirm">
                           <p>
-                            Deactivate <strong>{user.displayName}</strong>? They will not be able
-                            to log in until manually reactivated via the database.
+                            Deactivate <strong>{user.displayName}</strong>? They will be
+                            immediately locked out.
                           </p>
                           <form action={deactivateUserAction}>
                             <input type="hidden" name="id" value={user.id} />
@@ -188,14 +208,29 @@ export default async function UsersPage({
                       </details>
                     )}
 
-                    {!user.isActive && (
-                      <p className="inactive-note">
-                        Account inactive &mdash; reactivation requires direct DB access.
-                      </p>
+                    {canReactivate && (
+                      <details className="deactivate-details">
+                        <summary className="btn btn-secondary btn-sm">Reactivate</summary>
+                        <div className="deactivate-confirm">
+                          <p>
+                            Reactivate <strong>{user.displayName}</strong>? They will be able
+                            to log in again.
+                          </p>
+                          <form action={reactivateUserAction}>
+                            <input type="hidden" name="id" value={user.id} />
+                            <input type="hidden" name="returnPage" value={String(page)} />
+                            <input type="hidden" name="search" value={search} />
+                            <button type="submit" className="btn btn-secondary btn-sm">
+                              Confirm reactivate
+                            </button>
+                          </form>
+                        </div>
+                      </details>
                     )}
 
-                    {isSelf && user.isActive && (
-                      <p className="self-note">Cannot deactivate your own account.</p>
+                    {isSelf && <p className="self-note">Cannot modify your own account.</p>}
+                    {user.role === 'ADMIN' && !isSelf && (
+                      <p className="role-fixed-note">Admin role cannot be changed via console.</p>
                     )}
                   </div>
                 </div>
@@ -208,17 +243,11 @@ export default async function UsersPage({
       {totalPages > 1 && (
         <div className="pagination">
           {page > 1 && (
-            <Link href={`/users?page=${page - 1}`} className="btn btn-ghost">
-              Previous
-            </Link>
+            <Link href={pageUrl(page - 1)} className="btn btn-ghost">← Previous</Link>
           )}
-          <span className="page-info">
-            Page {page} of {totalPages}
-          </span>
+          <span className="page-info">Page {page} of {totalPages}</span>
           {page < totalPages && (
-            <Link href={`/users?page=${page + 1}`} className="btn btn-ghost">
-              Next
-            </Link>
+            <Link href={pageUrl(page + 1)} className="btn btn-ghost">Next →</Link>
           )}
         </div>
       )}

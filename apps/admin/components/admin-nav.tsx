@@ -4,58 +4,52 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 interface AdminNavProps {
+  role: string;
   canManageOrganizations: boolean;
 }
 
-export default function AdminNav({ canManageOrganizations }: AdminNavProps) {
+const MODERATOR_LINKS = [
+  { href: '/reports', label: 'Reports' },
+  { href: '/alerts', label: 'Alerts' },
+  { href: '/observations', label: 'Observations' },
+  { href: '/ingestion', label: 'Ingestion' },
+  { href: '/system', label: 'System Health' },
+];
+
+const ADMIN_ONLY_LINKS = [
+  { href: '/permissions', label: 'Permissions' },
+  { href: '/datasets', label: 'Datasets' },
+  { href: '/users', label: 'Users' },
+  { href: '/organizations', label: 'Organizations' },
+  { href: '/restoration', label: 'Restoration' },
+  { href: '/audit', label: 'Audit Log' },
+];
+
+export default function AdminNav({ role, canManageOrganizations }: AdminNavProps) {
   const pathname = usePathname();
+  const isAdmin = role === 'ADMIN';
+
+  function active(href: string) {
+    return pathname === href || pathname.startsWith(href + '/') ? ' active' : '';
+  }
 
   return (
     <nav className="sidebar-nav">
-      <Link
-        href="/reports"
-        className={`nav-link${pathname.startsWith('/reports') ? ' active' : ''}`}
-      >
-        Reports
-      </Link>
-      <Link
-        href="/alerts"
-        className={`nav-link${pathname.startsWith('/alerts') ? ' active' : ''}`}
-      >
-        Alerts
-      </Link>
-      <Link
-        href="/ingestion"
-        className={`nav-link${pathname.startsWith('/ingestion') ? ' active' : ''}`}
-      >
-        Ingestion
-      </Link>
-      {canManageOrganizations && (
+      <span className="nav-section-label">Moderation</span>
+      {MODERATOR_LINKS.map((link) => (
+        <Link key={link.href} href={link.href} className={`nav-link${active(link.href)}`}>
+          {link.label}
+        </Link>
+      ))}
+
+      {(isAdmin || canManageOrganizations) && (
         <>
-          <Link
-            href="/permissions"
-            className={`nav-link${pathname.startsWith('/permissions') ? ' active' : ''}`}
-          >
-            Permissions
-          </Link>
-          <Link
-            href="/datasets"
-            className={`nav-link${pathname.startsWith('/datasets') ? ' active' : ''}`}
-          >
-            Datasets
-          </Link>
-          <Link
-            href="/users"
-            className={`nav-link${pathname.startsWith('/users') ? ' active' : ''}`}
-          >
-            Users
-          </Link>
-          <Link
-            href="/organizations"
-            className={`nav-link${pathname.startsWith('/organizations') ? ' active' : ''}`}
-          >
-            Organizations
-          </Link>
+          <span className="nav-section-label">Administration</span>
+          {ADMIN_ONLY_LINKS.map((link) => (
+            <Link key={link.href} href={link.href} className={`nav-link${active(link.href)}`}>
+              {link.label}
+            </Link>
+          ))}
         </>
       )}
     </nav>

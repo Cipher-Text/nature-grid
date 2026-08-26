@@ -52,3 +52,25 @@ export async function cancelAlertAction(formData: FormData) {
   revalidatePath('/alerts');
   redirect('/alerts?tab=ACTIVE&success=cancelled');
 }
+
+export async function editAlertAction(formData: FormData) {
+  const id = String(formData.get('id') ?? '');
+  const tab = String(formData.get('tab') ?? 'ACTIVE');
+  const instructionsRaw = formData.get('instructions');
+  const instructions = instructionsRaw ? String(instructionsRaw).trim() || undefined : undefined;
+  const expiresAtRaw = formData.get('expiresAt');
+  const expiresAt = expiresAtRaw ? `${String(expiresAtRaw)}:00.000Z` : undefined;
+
+  const accessToken = cookies().get(ADMIN_ACCESS_TOKEN_COOKIE)?.value;
+  if (!accessToken) redirect('/login');
+
+  try {
+    await apiPatch(`/api/v1/alerts/${id}`, { instructions, expiresAt }, accessToken);
+  } catch (err) {
+    const message = err instanceof ApiError ? err.message : 'Edit failed';
+    redirect(`/alerts?tab=${tab}&error=${encodeURIComponent(message)}`);
+  }
+
+  revalidatePath('/alerts');
+  redirect(`/alerts?tab=${tab}&success=edited`);
+}

@@ -1112,3 +1112,273 @@ body {
   color: #059669;
   border-color: #a7f3d0;
 }
+
+/* ── Tag colour variants ── */
+.tag { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; letter-spacing: 0.02em; white-space: nowrap; }
+.tag-info    { background: #eff6ff; color: #1d4ed8; }
+.tag-success { background: #f0fdf4; color: #15803d; }
+.tag-danger  { background: #fef2f2; color: #b91c1c; }
+.tag-warning { background: #fffbeb; color: #b45309; }
+.tag-muted   { background: #f3f4f6; color: #6b7280; }
+
+/* ── Filter bar ── */
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.filter-input {
+  flex: 1;
+  min-width: 200px;
+  max-width: 320px;
+  padding: 7px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 13px;
+  background: #fff;
+  color: #111827;
+  font-family: inherit;
+}
+
+.filter-input-sm {
+  width: 180px;
+  padding: 6px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 13px;
+  background: #fff;
+  color: #111827;
+  font-family: inherit;
+}
+
+.filter-input:focus,
+.filter-input-sm:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px rgba(99,102,241,0.15);
+}
+
+.filter-select {
+  padding: 7px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 13px;
+  background: #fff;
+  color: #111827;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.filter-clear {
+  font-size: 12px;
+  color: #6b7280;
+  text-decoration: none;
+  padding: 4px 6px;
+  border-radius: 4px;
+}
+
+.filter-clear:hover { color: #111827; text-decoration: underline; }
+
+/* ── Data table (audit log, system health) ── */
+.data-table {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+  font-size: 13px;
+}
+
+.data-table-head {
+  display: grid;
+  grid-template-columns: 150px 1fr 1fr 1fr;
+  gap: 0;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 8px 14px;
+  font-weight: 600;
+  color: #6b7280;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.data-table-row {
+  display: grid;
+  grid-template-columns: 150px 1fr 1fr 1fr;
+  gap: 0;
+  padding: 10px 14px;
+  border-bottom: 1px solid #f3f4f6;
+  align-items: start;
+  color: #374151;
+}
+
+.data-table-row:last-child { border-bottom: none; }
+.data-table-row:hover { background: #fafafa; }
+
+/* For 5-column audit table */
+.data-table-head.cols-5,
+.data-table-row.cols-5 {
+  grid-template-columns: 140px 130px 160px 90px 1fr;
+}
+
+/* For 3-column table (cron jobs) */
+.data-table-head.cols-3,
+.data-table-row.cols-3 {
+  grid-template-columns: 1fr 140px 160px;
+}
+
+/* ── Audit log specific ── */
+.audit-timestamp { font-size: 12px; color: #6b7280; }
+.audit-actor     { font-size: 12px; }
+.audit-actor strong { display: block; color: #111827; }
+.audit-actor span { color: #9ca3af; font-size: 11px; }
+.audit-entity    { font-size: 12px; }
+.audit-entity-id { color: #9ca3af; font-size: 11px; font-family: monospace; }
+.audit-ip        { font-size: 11px; color: #9ca3af; font-family: monospace; }
+.audit-meta      { font-size: 12px; }
+.audit-meta-json { font-size: 11px; color: #6b7280; font-family: monospace; word-break: break-all; }
+.error-msg       { color: #b91c1c !important; }
+
+/* ── Observations admin ── */
+.obs-admin-row {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+}
+
+.obs-admin-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.obs-admin-tags {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.obs-admin-meta {
+  font-size: 12px;
+  color: #9ca3af;
+  white-space: nowrap;
+}
+
+.obs-admin-title {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 4px;
+}
+
+.obs-admin-description {
+  font-size: 13px;
+  color: #6b7280;
+  margin: 0 0 10px;
+  line-height: 1.5;
+}
+
+.obs-admin-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ── System health ── */
+.system-section { margin-bottom: 32px; }
+
+.system-section-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 12px;
+}
+
+.system-title-danger { color: #b91c1c; }
+
+.system-section-note {
+  font-size: 13px;
+  color: #6b7280;
+  margin: -4px 0 12px;
+}
+
+.system-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.system-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.system-card-ok    { border-color: #a7f3d0; background: #f0fdf4; }
+.system-card-error { border-color: #fca5a5; background: #fef2f2; }
+
+.system-card-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-top: 4px;
+  flex-shrink: 0;
+  background: #d1d5db;
+}
+
+.system-card-ok    .system-card-indicator { background: #10b981; }
+.system-card-error .system-card-indicator { background: #ef4444; }
+
+.system-card strong { display: block; font-size: 14px; color: #111827; margin-bottom: 2px; }
+.system-card p { font-size: 12px; color: #6b7280; margin: 0; }
+.system-card-ts { margin-top: 4px !important; }
+
+/* ── Nav section label ── */
+.nav-section-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #6b7280;
+  padding: 14px 12px 4px;
+}
+
+/* ── Alert edit form ── */
+.alert-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ── Tab link (restoration page uses tab-link not tab) ── */
+.tab-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #6b7280;
+  text-decoration: none;
+  border: 1px solid transparent;
+  transition: background 0.15s, color 0.15s;
+}
+
+.tab-link:hover  { background: #f3f4f6; color: #111827; }
+.tab-link.active { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; font-weight: 600; }

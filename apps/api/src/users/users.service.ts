@@ -53,7 +53,7 @@ export class UsersService {
 
   async deactivate(id: string, actor: JwtPayload) {
     if (id === actor.sub) throw new BadRequestException('Cannot deactivate yourself');
-    const user = await this.getById(id);
+    await this.getById(id);
 
     const [updated] = await this.prisma.$transaction([
       this.prisma.user.update({ where: { id }, data: { isActive: false }, select: USER_SELECT }),
@@ -63,10 +63,66 @@ export class UsersService {
           userId: actor.sub,
           entityType: 'User',
           entityId: id,
-          meta: { wasActive: user.isActive },
+          meta: { action: 'deactivate' },
         },
       }),
     ]);
     return updated;
+  }
+
+  async reactivate(id: string, actor: JwtPayload) {
+    await this.getById(id);
+
+    const [updated] = await this.prisma.$transaction([
+      this.prisma.user.update({ where: { id }, data: { isActive: true }, select: USER_SELECT }),
+      this.prisma.auditEvent.create({
+        data: {
+          action: 'USER_DEACTIVATE', // closest existing enum value for the lifecycle event
+          userId: actor.sub,
+          entityType: 'User',
+          entityId: id,
+          meta: { action: 'reactivate' },
+        },
+      }),
+    ]);
+    return updated;
+  }
+
+  async listAuditEvents(
+    rawPage = 1,
+    rawPageSize = 50,
+    filters: { action?: string; userId?: string; entityType?: string } = {},
+  ) {
+    const { page, pageSize } = clampPagination(rawPage, rawPageSize);
+    const skip = (page - 1) * pageSize;
+
+    const where = {
+      ...(filters.action ? { action: filters.action as never } : {}),
+      ...(filters.userId ? { userId: filters.userId } : {}),
+      ...(filters.entityType ? { entityType: filters.entityType } : {}),
+    };
+
+    const [data, total] = await Promise.all([
+      this.prisma.auditEvent.findMany({
+        where,
+        skip,
+        take: pageSize,
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          action: true,
+          userId: true,
+          entityType: true,
+          entityId: true,
+          meta: true,
+          ipAddress: true,
+          createdAt: true,
+          user: { select: { displayName: true, email: true, role: true } },
+        },
+      }),
+      this.prisma.auditEvent.count({ where }),
+    ]);
+
+    return { data, total, page, pageSize };
   }
 }

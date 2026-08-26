@@ -152,6 +152,9 @@ export const routes = {
     list: `${apiPrefix}/users`,
     detail: (id: string) => `${apiPrefix}/users/${id}`,
     updateRole: (id: string) => `${apiPrefix}/users/${id}/role`,
+    deactivate: (id: string) => `${apiPrefix}/users/${id}/deactivate`,
+    reactivate: (id: string) => `${apiPrefix}/users/${id}/reactivate`,
+    auditEvents: `${apiPrefix}/users/audit-events`,
   },
 
   organizations: {

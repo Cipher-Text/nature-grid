@@ -36,4 +36,24 @@ export class UsersController {
   deactivate(@Param('id') id: string, @CurrentUser() actor: JwtPayload) {
     return this.usersService.deactivate(id, actor);
   }
+
+  @Patch(':id/reactivate')
+  reactivate(@Param('id') id: string, @CurrentUser() actor: JwtPayload) {
+    return this.usersService.reactivate(id, actor);
+  }
+
+  @Get('audit-events')
+  listAuditEvents(
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+    @Query('action') action?: string,
+    @Query('userId') userId?: string,
+    @Query('entityType') entityType?: string,
+  ) {
+    return this.usersService.listAuditEvents(
+      Number(page ?? 1),
+      Number(pageSize ?? 50),
+      { action, userId, entityType },
+    );
+  }
 }

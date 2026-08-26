@@ -42,3 +42,22 @@ export async function deactivateUserAction(formData: FormData) {
   revalidatePath('/users');
   redirect(`/users?page=${returnPage}&success=deactivated`);
 }
+
+export async function reactivateUserAction(formData: FormData) {
+  const id = String(formData.get('id') ?? '');
+  const returnPage = String(formData.get('returnPage') ?? '1');
+  const search = String(formData.get('search') ?? '');
+
+  const accessToken = cookies().get(ADMIN_ACCESS_TOKEN_COOKIE)?.value;
+  if (!accessToken) redirect('/login');
+
+  try {
+    await apiPatch(`/api/v1/users/${id}/reactivate`, {}, accessToken);
+  } catch (err) {
+    const message = err instanceof ApiError ? err.message : 'Reactivation failed';
+    redirect(`/users?page=${returnPage}&search=${encodeURIComponent(search)}&error=${encodeURIComponent(message)}`);
+  }
+
+  revalidatePath('/users');
+  redirect(`/users?page=${returnPage}&search=${encodeURIComponent(search)}&success=reactivated`);
+}
