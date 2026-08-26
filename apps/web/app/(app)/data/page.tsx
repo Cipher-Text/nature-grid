@@ -85,7 +85,7 @@ export default async function DataPage({
         )}
       </div>
 
-      <article className="panel" style={{ marginTop: '20px' }}>
+      <article className="panel">
         <div className="panel-header">
           <div>
             <h2>Providers</h2>

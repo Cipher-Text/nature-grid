@@ -38,7 +38,9 @@ export default async function ObservationsPage({
     getCurrentUser(),
   ]);
 
-  const districts = await apiGet<DistrictOption[]>(routes.locations.districts);
+  const districts = user
+    ? await apiGet<DistrictOption[]>(routes.locations.districts)
+    : [];
 
   return (
     <>
@@ -86,7 +88,7 @@ export default async function ObservationsPage({
         )}
       </div>
 
-      <article className="panel" style={{ marginTop: '20px' }}>
+      <article className="panel">
         <div className="panel-header">
           <div>
             <h2>Submit an observation</h2>
@@ -102,7 +104,7 @@ export default async function ObservationsPage({
         )}
         {searchParams.error && <p className="form-error">{searchParams.error}</p>}
 
-        <form action={submitObservationAction} className="auth-form">
+        <form action={submitObservationAction} className="submit-form">
           <div className="field">
             <label htmlFor="category">Observation type</label>
             <select id="category" name="category" className="select-field" required>

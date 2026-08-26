@@ -100,7 +100,7 @@ export default async function AlertsPage({
         )}
       </div>
 
-      <article className="panel" style={{ marginTop: '20px' }}>
+      <article className="panel">
         <div className="panel-header">
           <div>
             <h2>Alert history</h2>
@@ -130,7 +130,7 @@ export default async function AlertsPage({
         </div>
       </article>
 
-      <div className="access-note" style={{ marginTop: '20px' }}>
+      <div className="access-note">
         <strong>Get notified about alerts</strong>
         <span>
           Visit your{' '}

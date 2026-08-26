@@ -38,18 +38,15 @@ export default async function BiodiversityPage({
         </div>
       </div>
 
-      <article className="panel" style={{ marginTop: '20px' }}>
+      <article className="panel">
         <div className="panel-header">
           <div>
             <h2>Species</h2>
             <p>Search by scientific or common name</p>
           </div>
         </div>
-        <form
-          method="get"
-          style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', marginBottom: '16px' }}
-        >
-          <div className="field" style={{ maxWidth: '320px' }}>
+        <form method="get" className="search-row">
+          <div className="field">
             <label htmlFor="search">Search species</label>
             <input id="search" name="search" type="text" defaultValue={search} placeholder="e.g. Heritiera fomes" />
           </div>
@@ -67,7 +64,7 @@ export default async function BiodiversityPage({
           </div>
           {speciesRes.data.map((s) => (
             <Link className="table-row table-row-link" role="row" key={s.id} href={`/biodiversity/species/${s.id}`}>
-              <strong>{s.canonicalName}</strong>
+              <strong><em>{s.canonicalName}</em></strong>
               <span>{s.vernacularName ?? '—'}</span>
               <span>{s.family ?? '—'}</span>
               <span>{s._count.occurrences}</span>
@@ -79,7 +76,7 @@ export default async function BiodiversityPage({
         </div>
       </article>
 
-      <article className="panel" style={{ marginTop: '20px' }}>
+      <article className="panel">
         <div className="panel-header">
           <div>
             <h2>Recent occurrence records</h2>

@@ -72,7 +72,7 @@ export default async function ReportsAlertsSection() {
             <h2>Verified reports</h2>
             <p>Public users see only reviewed environmental issues.</p>
           </div>
-          <Link className="button ghost" href="/login">
+          <Link className="button ghost" href="/reports">
             View all
           </Link>
         </div>
@@ -99,8 +99,8 @@ export default async function ReportsAlertsSection() {
             <h2>Active alerts</h2>
             <p>Public warnings, concise and easy to scan.</p>
           </div>
-          <Link className="button ghost" href="/#map">
-            Alert map
+          <Link className="button ghost" href="/alerts">
+            View all alerts
           </Link>
         </div>
 
@@ -114,7 +114,7 @@ export default async function ReportsAlertsSection() {
           ))}
         </div>
 
-        <Link className="button ghost" href="/#map" style={{ marginTop: '14px', width: '100%', justifyContent: 'center' }}>
+        <Link className="button ghost gated-action" href="/alerts">
           See all alerts
         </Link>
       </article>

@@ -63,18 +63,14 @@ export default async function RestorationDetailPage({
       </div>
 
       {searchParams.joined && (
-        <p className="form-success" style={{ marginBottom: 16 }}>
-          You&apos;ve joined this project.
-        </p>
+        <p className="form-success">You&apos;ve joined this project.</p>
       )}
       {searchParams.error && (
-        <p className="form-error" style={{ marginBottom: 16 }}>
-          {searchParams.error}
-        </p>
+        <p className="form-error">{searchParams.error}</p>
       )}
 
-      <article className="panel" style={{ marginBottom: 16 }}>
-        <h2 style={{ marginBottom: 12 }}>About this project</h2>
+      <article className="panel">
+        <h2>About this project</h2>
         <p className="report-description">{project.description}</p>
         {project.impactSummary && (
           <div className="report-summary">
@@ -84,8 +80,8 @@ export default async function RestorationDetailPage({
         )}
       </article>
 
-      <article className="panel" style={{ marginBottom: 16 }}>
-        <h2 style={{ marginBottom: 12 }}>Details</h2>
+      <article className="panel">
+        <h2>Details</h2>
         <div className="obs-detail-grid">
           <div className="obs-detail-row">
             <span>Category</span>

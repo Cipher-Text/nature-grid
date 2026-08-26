@@ -70,20 +70,17 @@ export default async function ObservationDetailPage({
         </div>
       </div>
 
-      <div
-        className={`alert-strip ${TRUST_BADGE[observation.trustLevel] ?? 'info'}`}
-        style={{ marginBottom: 16 }}
-      >
+      <div className={`alert-strip ${TRUST_BADGE[observation.trustLevel] ?? 'info'}`}>
         {TRUST_DESCRIPTION[observation.trustLevel]}
       </div>
 
-      <article className="panel" style={{ marginBottom: 16 }}>
-        <h2 style={{ marginBottom: 12 }}>Description</h2>
+      <article className="panel">
+        <h2>Description</h2>
         <p className="report-description">{observation.description}</p>
       </article>
 
-      <article className="panel" style={{ marginBottom: 16 }}>
-        <h2 style={{ marginBottom: 12 }}>Details</h2>
+      <article className="panel">
+        <h2>Details</h2>
         <div className="obs-detail-grid">
           <div className="obs-detail-row">
             <span>Category</span>

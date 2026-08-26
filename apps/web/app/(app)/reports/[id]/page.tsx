@@ -70,13 +70,13 @@ export default async function ReportDetailPage({
       </div>
 
       {!isPublic && (
-        <div className="alert-strip info" role="status" style={{ marginBottom: 20 }}>
+        <div className="alert-strip info" role="status">
           This report is pending moderator review and not yet publicly listed.
         </div>
       )}
 
-      <article className="panel" style={{ marginBottom: 16 }}>
-        <h2 style={{ marginBottom: 12 }}>Description</h2>
+      <article className="panel">
+        <h2>Description</h2>
         <p className="report-description">{report.description}</p>
         {report.summary && (
           <div className="report-summary">
@@ -87,8 +87,8 @@ export default async function ReportDetailPage({
       </article>
 
       {report.statusHistory.length > 0 && (
-        <article className="panel" style={{ marginBottom: 16 }}>
-          <h2 style={{ marginBottom: 12 }}>Status history</h2>
+        <article className="panel">
+          <h2>Status history</h2>
           <div className="status-trail">
             {report.statusHistory.map((event) => (
               <div key={event.id} className="status-trail-row">
@@ -106,8 +106,8 @@ export default async function ReportDetailPage({
       )}
 
       {mediaRaw.length > 0 && (
-        <article className="panel" style={{ marginBottom: 16 }}>
-          <h2 style={{ marginBottom: 12 }}>Attached media</h2>
+        <article className="panel">
+          <h2>Attached media</h2>
           <div className="media-list">
             {mediaRaw.map((m) => (
               <div key={m.id} className="media-item">
@@ -130,7 +130,7 @@ export default async function ReportDetailPage({
       )}
 
       <article className="panel">
-        <h2 style={{ marginBottom: 12 }}>
+        <h2>
           Comments{' '}
           {commentsRaw.length > 0 && (
             <span className="comment-count">({commentsRaw.length})</span>

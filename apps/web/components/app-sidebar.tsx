@@ -16,6 +16,7 @@ const NAV_SECTIONS = [
       { href: '/alerts', label: 'Alerts' },
       { href: '/biodiversity', label: 'Biodiversity' },
       { href: '/restoration', label: 'Restoration' },
+      { href: '/organizations', label: 'Organizations' },
       { href: '/community', label: 'Community' },
     ],
   },
@@ -111,9 +112,6 @@ export default function AppSidebar({ user }: { user: CurrentUser }) {
                   {link.label}
                 </Link>
               ))}
-              <Link href="/organizations" className={isActive('/organizations') ? 'active' : undefined} onClick={close}>
-                Organizations
-              </Link>
             </div>
           ))}
         </nav>

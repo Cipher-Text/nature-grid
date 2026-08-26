@@ -51,8 +51,8 @@ export default async function SpeciesDetailPage({
       </div>
 
       {filledTaxonomy.length > 0 && (
-        <article className="panel" style={{ marginBottom: 16 }}>
-          <h2 style={{ marginBottom: 12 }}>Taxonomy</h2>
+        <article className="panel">
+          <h2>Taxonomy</h2>
           <div className="obs-detail-grid">
             {filledTaxonomy.map(({ label, value }) => (
               <div key={label} className="obs-detail-row">

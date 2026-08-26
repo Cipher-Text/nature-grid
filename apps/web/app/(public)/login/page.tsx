@@ -20,58 +20,65 @@ export default function LoginPage({
 
   return (
     <main className="auth-page">
-      <div className="panel auth-panel">
-        <div className="panel-header">
-          <div>
-            <h2>Sign in</h2>
-            <p>Access your Nature Grid account</p>
-          </div>
+      <div className="auth-panel">
+        <div className="auth-brand">
+          <div className="brand-mark">NG</div>
+          <span>Nature Grid</span>
         </div>
 
-        {searchParams.error && <p className="form-error">{searchParams.error}</p>}
-
-        <form action={loginAction} className="auth-form">
-          <div className="field">
-            <label htmlFor="email">Email</label>
-            <input id="email" name="email" type="email" required autoComplete="email" />
-          </div>
-          <div className="field">
-            <label htmlFor="password">Password</label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              required
-              autoComplete="current-password"
-              minLength={8}
-            />
-          </div>
-          <button className="button" type="submit" style={{ width: '100%' }}>
-            Sign in
-          </button>
-        </form>
-
-        {showSeedLogin && (
-          <section className="seed-login">
-            <p className="seed-login-title">Seed accounts</p>
-            <div className="seed-login-grid">
-              {SEED_USERS.map((user) => (
-                <form key={user.email} action={loginAction}>
-                  <input type="hidden" name="email" value={user.email} />
-                  <input type="hidden" name="password" value={SEED_PASSWORD} />
-                  <button className="seed-login-button" type="submit">
-                    <span>{user.label}</span>
-                    <small>{user.email}</small>
-                  </button>
-                </form>
-              ))}
+        <div className="panel auth-panel-card">
+          <div className="panel-header">
+            <div>
+              <h2>Sign in</h2>
+              <p>Access your Nature Grid account</p>
             </div>
-          </section>
-        )}
+          </div>
 
-        <p className="auth-switch">
-          Don&apos;t have an account? <Link href="/register">Create one</Link>
-        </p>
+          {searchParams.error && <p className="form-error">{searchParams.error}</p>}
+
+          <form action={loginAction} className="auth-form">
+            <div className="field">
+              <label htmlFor="email">Email</label>
+              <input id="email" name="email" type="email" required autoComplete="email" />
+            </div>
+            <div className="field">
+              <label htmlFor="password">Password</label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                required
+                autoComplete="current-password"
+                minLength={8}
+              />
+            </div>
+            <button className="button button-full" type="submit">
+              Sign in
+            </button>
+          </form>
+
+          {showSeedLogin && (
+            <section className="seed-login">
+              <p className="seed-login-title">Seed accounts</p>
+              <div className="seed-login-grid">
+                {SEED_USERS.map((user) => (
+                  <form key={user.email} action={loginAction}>
+                    <input type="hidden" name="email" value={user.email} />
+                    <input type="hidden" name="password" value={SEED_PASSWORD} />
+                    <button className="seed-login-button" type="submit">
+                      <span>{user.label}</span>
+                      <small>{user.email}</small>
+                    </button>
+                  </form>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <p className="auth-switch">
+            Don&apos;t have an account? <Link href="/register">Create one</Link>
+          </p>
+        </div>
       </div>
     </main>
   );

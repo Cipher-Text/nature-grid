@@ -122,7 +122,7 @@ export default async function ProfilePage({
       {searchParams.profileSaved && <div className="flash flash-success">Profile updated.</div>}
       {searchParams.profileError && <div className="flash flash-error">{searchParams.profileError}</div>}
 
-      <article className="panel profile-edit-panel">
+      <article className="panel">
         <div className="panel-header">
           <div>
             <h2>Profile information</h2>
@@ -171,7 +171,7 @@ export default async function ProfilePage({
       </article>
 
       {/* ── My reports ── */}
-      <article className="panel" style={{ marginTop: 20 }}>
+      <article className="panel">
         <div className="panel-header">
           <div>
             <h2>My reports</h2>
@@ -213,7 +213,7 @@ export default async function ProfilePage({
       </article>
 
       {/* ── My observations ── */}
-      <article className="panel" style={{ marginTop: 20 }}>
+      <article className="panel">
         <div className="panel-header">
           <div>
             <h2>My observations</h2>
@@ -255,7 +255,7 @@ export default async function ProfilePage({
       </article>
 
       {/* ── Alert subscriptions ── */}
-      <article className="panel" style={{ marginTop: 20 }}>
+      <article className="panel">
         <div className="panel-header">
           <div>
             <h2>Alert subscriptions</h2>
@@ -297,11 +297,11 @@ export default async function ProfilePage({
           <h3>Add subscription</h3>
           <form action={subscribeAction} className="subscription-form">
             <div className="subscription-form-fields">
-              <div className="field" style={{ margin: 0 }}>
+              <div className="field">
                 <label htmlFor="districtId">Location</label>
                 <DistrictSelect districts={districts} emptyLabel="Nationwide (all districts)" />
               </div>
-              <div className="field" style={{ margin: 0 }}>
+              <div className="field">
                 <label htmlFor="minSeverity">Minimum severity</label>
                 <select id="minSeverity" name="minSeverity" className="select-field">
                   <option value="INFO">All alerts (Info+)</option>
@@ -311,7 +311,7 @@ export default async function ProfilePage({
                 </select>
               </div>
             </div>
-            <button className="button" type="submit" style={{ marginTop: 12 }}>
+            <button className="button" type="submit" style={{ marginTop: '16px' }}>
               Subscribe
             </button>
           </form>

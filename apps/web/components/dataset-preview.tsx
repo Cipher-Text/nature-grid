@@ -72,7 +72,7 @@ export default async function DatasetPreview() {
             contributions require sign in.
           </p>
         </div>
-        <Link className="button ghost" href="/login">
+        <Link className="button ghost" href="/data">
           Browse all datasets
         </Link>
       </div>

@@ -11,9 +11,9 @@ export default function HeroSection() {
         Sign in to contribute, submit reports, or download datasets.
       </p>
       <div className="button-row">
-        <a className="button" href="#dashboard">
-          View dashboard
-        </a>
+        <Link className="button" href="#dashboard">
+          View live data
+        </Link>
         <Link className="button ghost" href="/login">
           Sign in to contribute
         </Link>

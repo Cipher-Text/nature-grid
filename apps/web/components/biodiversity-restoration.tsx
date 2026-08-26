@@ -61,7 +61,7 @@ export default async function BiodiversityRestoration() {
             <h2>Biodiversity highlights</h2>
             <p>Research-grade observations and habitat signals.</p>
           </div>
-          <Link className="button ghost" href="/login">
+          <Link className="button ghost" href="/biodiversity">
             Explore
           </Link>
         </div>
@@ -80,10 +80,10 @@ export default async function BiodiversityRestoration() {
         </p>
 
         <div className="button-row" style={{ marginTop: '14px' }}>
-          <Link className="button ghost" href="/login">
+          <Link className="button ghost" href="/biodiversity">
             Species records
           </Link>
-          <Link className="button ghost" href="/login">
+          <Link className="button ghost" href="/observations">
             All observations
           </Link>
         </div>
@@ -96,7 +96,7 @@ export default async function BiodiversityRestoration() {
             <h2>Restoration and community</h2>
             <p>Projects and campaigns show action, not only problems.</p>
           </div>
-          <Link className="button ghost" href="/login">
+          <Link className="button ghost" href="/restoration">
             View projects
           </Link>
         </div>

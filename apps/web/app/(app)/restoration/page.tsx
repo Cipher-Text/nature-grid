@@ -88,7 +88,7 @@ export default async function RestorationPage({
         ))}
       </div>
 
-      <div className="table" role="table" aria-label="Restoration projects">
+      <div className="table restoration-table" role="table" aria-label="Restoration projects">
         <div className="table-row table-head" role="row">
           <span>Project</span>
           <span>Organization / Location</span>
@@ -103,12 +103,12 @@ export default async function RestorationPage({
               {p.district?.name ? ` · ${p.district.name}` : ''}
             </span>
             <span className={`tag ${STATUS_VARIANT[p.status] ?? 'muted'}`}>{titleCase(p.status)}</span>
-            <span>
-              {p._count.participants}
+            <span className="restoration-participants-cell">
+              <span>{p._count.participants}</span>
               {user && !canCreate && (
-                <form action={joinRestorationProjectAction} style={{ display: 'inline', marginLeft: '8px' }}>
+                <form action={joinRestorationProjectAction}>
                   <input type="hidden" name="projectId" value={p.id} />
-                  <button className="button ghost" type="submit">
+                  <button className="button ghost" type="submit" style={{ padding: '0.35rem 0.65rem', fontSize: '0.8rem' }}>
                     Join
                   </button>
                 </form>
@@ -122,14 +122,14 @@ export default async function RestorationPage({
       </div>
 
       {canCreate && (
-        <article className="panel" style={{ marginTop: '20px' }}>
+        <article className="panel">
           <div className="panel-header">
             <div>
               <h2>Register a restoration project</h2>
               <p>Visible to the public immediately — no moderation queue yet.</p>
             </div>
           </div>
-          <form action={createRestorationProjectAction} className="auth-form">
+          <form action={createRestorationProjectAction} className="submit-form">
             <div className="field">
               <label htmlFor="title">Title</label>
               <input id="title" name="title" type="text" required minLength={5} maxLength={200}

@@ -102,7 +102,7 @@ export default async function ReportsPage({
         )}
       </div>
 
-      <article className="panel" style={{ marginTop: '20px' }}>
+      <article className="panel">
         <div className="panel-header">
           <div>
             <h2>Report an environmental issue</h2>
@@ -118,7 +118,7 @@ export default async function ReportsPage({
         )}
         {searchParams.error && <p className="form-error">{searchParams.error}</p>}
 
-        <form action={submitReportAction} className="auth-form">
+        <form action={submitReportAction} className="submit-form">
           <div className="field">
             <label htmlFor="title">Title</label>
             <input
@@ -163,7 +163,7 @@ export default async function ReportsPage({
         </form>
       </article>
 
-      <article className="panel" style={{ marginTop: '20px' }}>
+      <article className="panel">
         <div className="panel-header">
           <div>
             <h2>Status flow</h2>

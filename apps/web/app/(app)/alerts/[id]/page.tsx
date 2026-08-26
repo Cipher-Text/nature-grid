@@ -53,7 +53,7 @@ export default async function AlertDetailPage({
       </Link>
 
       {isActive && (
-        <div className={`alert-strip ${stripClass}`} role="alert" style={{ marginBottom: 20 }}>
+        <div className={`alert-strip ${stripClass}`} role="alert">
           {titleCase(alert.severity)} alert — {alert.district?.name ?? 'Nationwide'}
         </div>
       )}
@@ -75,14 +75,14 @@ export default async function AlertDetailPage({
         </div>
       </div>
 
-      <article className="panel" style={{ marginBottom: 16 }}>
-        <h2 style={{ marginBottom: 12 }}>Details</h2>
+      <article className="panel">
+        <h2>Details</h2>
         <p className="report-description">{alert.description}</p>
       </article>
 
       {alert.instructions && (
-        <article className="panel" style={{ marginBottom: 16 }}>
-          <h2 style={{ marginBottom: 12 }}>Instructions</h2>
+        <article className="panel">
+          <h2>Instructions</h2>
           <p className="report-description">{alert.instructions}</p>
         </article>
       )}
