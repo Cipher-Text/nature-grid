@@ -172,6 +172,14 @@ export const routes = {
     platform: `${apiPrefix}/metrics/platform`,
   },
 
+  analytics: {
+    admin: `${apiPrefix}/analytics/admin`,
+    moderator: `${apiPrefix}/analytics/moderator`,
+    government: `${apiPrefix}/analytics/government`,
+    researcher: `${apiPrefix}/analytics/researcher`,
+    orgadmin: `${apiPrefix}/analytics/orgadmin`,
+  },
+
   notifications: {
     subscriptions: `${apiPrefix}/notifications/subscriptions`,
     unsubscribe: (id: string) => `${apiPrefix}/notifications/subscriptions/${id}`,
@@ -658,4 +666,92 @@ export interface CreateSubscriptionRequest {
   districtId?: string;
   minSeverity?: AlertSeverity;
   channel?: string;
+}
+
+// ─── Analytics Dashboards ─────────────────────────────────────────────────────
+
+export interface AdminDashboard {
+  users: {
+    total: number;
+    byRole: Array<{ role: string; count: number }>;
+  };
+  reports: {
+    pendingReview: number;
+    byStatus: Array<{ status: string; count: number }>;
+  };
+  alerts: {
+    activeBySeverity: Array<{ severity: string; count: number }>;
+  };
+  platform: {
+    organizations: number;
+    publishedDatasets: number;
+    speciesRecorded: number;
+    observationsThisMonth: number;
+    auditEventsToday: number;
+  };
+}
+
+export interface ModeratorDashboard {
+  queue: {
+    pending: number;
+    underReview: number;
+    totalPending: number;
+    reviewedToday: number;
+  };
+  byStatus: Array<{ status: string; count: number }>;
+  byCategory: Array<{ category: string; count: number }>;
+  submissionTrend: Array<{ day: string; count: number }>;
+}
+
+export interface GovernmentDashboard {
+  alerts: {
+    total: number;
+    bySeverity: Array<{ severity: string; count: number }>;
+    byDivision: Array<{ division: string; count: number }>;
+  };
+  reports: {
+    verifiedLast30d: number;
+    byCategory: Array<{ category: string; count: number }>;
+    topDistricts: Array<{ district: string; division: string; count: number }>;
+  };
+  climate: {
+    divisions: Array<{
+      name: string;
+      avgTemp: number | null;
+      avgPm25: number | null;
+      totalPrecip: number | null;
+      avgHumidity: number | null;
+    }>;
+  };
+}
+
+export interface ResearcherDashboard {
+  biodiversity: {
+    totalSpecies: number;
+    totalOccurrences: number;
+    topSpecies: Array<{ name: string; occurrences: number }>;
+    monthlyTrend: Array<{ month: string; count: number }>;
+  };
+  observations: {
+    total: number;
+    researchGrade: number;
+    researchGradePct: number;
+    byCategory: Array<{ category: string; count: number }>;
+    byTrust: Array<{ trustLevel: string; count: number }>;
+  };
+}
+
+export interface OrgAdminDashboard {
+  projects: {
+    total: number;
+    active: number;
+    newLast30d: number;
+    byStatus: Array<{ status: string; count: number }>;
+    byCategory: Array<{ category: string; count: number }>;
+  };
+  engagement: {
+    totalParticipants: number;
+    avgParticipantsPerProject: number;
+    topProjects: Array<{ id: string; title: string; participants: number }>;
+  };
 }

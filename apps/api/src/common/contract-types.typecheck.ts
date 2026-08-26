@@ -34,6 +34,11 @@ import type {
   CurrentWeatherReading,
   HourlyAirQualityReading,
   PlatformMetrics,
+  AdminDashboard,
+  ModeratorDashboard,
+  GovernmentDashboard,
+  ResearcherDashboard,
+  OrgAdminDashboard,
 } from '@nature-grid/contracts';
 
 import type { ReportsService } from '../reports/reports.service';
@@ -44,6 +49,7 @@ import type { RestorationService } from '../restoration/restoration.service';
 import type { BiodiversityService } from '../biodiversity/biodiversity.service';
 import type { WeatherService } from '../weather/weather.service';
 import type { MetricsService } from '../metrics/metrics.service';
+import type { AnalyticsService } from '../analytics/analytics.service';
 
 // ─── Jsonified utility ────────────────────────────────────────────────────────
 //
@@ -117,3 +123,20 @@ const _checkAirQuality: HourlyAirQualityReading | null = _airQuality;
 
 declare const _metrics: Awaited<ReturnType<MetricsService['getPlatformMetrics']>>;
 const _checkMetrics: PlatformMetrics = _metrics;
+
+// ─── Analytics ────────────────────────────────────────────────────────────────
+
+declare const _adminDashboard: Jsonified<Awaited<ReturnType<AnalyticsService['getAdminDashboard']>>>;
+const _checkAdminDashboard: AdminDashboard = _adminDashboard;
+
+declare const _moderatorDashboard: Jsonified<Awaited<ReturnType<AnalyticsService['getModeratorDashboard']>>>;
+const _checkModeratorDashboard: ModeratorDashboard = _moderatorDashboard;
+
+declare const _governmentDashboard: Jsonified<Awaited<ReturnType<AnalyticsService['getGovernmentDashboard']>>>;
+const _checkGovernmentDashboard: GovernmentDashboard = _governmentDashboard;
+
+declare const _researcherDashboard: Jsonified<Awaited<ReturnType<AnalyticsService['getResearcherDashboard']>>>;
+const _checkResearcherDashboard: ResearcherDashboard = _researcherDashboard;
+
+declare const _orgAdminDashboard: Jsonified<Awaited<ReturnType<AnalyticsService['getOrgAdminDashboard']>>>;
+const _checkOrgAdminDashboard: OrgAdminDashboard = _orgAdminDashboard;

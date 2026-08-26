@@ -6,6 +6,14 @@ import { useState } from 'react';
 import { logoutAction } from '../lib/auth-actions';
 import type { CurrentUser } from '../lib/current-user';
 
+const DASHBOARD_ROLES = new Set([
+  'ADMIN',
+  'MODERATOR',
+  'GOVERNMENT',
+  'RESEARCHER',
+  'ORGANIZATION_ADMIN',
+]);
+
 const NAV_SECTIONS = [
   {
     label: 'Explore',
@@ -99,6 +107,18 @@ export default function AppSidebar({ user }: { user: CurrentUser }) {
 
         {/* Nav links */}
         <nav aria-label="App navigation">
+          {DASHBOARD_ROLES.has(user.role) && (
+            <div>
+              <span className="nav-label">Analytics</span>
+              <Link
+                href="/dashboard"
+                className={isActive('/dashboard') ? 'active' : undefined}
+                onClick={close}
+              >
+                Dashboard
+              </Link>
+            </div>
+          )}
           {NAV_SECTIONS.map((section) => (
             <div key={section.label}>
               <span className="nav-label">{section.label}</span>
