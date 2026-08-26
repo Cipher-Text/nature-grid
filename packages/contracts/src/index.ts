@@ -267,6 +267,20 @@ export interface DivisionSummary {
   _count?: { districts: number };
 }
 
+/** Returned by GET /api/v1/locations/divisions — includes 30-day rolling climate columns */
+export interface DivisionWithClimate extends DivisionSummary {
+  avgTemp30d: number | null;
+  minTemp30d: number | null;
+  maxTemp30d: number | null;
+  avgHumidity30d: number | null;
+  totalPrecip30d: number | null;
+  avgWindSpeed30d: number | null;
+  avgPm25_30d: number | null;
+  avgPm10_30d: number | null;
+  avgUvIndex30d: number | null;
+  climateUpdatedAt: string | null;
+}
+
 export interface DistrictSummary {
   id: string;
   name: string;
@@ -277,6 +291,17 @@ export interface DistrictSummary {
   areaSqKm?: number | null;
   division?: { id: string; name: string };
   _count?: { upazilas: number };
+}
+
+/** Returned by GET /api/v1/locations/districts — includes 30-day rolling climate columns */
+export interface DistrictWithClimate extends DistrictSummary {
+  avgTemp30d: number | null;
+  maxTemp30d: number | null;
+  totalPrecip30d: number | null;
+  avgPm25_30d: number | null;
+  avgPm10_30d: number | null;
+  avgUvIndex30d: number | null;
+  climateUpdatedAt: string | null;
 }
 
 export interface UpazilaSummary {
