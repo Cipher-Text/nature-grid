@@ -6,7 +6,7 @@ Global prefix is `/api/v1` (see `packages/contracts/src/index.ts` for the canoni
 
 Legend: ✓ Implemented | ~ Stub only | ✗ Not started
 
-Registered in `app.module.ts`: `database`, `auth`, `users`, `organizations`, `locations`, `providers`, `datasets`, `reports`, `alerts`, `biodiversity`, `observations`, `restoration`, `media`, `ingestion`, `weather`, `metrics`.
+Registered in `app.module.ts`: `database`, `auth`, `users`, `organizations`, `locations`, `locations/climate`, `providers`, `datasets`, `reports`, `alerts`, `biodiversity`, `observations`, `restoration`, `media`, `ingestion`, `weather`, `flood`, `metrics`, `notifications`.
 
 ## database ✓
 
@@ -74,7 +74,7 @@ Owns administrative geography for Bangladesh.
 
 Entities: `Division → District → Upazila → Union`
 
-Seeded on first boot via `OnModuleInit`: 8 divisions, 64 districts with real lat/lng. Coordinates are backfilled on boot if missing.
+Seeded on first boot via `OnModuleInit`: 8 divisions, 64 districts (56 with GeoJSON boundary), 494 upazilas, 4,540 unions — all with lat/lng. All coordinates are hardcoded in `apps/api/src/locations/seed/bangladesh.ts`; no runtime file reads are required.
 
 | Method | Path | Access |
 | --- | --- | --- |
@@ -82,13 +82,23 @@ Seeded on first boot via `OnModuleInit`: 8 divisions, 64 districts with real lat
 | GET | `/locations/districts` | Public (`?divisionId`) |
 | GET | `/locations/districts/:id` | Public |
 | GET | `/locations/upazilas` | Public (`?districtId`) |
+| GET | `/locations/upazilas/:id` | Public |
 | GET | `/locations/unions` | Public (`?upazilaId`) |
+| GET | `/locations/unions/:id` | Public |
+
+## locations/climate ✓
+
+Owns the daily union-level climate ingestion pipeline. No HTTP endpoints — scheduler only.
+
+`LocationClimateScheduler` runs daily at midnight (`@Cron('0 0 0 * * *')`). `LocationClimateService` calls the OpenMeteo forecast API (daily temp max/min/mean, precipitation, wind speed, UV index) and air-quality API (PM2.5, PM10, ozone, UV index) in batch: up to 1,000 union coordinates per HTTP request, so 4,540 unions require just 6 requests total. The service reuses `WeatherOpenMeteoClient` exported from `WeatherModule`.
+
+Raw daily results are upserted into `UnionDailyClimate` (one row per union per day, unique on `(unionId, date)`). After inserting, 30-day rolling averages are recomputed bottom-up — Union → Upazila → District → Division — via bulk `UPDATE … FROM (SELECT … GROUP BY)` SQL, updating the 11 climate columns on each geography model in a single pass per level.
 
 ## providers ✓
 
 Owns data source provenance: government agencies, research institutions, NGOs, satellite feeds, IoT sensors.
 
-Auto-seeds the `OpenMeteo` provider on first boot.
+Auto-seeds the `OpenMeteo` and `GBIF` provider records on first boot.
 
 | Method | Path | Access |
 | --- | --- | --- |
@@ -279,4 +289,4 @@ If audit event volume grows, extract to a dedicated `AuditModule` with its own s
 
 ## Coverage note
 
-`app.module.ts` registers 17 modules: `database` plus 16 feature modules. All are implemented except the `media` stub; `ingestion` now owns provider job tracking. Advanced domains not yet represented by a module — satellite ingestion, climate prediction, emissions, carbon accounting, research publications, structured surveys — are planned for Phase 7. See `docs/roadmap.md` and `docs/architecture/feature-map.md`.
+`app.module.ts` registers 20 modules: `database` plus 19 feature modules (including `locations/climate`, `flood`, and `notifications`). All are implemented except the `media` stub; `ingestion` now owns provider job tracking. Advanced domains not yet represented by a module — satellite ingestion, long-range climate projections, emissions, carbon accounting, research publications, structured surveys — are planned for Phase 7. See `docs/roadmap.md` and `docs/architecture/feature-map.md`.

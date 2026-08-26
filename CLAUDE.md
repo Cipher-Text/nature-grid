@@ -19,7 +19,9 @@ pnpm db:push        # prisma db push (sync without migration file)
 pnpm db:studio      # prisma studio
 
 # Infrastructure
-docker-compose up -d  # Start Postgres 16/PostGIS on :5433 + Redis 7 on :6379
+docker compose up -d           # Start Redis + API + web + admin containers
+docker compose build api       # Rebuild API image after schema/migration changes
+docker compose logs api -f     # Stream API logs (seeding, cron jobs)
 
 # API tests (from apps/api)
 pnpm exec jest                                  # All tests
@@ -47,7 +49,7 @@ packages/ui        Empty placeholder
 packages/config    Empty placeholder
 ```
 
-**Postgres runs on port 5433** (docker-compose remaps it; local Postgres occupies 5432). `DATABASE_URL` must reflect this.
+**Postgres is local-only** — the docker-compose no longer runs a Postgres container. Local Postgres runs on **port 5432**; `DATABASE_URL` must use `localhost:5432`. The API container connects via `host.docker.internal:5432`.
 
 ### API (NestJS)
 
@@ -58,7 +60,7 @@ Global setup in `apps/api/src/main.ts`:
 - `JwtAuthGuard` + `RolesGuard` registered via `useGlobalGuards`; `ThrottlerGuard` registered via `APP_GUARD` in `AppModule` (needs DI)
 - Rate limits: global 120 req / 60 s; auth endpoints tightened — login/register 5 req / 60 s, refresh 20 req / 60 s
 
-**Feature modules** (`apps/api/src/`): `auth`, `users`, `organizations`, `locations`, `providers`, `datasets`, `reports`, `alerts`, `observations`, `restoration`, `biodiversity`, `weather`, `metrics`, `notifications`, `database`, `common`. Stubs with no implementation: `media`, `ingestion`.
+**Feature modules** (`apps/api/src/`): `auth`, `users`, `organizations`, `locations`, `locations/climate`, `providers`, `datasets`, `reports`, `alerts`, `observations`, `restoration`, `biodiversity`, `weather`, `metrics`, `notifications`, `database`, `common`. Stubs with no implementation: `media`, `ingestion`.
 
 Each feature module follows: `*.module.ts` → `*.controller.ts` → `*.service.ts` → `dto/` folder.
 
@@ -75,16 +77,16 @@ Each feature module follows: `*.module.ts` → `*.controller.ts` → `*.service.
 
 ### Database (Prisma)
 
-Schema: `packages/database/prisma/schema.prisma` — 28 models, 17 enums.
+Schema: `packages/database/prisma/schema.prisma` — 30 models, 17 enums. Single migration: `packages/database/prisma/migrations/20260826150548_init`.
 
 **All IDs are Prisma CUIDs** (e.g. `cmstewlrj0012usw17sqz1d3n`). Use `@IsString()` in DTO validators, never `@IsUUID()`.
 
 **All enum values are UPPERCASE** and defined in `packages/shared`. A previous bug had them lowercase, causing `RolesGuard` to reject every request including admins. The shared package is the canonical source — Prisma, guards, and DTOs must all agree.
 
 Seeding happens in service `onModuleInit()` hooks (idempotent `count()` check):
-- `LocationsService` — seeds 8 divisions + 64 districts with coordinates
-- `ProvidersService` — seeds OpenMeteo provider record
-- `DatasetsService` — seeds 5 dataset catalog records
+- `LocationsService` — seeds 8 divisions, 64 districts (56 with GeoJSON boundary), 494 upazilas, 4,540 unions — all with lat/lng. Hardcoded in `apps/api/src/locations/seed/bangladesh.ts` (no runtime file reads). Regenerate with `scripts/gen-bangladesh-seed.py` from `administrative.json` + `districts.geojson`.
+- `ProvidersService` — seeds OpenMeteo + GBIF provider records
+- `DatasetsService` — seeds 6 dataset catalog records
 
 Every mutation writes an `AuditEvent` record (action, userId, entityType, entityId, meta, ipAddress).
 
@@ -92,6 +94,8 @@ Notable schema decisions:
 - `Occurrence.gbifOccurrenceKey` is `BigInt` — real GBIF keys exceed `INT4` range (caught on first live sync)
 - Geography fields are plain `Float` lat/lng, not PostGIS `geography` — the PostGIS image runs but the type is not yet used in schema
 - No org-membership model — `ORGANIZATION_ADMIN` is a bare role, not scoped to a specific organization
+- All 4 geography models (`Division`, `District`, `Upazila`, `Union`) carry 11 climate columns (`avgTemp30d`, `minTemp30d`, `maxTemp30d`, `avgHumidity30d`, `totalPrecip30d`, `avgWindSpeed30d`, `avgCloudCover30d`, `avgPm25_30d`, `avgPm10_30d`, `avgUvIndex30d`, `climateUpdatedAt`) — populated nightly by `LocationClimateModule`
+- `UnionDailyClimate` — raw daily history per union; the source for 30-day rolling averages
 
 ### Frontend (apps/web)
 
@@ -100,6 +104,8 @@ Next.js 14 App Router, Server Components throughout — no `useState`, no Redux,
 Route groups: `(public)` — `/`, `/login`, `/register`; `(app)` — all other pages behind a sidebar shell. Edge middleware (`middleware.ts`) guards `/profile` and auto-refreshes expired access tokens before page render.
 
 Fetch helpers: `apiGet` (cached), `apiGetAuthed`, `apiPost`, `apiPostAuthed` (never cached).
+
+**`DistrictSelect` component** (`apps/web/components/district-select.tsx`) — Server Component that renders a `<select>` with districts grouped by division via `<optgroup>`. Accepts `DistrictWithDivision[]` (includes `division?: { id, name }`). Used on profile, reports, observations, restoration pages.
 
 `apps/web` depends on `@nature-grid/contracts` for route constants and DTOs. `apps/api` has `@nature-grid/contracts` as a **devDependency only** — it is never imported in production code, but `apps/api/src/common/contract-types.typecheck.ts` uses it for compile-time contract enforcement: every service return type is asserted against its contract type via `tsc --noEmit` in CI. A service dropping a required field or changing a field type will produce a `TS2322` error and fail the build.
 
@@ -117,12 +123,13 @@ Route groups: `(auth)` — `/login`; `(admin)` — all other pages behind a dark
 
 Pages: Reports (moderation queue, 5-status tabs), Users (role change, deactivate), Alerts (create, cancel, status tabs), Datasets (publish toggle, access policy). Ingestion dashboard blocked — `IngestionModule` is an empty stub.
 
-### Weather & Biodiversity modules
+### Weather, Biodiversity & Location Climate modules
 
-Both are self-contained; neither is wired to the generic `ingestion` module stubs.
+All three are self-contained; none is wired to the generic `ingestion` module stubs.
 
-- `weather/` — OpenMeteo HTTP client, three cron jobs (current every 15 min, hourly/AQ every 2 h, daily every 12 h), public read endpoints
+- `weather/` — OpenMeteo HTTP client (`WeatherOpenMeteoClient`, exported from `WeatherModule`), three cron jobs (current every 15 min, hourly/AQ every 2 h, daily every 12 h), public read endpoints. Fetches at **district** level (64 locations).
 - `biodiversity/` — GBIF HTTP client, daily sync cron (fetches 1 000 occurrences), species + occurrence read endpoints
+- `locations/climate/` — `LocationClimateModule` with a daily cron (`0 0 0 * * *`). Fetches OpenMeteo at **union** level using the batch API (up to 1,000 coords per HTTP request — 4,540 unions = 6 total requests). Stores raw daily data in `UnionDailyClimate`, then recomputes 30-day rolling averages bottom-up: Union → Upazila → District → Division via bulk `UPDATE … FROM (SELECT … GROUP BY)` SQL. Reuses `WeatherOpenMeteoClient` from `WeatherModule` (import `WeatherModule` to get it).
 
 ### Testing
 
@@ -141,7 +148,7 @@ CI (`.github/workflows/ci.yml`): `pnpm install --frozen-lockfile` → `prisma ge
 
 | Variable | Notes |
 |---|---|
-| `DATABASE_URL` | Must point to port **5433** for local docker dev |
+| `DATABASE_URL` | Local dev: `localhost:5432`. Docker container uses `host.docker.internal:5432`. |
 | `JWT_SECRET` | Required. ≥ 32 chars, no known placeholders. App fails fast if absent. |
 | `PORT` | Defaults to `3001` |
 | `CORS_ORIGIN` | Defaults to `*` in dev |

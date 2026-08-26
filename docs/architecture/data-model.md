@@ -2,7 +2,7 @@
 
 Nature Grid uses PostgreSQL as the primary database. The Prisma schema lives at `packages/database/prisma/schema.prisma`. The Prisma client is regenerated via `pnpm run db:generate` from the `packages/database` directory.
 
-Current state: **32 models, 20 enums, 18 migrations applied.**
+Current state: **30 models, 17 enums, 1 migration applied (`20260826150548_init`).**
 
 ## Enums
 
@@ -52,10 +52,11 @@ Current state: **32 models, 20 enums, 18 migrations applied.**
 
 | Model | Key Fields | Relations |
 | --- | --- | --- |
-| `Division` | `id`, `name unique`, `bnName?` | → `District[]` |
-| `District` | `id`, `name`, `bnName?`, `lat?`, `lng?`, `divisionId` | → `Division`, `Upazila[]`, `CitizenReport[]`, `Alert[]`, `Observation[]`, `RestorationProject[]`, `Occurrence[]`, plus all 4 weather tables; unique `(name, divisionId)` |
-| `Upazila` | `id`, `name`, `bnName?`, `districtId` | → `District`, `Union[]`; unique `(name, districtId)` |
-| `Union` | `id`, `name`, `bnName?`, `upazilaId` | → `Upazila`; unique `(name, upazilaId)` |
+| `Division` | `id`, `name unique`, `bnName?`, `slug`, `pcode`, `lat`, `lng`, `areaSqKm`, `url`; climate: `avgTemp30d`, `minTemp30d`, `maxTemp30d`, `avgHumidity30d`, `totalPrecip30d`, `avgWindSpeed30d`, `avgCloudCover30d`, `avgPm25_30d`, `avgPm10_30d`, `avgUvIndex30d`, `climateUpdatedAt` | → `District[]` |
+| `District` | `id`, `name`, `bnName?`, `slug`, `pcode`, `lat`, `lng`, `areaSqKm`, `url`, `centerLat`, `centerLng`, `boundary Json?`, `divisionId`; climate columns (same 11 as Division) | → `Division`, `Upazila[]`, `CitizenReport[]`, `Alert[]`, `Observation[]`, `RestorationProject[]`, `Occurrence[]`, plus all 4 weather tables; unique `(name, divisionId)` |
+| `Upazila` | `id`, `name`, `bnName?`, `slug`, `pcode`, `lat`, `lng`, `areaSqKm`, `url`, `districtId`; climate columns (same 11 as Division) | → `District`, `Union[]`; unique `(name, districtId)` |
+| `Union` | `id`, `name`, `bnName?`, `slug`, `pcode`, `lat`, `lng`, `areaSqKm`, `url`, `upazilaId`; climate columns (same 11 as Division) | → `Upazila`, `UnionDailyClimate[]`; unique `(name, upazilaId)` |
+| `UnionDailyClimate` | `id`, `unionId`, `date Date`, `avgTemp`, `minTemp`, `maxTemp`, `avgHumidity`, `totalPrecip`, `avgWindSpeed`, `maxWindSpeed`, `avgCloudCover`, `avgPm25`, `avgPm10`, `avgUvIndex`, `avgOzone`, `fetchedAt`; unique `(unionId, date)` | → `Union` |
 
 ## Datasets
 
@@ -144,6 +145,10 @@ Future candidates for proper geometry fields:
 - `Upazila` — boundary polygon
 - `WaterBody` — shape (planned model, not yet in schema)
 
+## Notable schema decisions
+
+**Climate columns:** All four geography models (`Division`, `District`, `Upazila`, `Union`) carry 11 rolling-average climate columns (`avgTemp30d`, `minTemp30d`, `maxTemp30d`, `avgHumidity30d`, `totalPrecip30d`, `avgWindSpeed30d`, `avgCloudCover30d`, `avgPm25_30d`, `avgPm10_30d`, `avgUvIndex30d`, `climateUpdatedAt`). These are 30-day rolling averages recomputed nightly by `LocationClimateModule` via bulk SQL aggregation bottom-up from union level. Raw daily data per union is stored in `UnionDailyClimate` (one row per union per day). See `docs/integrations/openmeteo-climate.md` for implementation details.
+
 ## Planned Models (not yet in schema)
 
 | Model | Phase | Purpose |
@@ -206,38 +211,21 @@ Defined in the schema; no code writes these transitions yet.
 
 ## Database Setup
 
-> **Port note:** Docker Postgres is mapped to `5433` (not the default 5432) because a local Postgres instance occupies 5432 on this machine. `DATABASE_URL` in `.env` uses port 5433 accordingly.
+Postgres runs locally on port 5432. The docker-compose no longer includes a Postgres container. `DATABASE_URL` in `.env` uses port 5432. When running the API in Docker, set `DATABASE_URL` to `host.docker.internal:5432`.
 
 ```bash
-docker-compose up -d          # Start PostgreSQL 16/PostGIS on :5433, Redis 7 on :6379
+docker-compose up -d          # Start Redis 7 on :6379 (Postgres is local-only)
 cd packages/database && pnpm run db:migrate   # Create/update schema
 pnpm run db:generate          # Regenerate Prisma client after schema changes
 pnpm run db:studio            # Open Prisma Studio at localhost:5555
 ```
 
-**Migrations applied (18, in order):**
+**Migrations applied (1):**
 
 | Migration | Adds |
 | --- | --- |
-| `20260814204043_init` | 13 core tables |
-| `20260816113512_add_district_coordinates` | `District.lat` / `lng` |
-| `20260816115338_add_weather_tables` | 4 weather tables |
-| `20260816140931_add_refresh_tokens` | `RefreshToken` |
-| `20260817181448_add_observations` | `Observation` |
-| `20260819104332_add_restoration_projects` | `RestorationProject`, `RestorationParticipant` |
-| `20260819145646_add_biodiversity` | `Species`, `Occurrence` |
-| `20260819150726_fix_gbif_occurrence_key_bigint` | `Occurrence.gbifOccurrenceKey` → `BigInt` |
-| `20260819173836_add_dataset_access_requests` | `DatasetAccessRequest` |
-| `20260819185617_add_user_deactivate_audit_action` | `AuditAction.USER_DEACTIVATE` |
-| `20260820200435_add_user_login_failed_audit_action` | `AuditAction.USER_LOGIN_FAILED` |
-| `20260821215250_add_notification_subscriptions_and_deliveries` | `AlertSubscription`, `NotificationDelivery`, `NotificationChannel`, `DeliveryStatus` enums |
-| `20260822100000_add_dataset_update_audit_action` | `AuditAction.DATASET_UPDATE` |
-| `20260822120000_add_report_comment_and_media` | `ReportComment`, `ReportMedia`, `AuditAction.REPORT_COMMENT_ADD`, `AuditAction.REPORT_MEDIA_ADD` |
-| `20260825120000_add_flood_forecasts` | `FloodForecast` |
-| `20260825130000_split_organization_type` | Dedicated `OrganizationType` enum for organizations |
-| `20260825140000_add_organization_memberships` | `OrganizationMemberRole`, `OrganizationMembership` |
-| `20260825150000_add_user_profiles` | `ProfileVisibility`, `UserProfile`, `UserSocialLink` |
+| `20260826150548_init` | Full schema — all 30 tables and 17 enums in a single fresh migration |
 
-32 tables live.
+30 tables live.
 
-The `LocationsService`, `DatasetsService`, and `ProvidersService` auto-seed geography, catalog, and provider data on first boot via `OnModuleInit`. `LocationsService` also backfills district coordinates if missing. No separate seed script is required for those tables.
+The `LocationsService`, `DatasetsService`, and `ProvidersService` auto-seed geography, catalog, and provider data on first boot via `OnModuleInit`. `LocationsService` seeds 8 divisions, 64 districts (56 with GeoJSON boundary), 494 upazilas, and 4,540 unions — all with lat/lng. All coordinates are hardcoded in `apps/api/src/locations/seed/bangladesh.ts`; no runtime file reads are required. `DatasetsService` seeds 6 catalog records. `ProvidersService` seeds both the OpenMeteo and GBIF provider records. No separate seed script is required for those tables.

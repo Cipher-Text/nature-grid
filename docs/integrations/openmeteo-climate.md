@@ -2,9 +2,31 @@
 
 ## Status
 
-Not implemented.
+Implemented (2026-08-26).
 
-Nature Grid currently integrates OpenMeteo forecast and air-quality APIs only. The OpenMeteo Climate API is a separate candidate source for long-range climate model data, climate-change projections, and historical model validation data.
+Nature Grid now uses the OpenMeteo forecast and air-quality APIs to build operational climate summaries at union level. See the Implementation section below for details. The OpenMeteo Climate API (long-range climate model projections) remains a separate future candidate — see "Possible Nature Grid Use" below.
+
+## Implementation
+
+**Module:** `LocationClimateModule` at `apps/api/src/locations/climate/`
+
+**`LocationClimateService`** calls two OpenMeteo APIs in batch:
+
+- Forecast API — daily variables: `temperature_2m_max`, `temperature_2m_min`, `temperature_2m_mean`, `precipitation_sum`, `wind_speed_10m_mean`, `uv_index_max`
+- Air Quality API — hourly variables: `pm10`, `pm2_5`, `ozone`, `uv_index`; also hourly `relative_humidity_2m` and `cloud_cover` from the forecast API
+
+Up to 1,000 union coordinates are sent per HTTP request. With 4,540 unions, the full nightly run completes in 6 HTTP requests total. The service reuses `WeatherOpenMeteoClient` exported from `WeatherModule`.
+
+**`LocationClimateScheduler`** runs daily at midnight via `@Cron('0 0 0 * * *')`.
+
+**Storage:**
+
+- `UnionDailyClimate` — raw daily record per union per day (unique on `(unionId, date)`). Fields: `avgTemp`, `minTemp`, `maxTemp`, `avgHumidity`, `totalPrecip`, `avgWindSpeed`, `maxWindSpeed`, `avgCloudCover`, `avgPm25`, `avgPm10`, `avgUvIndex`, `avgOzone`, `fetchedAt`.
+- 11 rolling-average columns on each of the 4 geography models (`Division`, `District`, `Upazila`, `Union`): `avgTemp30d`, `minTemp30d`, `maxTemp30d`, `avgHumidity30d`, `totalPrecip30d`, `avgWindSpeed30d`, `avgCloudCover30d`, `avgPm25_30d`, `avgPm10_30d`, `avgUvIndex30d`, `climateUpdatedAt`.
+
+**Aggregation:** After raw data is upserted, 30-day rolling averages are recomputed bottom-up — Union → Upazila → District → Division — via bulk `UPDATE … FROM (SELECT … GROUP BY)` SQL (one pass per geographic level).
+
+> **Note:** This implementation uses the standard OpenMeteo forecast API and air-quality API, NOT the OpenMeteo Climate API (`climate-api.open-meteo.com`). The goal is operational climate summaries at union level for Nature Grid's public data pages and alert context. The long-range climate projection API documented below remains a future candidate.
 
 ## Provider
 
@@ -14,9 +36,9 @@ Nature Grid currently integrates OpenMeteo forecast and air-quality APIs only. T
 | API key | Not required for non-commercial use |
 | Official docs | `https://open-meteo.com/en/docs/climate-api` |
 | Endpoint | `https://climate-api.open-meteo.com/v1/climate` |
-| Current client | None |
-| Current scheduler | None |
-| Current storage | None |
+| Current client | `LocationClimateService` (reuses `WeatherOpenMeteoClient`) |
+| Current scheduler | `LocationClimateScheduler` — daily at midnight |
+| Current storage | `UnionDailyClimate` + 11 rolling-average columns on each geography model |
 
 ## Available Data
 
@@ -83,11 +105,13 @@ Candidate use cases:
 - Climate-change education and public dashboards.
 - Agriculture and public-health risk analysis when combined with local reports and observations.
 
-## Implementation Needed
+## Future Work (Climate Projection API)
 
-- Add climate schema or dataset models; current weather tables are operational forecasts and are not designed for multi-model climate projections.
+The items below apply specifically to integrating the OpenMeteo Climate API (`climate-api.open-meteo.com`) for long-range projections — not to the operational climate pipeline above, which is already implemented.
+
+- Add climate projection schema models; current weather and `UnionDailyClimate` tables are operational records and are not designed for multi-model climate projections.
 - Decide storage granularity: district centroids, divisions, selected ecological zones, or user-requested locations.
 - Decide whether to store every model separately or derived aggregates only.
-- Add an OpenMeteo climate client under `apps/api/src/weather/` or a new `climate` module.
-- Add batch ingestion rather than frequent cron; the dataset is long-range and heavy compared with current weather.
+- Add a dedicated OpenMeteo climate-projection client (separate from `WeatherOpenMeteoClient`).
+- Prefer batch ingestion over frequent cron; the projection dataset is long-range and heavy.
 - Add public API routes and dataset catalog entries.
