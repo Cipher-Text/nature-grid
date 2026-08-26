@@ -1,10 +1,12 @@
 import Link from 'next/link';
-import { apiGet } from '../../../lib/api';
+import { cookies } from 'next/headers';
+import { apiGet, apiGetAuthed } from '../../../lib/api';
 import { getCurrentUser } from '../../../lib/current-user';
 import { createRestorationProjectAction, joinRestorationProjectAction } from '../../../lib/restoration-actions';
 import { routes, type RestorationProject, type PaginatedEnvelope } from '@nature-grid/contracts';
-import { titleCase, relativeTime } from '../../../lib/format';
+import { titleCase } from '../../../lib/format';
 import DistrictSelect, { type DistrictWithDivision } from '../../../components/district-select';
+import { ACCESS_TOKEN_COOKIE } from '../../../lib/session-constants';
 
 const CATEGORIES = [
   'TREE_PLANTING',
@@ -47,11 +49,12 @@ export default async function RestorationPage({
   ]);
 
   const canCreate = user !== null && CREATOR_ROLES.has(user.role);
+  const accessToken = cookies().get(ACCESS_TOKEN_COOKIE)?.value ?? '';
 
   const [districts, organizations] = canCreate
     ? await Promise.all([
         apiGet<DistrictOption[]>(routes.locations.districts),
-        apiGet<PaginatedEnvelope<OrganizationOption>>(`${routes.organizations.list}?pageSize=100`).then(
+        apiGetAuthed<PaginatedEnvelope<OrganizationOption>>(`${routes.organizations.list}?pageSize=100`, accessToken).then(
           (res) => res.data,
         ),
       ])
