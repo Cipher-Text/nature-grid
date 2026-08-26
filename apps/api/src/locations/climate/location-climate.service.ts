@@ -1,15 +1,25 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { WeatherOpenMeteoClient } from '../../weather/weather-openmeteo.client';
+import {
+  OpenMeteoUnionWeatherResponse,
+  OpenMeteoUnionAirQualityResponse,
+} from '../../weather/dto/open-meteo-response.dto';
 
-/** Throttle between union fetches — keeps us within OpenMeteo free-tier (10k req/day). */
-const INTER_UNION_DELAY_MS = 100;
+/**
+ * OpenMeteo supports up to 1,000 locations per batch request.
+ * 2,629 unions with coordinates → 3 HTTP requests instead of 2,629.
+ */
+const BATCH_SIZE = 1_000;
+const INTER_BATCH_DELAY_MS = 500;
 
 function numAvg(values: (number | null | undefined)[]): number | null {
   const valid = values.filter((v): v is number => v != null && !Number.isNaN(v));
   if (valid.length === 0) return null;
   return valid.reduce((a, b) => a + b, 0) / valid.length;
 }
+
+type UnionWithCoords = { id: string; name: string; lat: number; lng: number };
 
 @Injectable()
 export class LocationClimateService {
@@ -22,33 +32,48 @@ export class LocationClimateService {
 
   /**
    * Full daily sync:
-   *   1. Fetch OpenMeteo for every union that has coordinates.
-   *   2. Upsert a UnionDailyClimate row for today.
-   *   3. Recompute 30-day rolling averages on Union rows (bulk SQL).
-   *   4. Aggregate Union → Upazila → District → Division (bulk SQL).
+   *   1. Fetch OpenMeteo in batches of 1,000 unions per HTTP request.
+   *   2. Upsert a UnionDailyClimate row for today per union (batched in a transaction).
+   *   3. Recompute 30-day rolling averages on Union rows (single bulk SQL).
+   *   4. Aggregate Union → Upazila → District → Division (3 bulk SQL statements).
    */
   async syncAll(): Promise<void> {
-    const unions = await this.prisma.union.findMany({
-      where: { lat: { not: null }, lng: { not: null } },
+    // Load all unions; filter for those with coordinates in JS to avoid any Prisma
+    // type-narrowing issues on nullable Float fields.
+    const allUnions = await this.prisma.union.findMany({
       select: { id: true, name: true, lat: true, lng: true },
     });
+    // Map through to narrow nullable lat/lng to number — avoids Prisma type-predicate issues.
+    const unions: UnionWithCoords[] = allUnions
+      .filter((u) => u.lat != null && u.lng != null)
+      .map((u) => ({
+        id: u.id,
+        name: u.name,
+        lat: u.lat as number,
+        lng: u.lng as number,
+      }));
 
-    this.logger.log(`Syncing climate for ${unions.length} unions with coordinates`);
+    const totalBatches = Math.ceil(unions.length / BATCH_SIZE);
+    this.logger.log(
+      `Syncing climate for ${unions.length} unions in ${totalBatches} batch(es)`,
+    );
 
     let ok = 0;
     let fail = 0;
 
-    for (let i = 0; i < unions.length; i++) {
-      const u = unions[i] as { id: string; name: string; lat: number; lng: number };
+    for (let i = 0; i < unions.length; i += BATCH_SIZE) {
+      const batch = unions.slice(i, i + BATCH_SIZE);
+      const batchNum = Math.floor(i / BATCH_SIZE) + 1;
       try {
-        await this.syncUnion(u);
-        ok++;
+        await this.syncBatch(batch);
+        ok += batch.length;
+        this.logger.log(`Batch ${batchNum}/${totalBatches} done (${batch.length} unions)`);
       } catch (err) {
-        fail++;
-        this.logger.error(`Climate fetch failed for union ${u.name}: ${String(err)}`);
+        fail += batch.length;
+        this.logger.error(`Batch ${batchNum}/${totalBatches} failed: ${String(err)}`);
       }
-      if (i < unions.length - 1) {
-        await new Promise((r) => setTimeout(r, INTER_UNION_DELAY_MS));
+      if (i + BATCH_SIZE < unions.length) {
+        await new Promise((r) => setTimeout(r, INTER_BATCH_DELAY_MS));
       }
     }
 
@@ -62,51 +87,78 @@ export class LocationClimateService {
     this.logger.log('Bottom-up climate aggregation complete');
   }
 
-  // ─── Per-union fetch ──────────────────────────────────────────────────────
+  // ─── Batch fetch + upsert ──────────────────────────────────────────────────
 
-  private async syncUnion(union: { id: string; lat: number; lng: number }): Promise<void> {
+  private async syncBatch(batch: UnionWithCoords[]): Promise<void> {
+    const lats = batch.map((u) => u.lat).join(',');
+    const lngs = batch.map((u) => u.lng).join(',');
+
+    const [weatherRaw, aqRaw] = await Promise.all([
+      this.openMeteo.fetchUnionWeatherBatch(lats, lngs),
+      this.openMeteo.fetchUnionAirQualityBatch(lats, lngs),
+    ]);
+
+    // OpenMeteo returns a single object for 1 coord, an array for multiple.
+    const weatherArr: OpenMeteoUnionWeatherResponse[] = Array.isArray(weatherRaw)
+      ? weatherRaw
+      : [weatherRaw];
+    const aqArr: OpenMeteoUnionAirQualityResponse[] = Array.isArray(aqRaw)
+      ? aqRaw
+      : [aqRaw];
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const [weather, aq] = await Promise.all([
-      this.openMeteo.fetchUnionWeather(union.lat, union.lng),
-      this.openMeteo.fetchUnionAirQuality(union.lat, union.lng),
-    ]);
+    const upserts = batch
+      .map((union, i) => {
+        const w = weatherArr[i];
+        const aq = aqArr[i];
+        if (!w || !aq) return null;
 
-    // Daily values (index 0 = today's forecast)
-    const tempMax = weather.daily.temperature_2m_max?.[0] ?? null;
-    const tempMin = weather.daily.temperature_2m_min?.[0] ?? null;
-    const avgTemp = tempMax != null && tempMin != null ? (tempMax + tempMin) / 2 : null;
-    const totalPrecip = weather.daily.precipitation_sum?.[0] ?? null;
-    const maxWindSpeed = weather.daily.wind_speed_10m_max?.[0] ?? null;
-    const uvMax = weather.daily.uv_index_max?.[0] ?? null;
+        const tempMax = w.daily.temperature_2m_max?.[0] ?? null;
+        const tempMin = w.daily.temperature_2m_min?.[0] ?? null;
+        const avgTemp =
+          tempMax != null && tempMin != null ? (tempMax + tempMin) / 2 : null;
+        const totalPrecip = w.daily.precipitation_sum?.[0] ?? null;
+        const maxWindSpeed = w.daily.wind_speed_10m_max?.[0] ?? null;
+        const uvMax = w.daily.uv_index_max?.[0] ?? null;
 
-    // Hourly averages across today's 24 slots
-    const avgHumidity = numAvg(weather.hourly.relative_humidity_2m?.slice(0, 24) ?? []);
-    const avgCloudCover = numAvg(weather.hourly.cloud_cover?.slice(0, 24) ?? []);
-    const avgPm25 = numAvg(aq.hourly.pm2_5?.slice(0, 24) ?? []);
-    const avgPm10 = numAvg(aq.hourly.pm10?.slice(0, 24) ?? []);
-    const avgOzone = numAvg(aq.hourly.ozone?.slice(0, 24) ?? []);
-    const avgUvIndex = numAvg(aq.hourly.uv_index?.slice(0, 24) ?? []) ?? uvMax;
+        const avgHumidity = numAvg(w.hourly.relative_humidity_2m?.slice(0, 24) ?? []);
+        const avgCloudCover = numAvg(w.hourly.cloud_cover?.slice(0, 24) ?? []);
+        const avgPm25 = numAvg(aq.hourly.pm2_5?.slice(0, 24) ?? []);
+        const avgPm10 = numAvg(aq.hourly.pm10?.slice(0, 24) ?? []);
+        const avgOzone = numAvg(aq.hourly.ozone?.slice(0, 24) ?? []);
+        const avgUvIndex = numAvg(aq.hourly.uv_index?.slice(0, 24) ?? []) ?? uvMax;
 
-    await this.prisma.unionDailyClimate.upsert({
-      where: { unionId_date: { unionId: union.id, date: today } },
-      update: {
-        avgTemp, minTemp: tempMin, maxTemp: tempMax,
-        avgHumidity, totalPrecip, avgWindSpeed: maxWindSpeed, maxWindSpeed,
-        avgCloudCover, avgPm25, avgPm10, avgUvIndex, avgOzone,
-        fetchedAt: new Date(),
-      },
-      create: {
-        unionId: union.id, date: today,
-        avgTemp, minTemp: tempMin, maxTemp: tempMax,
-        avgHumidity, totalPrecip, avgWindSpeed: maxWindSpeed, maxWindSpeed,
-        avgCloudCover, avgPm25, avgPm10, avgUvIndex, avgOzone,
-      },
-    });
+        const data = {
+          avgTemp,
+          minTemp: tempMin,
+          maxTemp: tempMax,
+          avgHumidity,
+          totalPrecip,
+          avgWindSpeed: maxWindSpeed,
+          maxWindSpeed,
+          avgCloudCover,
+          avgPm25,
+          avgPm10,
+          avgUvIndex,
+          avgOzone,
+        };
+
+        return this.prisma.unionDailyClimate.upsert({
+          where: { unionId_date: { unionId: union.id, date: today } },
+          update: { ...data, fetchedAt: new Date() },
+          create: { unionId: union.id, date: today, ...data },
+        });
+      })
+      .filter((p): p is NonNullable<typeof p> => p !== null);
+
+    if (upserts.length > 0) {
+      await this.prisma.$transaction(upserts);
+    }
   }
 
-  // ─── Bulk aggregation (raw SQL for efficiency) ────────────────────────────
+  // ─── Bulk aggregation (raw SQL) ────────────────────────────────────────────
 
   /** Recompute 30-day rolling averages on all Union rows from their daily history. */
   private async updateUnionRollingAverages(): Promise<void> {
