@@ -175,6 +175,17 @@ CREATE TABLE "Division" (
     "lng" DOUBLE PRECISION,
     "areaSqKm" DOUBLE PRECISION,
     "url" TEXT,
+    "avgTemp30d" DOUBLE PRECISION,
+    "minTemp30d" DOUBLE PRECISION,
+    "maxTemp30d" DOUBLE PRECISION,
+    "avgHumidity30d" DOUBLE PRECISION,
+    "totalPrecip30d" DOUBLE PRECISION,
+    "avgWindSpeed30d" DOUBLE PRECISION,
+    "avgCloudCover30d" DOUBLE PRECISION,
+    "avgPm25_30d" DOUBLE PRECISION,
+    "avgPm10_30d" DOUBLE PRECISION,
+    "avgUvIndex30d" DOUBLE PRECISION,
+    "climateUpdatedAt" TIMESTAMP(3),
 
     CONSTRAINT "Division_pkey" PRIMARY KEY ("id")
 );
@@ -194,6 +205,17 @@ CREATE TABLE "District" (
     "url" TEXT,
     "boundary" JSONB,
     "divisionId" TEXT NOT NULL,
+    "avgTemp30d" DOUBLE PRECISION,
+    "minTemp30d" DOUBLE PRECISION,
+    "maxTemp30d" DOUBLE PRECISION,
+    "avgHumidity30d" DOUBLE PRECISION,
+    "totalPrecip30d" DOUBLE PRECISION,
+    "avgWindSpeed30d" DOUBLE PRECISION,
+    "avgCloudCover30d" DOUBLE PRECISION,
+    "avgPm25_30d" DOUBLE PRECISION,
+    "avgPm10_30d" DOUBLE PRECISION,
+    "avgUvIndex30d" DOUBLE PRECISION,
+    "climateUpdatedAt" TIMESTAMP(3),
 
     CONSTRAINT "District_pkey" PRIMARY KEY ("id")
 );
@@ -210,6 +232,17 @@ CREATE TABLE "Upazila" (
     "areaSqKm" DOUBLE PRECISION,
     "url" TEXT,
     "districtId" TEXT NOT NULL,
+    "avgTemp30d" DOUBLE PRECISION,
+    "minTemp30d" DOUBLE PRECISION,
+    "maxTemp30d" DOUBLE PRECISION,
+    "avgHumidity30d" DOUBLE PRECISION,
+    "totalPrecip30d" DOUBLE PRECISION,
+    "avgWindSpeed30d" DOUBLE PRECISION,
+    "avgCloudCover30d" DOUBLE PRECISION,
+    "avgPm25_30d" DOUBLE PRECISION,
+    "avgPm10_30d" DOUBLE PRECISION,
+    "avgUvIndex30d" DOUBLE PRECISION,
+    "climateUpdatedAt" TIMESTAMP(3),
 
     CONSTRAINT "Upazila_pkey" PRIMARY KEY ("id")
 );
@@ -225,8 +258,41 @@ CREATE TABLE "Union" (
     "lng" DOUBLE PRECISION,
     "url" TEXT,
     "upazilaId" TEXT NOT NULL,
+    "avgTemp30d" DOUBLE PRECISION,
+    "minTemp30d" DOUBLE PRECISION,
+    "maxTemp30d" DOUBLE PRECISION,
+    "avgHumidity30d" DOUBLE PRECISION,
+    "totalPrecip30d" DOUBLE PRECISION,
+    "avgWindSpeed30d" DOUBLE PRECISION,
+    "avgCloudCover30d" DOUBLE PRECISION,
+    "avgPm25_30d" DOUBLE PRECISION,
+    "avgPm10_30d" DOUBLE PRECISION,
+    "avgUvIndex30d" DOUBLE PRECISION,
+    "climateUpdatedAt" TIMESTAMP(3),
 
     CONSTRAINT "Union_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "UnionDailyClimate" (
+    "id" TEXT NOT NULL,
+    "unionId" TEXT NOT NULL,
+    "date" DATE NOT NULL,
+    "avgTemp" DOUBLE PRECISION,
+    "minTemp" DOUBLE PRECISION,
+    "maxTemp" DOUBLE PRECISION,
+    "avgHumidity" DOUBLE PRECISION,
+    "totalPrecip" DOUBLE PRECISION,
+    "avgWindSpeed" DOUBLE PRECISION,
+    "maxWindSpeed" DOUBLE PRECISION,
+    "avgCloudCover" DOUBLE PRECISION,
+    "avgPm25" DOUBLE PRECISION,
+    "avgPm10" DOUBLE PRECISION,
+    "avgUvIndex" DOUBLE PRECISION,
+    "avgOzone" DOUBLE PRECISION,
+    "fetchedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "UnionDailyClimate_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -647,6 +713,15 @@ CREATE INDEX "Union_upazilaId_idx" ON "Union"("upazilaId");
 CREATE UNIQUE INDEX "Union_name_upazilaId_key" ON "Union"("name", "upazilaId");
 
 -- CreateIndex
+CREATE INDEX "UnionDailyClimate_unionId_idx" ON "UnionDailyClimate"("unionId");
+
+-- CreateIndex
+CREATE INDEX "UnionDailyClimate_date_idx" ON "UnionDailyClimate"("date");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "UnionDailyClimate_unionId_date_key" ON "UnionDailyClimate"("unionId", "date");
+
+-- CreateIndex
 CREATE INDEX "Dataset_category_idx" ON "Dataset"("category");
 
 -- CreateIndex
@@ -807,6 +882,9 @@ ALTER TABLE "Upazila" ADD CONSTRAINT "Upazila_districtId_fkey" FOREIGN KEY ("dis
 
 -- AddForeignKey
 ALTER TABLE "Union" ADD CONSTRAINT "Union_upazilaId_fkey" FOREIGN KEY ("upazilaId") REFERENCES "Upazila"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "UnionDailyClimate" ADD CONSTRAINT "UnionDailyClimate_unionId_fkey" FOREIGN KEY ("unionId") REFERENCES "Union"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Dataset" ADD CONSTRAINT "Dataset_providerId_fkey" FOREIGN KEY ("providerId") REFERENCES "Provider"("id") ON DELETE SET NULL ON UPDATE CASCADE;
