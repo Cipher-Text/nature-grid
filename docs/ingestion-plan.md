@@ -4,20 +4,23 @@ Source analysis: `open-nature/apps/backend` (partial implementation, Spring Boot
 
 ---
 
-## Implementation status (2026-08-16)
+## Implementation status (updated 2026-08-27)
 
-OpenMeteo weather, air quality, and Flood ingestion are **done**, but with a smaller, redesigned scope than this document originally planned. GBIF ingestion is also implemented in the separate `biodiversity` module. Read this before treating the sections below as current:
+OpenMeteo weather, air quality, Flood ingestion, and GBIF biodiversity ingestion are all **done**. `IngestionModule` is also implemented (not a stub) — `IngestionService` tracks job lifecycle (`RUNNING → SUCCEEDED/FAILED`) and is called by weather, GBIF, and flood schedulers. See `docs/architecture/modules.md` "ingestion" and `docs/integrations/` for provider details.
+
+The original plan in this document was redesigned during implementation. Key deviations:
 
 | Planned (this doc) | Actually built | Why |
 | --- | --- | --- |
-| Module at `apps/api/src/ingestion/` with `clients/`, `schedulers/`, `services/` subfolders | Self-contained `apps/api/src/weather/` module (client, service, scheduler, controller — 4 files, no subfolders) | Only one provider (OpenMeteo) was in scope; the split wasn't earning its keep yet. `ingestion/` stays for future generic job bookkeeping. |
+| Module at `apps/api/src/ingestion/` with `clients/`, `schedulers/`, `services/` subfolders | Self-contained `apps/api/src/weather/` module (client, service, scheduler, controller — 4 files, no subfolders) | Only one provider (OpenMeteo) was in scope; the split wasn't earning its keep yet. `ingestion/` handles generic job bookkeeping. |
 | `WeatherReading` / `AirQualityReading` (one wide table each, `rawJson` column) | `CurrentWeatherReading`, `HourlyWeatherForecast`, `DailyWeatherForecast`, `HourlyAirQuality` (4 tables, trimmed fields, no raw JSON) | Current/hourly/daily have different fetch cadences and shapes; splitting them avoids one table with mostly-null columns depending on reading type. |
 | `WeatherAggregate` / `AqiAggregate` daily rollups | Not built | No consumer needed rollups yet; raw hourly/daily rows are queried directly. Revisit if retention or dashboard needs arise. |
-| `ApiCallLog` — every external HTTP call logged | Not built | Deliberately skipped for this pass — failures are logged via NestJS `Logger` only. `AuditEvent` exists generically if this is wanted later. |
-| Proximity/radius-based location matching (`WeatherDataAccessServiceImpl` pattern from `open-nature`) | Direct `districtId` foreign key on every weather row | Every fetch already targets a known district, so matching by FK is simpler and exact — no haversine distance queries needed. |
-| District lat/lng: "hardcode divisional capitals first" (open question) | All 64 districts backfilled with real coordinates from `open-nature`'s `district.csv` | The source data was already available and reusable — no need for a placeholder step. |
-| Resilience4j-equivalent circuit breaker | Manual 3-attempt retry with fixed backoff, no circuit breaker | Trimmed for MVP; per-district failures are caught and logged without tripping the whole scheduler run. |
+| `ApiCallLog` — every external HTTP call logged | Not built | Deliberately skipped — failures are logged via NestJS `Logger` only. |
+| Proximity/radius-based location matching | Direct `districtId` foreign key on every weather row | Every fetch already targets a known district, so matching by FK is simpler and exact. |
+| District lat/lng: "hardcode divisional capitals first" | All 64 districts backfilled with real coordinates | The source data was already available. |
+| Resilience4j-equivalent circuit breaker | Manual 3-attempt retry with fixed backoff, no circuit breaker | Trimmed for MVP. |
 | Read endpoints at `/ingestion/weather/latest` | `/weather/current`, `/weather/hourly/:districtId`, `/weather/daily/:districtId`, `/weather/air-quality` | Endpoints live under the module that owns the data. |
+| `IngestionJob` tracking deferred | `IngestionService` now writes job records per cron run (RUNNING → SUCCEEDED/FAILED) | Implemented 2026-08-24. |
 
 The gap analysis, API research, and "what NOT to port" sections below are still useful background, but provider-specific facts now live in `docs/integrations/`. The concrete implementation plan (models, module structure, tasks) has been superseded for OpenMeteo and GBIF.
 
@@ -55,21 +58,45 @@ Added these well-designed entities not yet in nature-grid:
 
 ## What nature-grid already has (do not duplicate)
 
+This table reflects the state at the time of original planning. The schema now has 35 models. See `docs/architecture/data-model.md` for the full current model list.
+
 | Model | Module | Notes |
 | --- | --- | --- |
 | `User` | auth / users | Role, passwordHash, isActive, lastLoginAt |
-| `Organization` | organizations | Type, isVerified |
+| `UserProfile` | users | Extended profile fields, visibility settings |
+| `UserSocialLink` | users | Per-platform social links |
+| `Organization` | organizations | Type, isVerified, memberships |
+| `OrganizationMembership` | organizations | Many-to-many users↔orgs with ADMIN/MEMBER role |
 | `Provider` | providers | Type, isActive, linked to Organization |
-| `Division` | locations | Auto-seeded, 8 divisions |
-| `District` | locations | Auto-seeded, 64 districts |
-| `Upazila` | locations | Model exists, not seeded |
-| `Union` | locations | Model exists, not seeded |
-| `Dataset` | datasets | Catalog metadata + access policy, auto-seeded |
+| `Division` | locations | Auto-seeded, 8 divisions, climate columns |
+| `District` | locations | Auto-seeded, 64 districts, lat/lng, climate columns |
+| `Upazila` | locations | Auto-seeded, 494 upazilas, climate columns |
+| `Union` | locations | Auto-seeded, 4,540 unions, climate columns |
+| `UnionDailyClimate` | locations/climate | Raw daily climate data per union per day |
+| `Dataset` | datasets | Catalog metadata + access policy, download enforcement |
+| `DatasetAccessRequest` | datasets | Access request + approve/reject workflow |
 | `CitizenReport` | reports | Category, status workflow, lat/lng, status history |
 | `ReportStatusEvent` | reports | Per-transition audit row |
+| `ReportComment` | reports | Public + internal (moderator) comments |
+| `ReportMedia` | reports | URL-registered media attachments |
+| `Observation` | observations | Trust levels, category, species free text |
+| `RestorationProject` | restoration | Status, category, participant join workflow |
+| `RestorationParticipant` | restoration | Join table with unique constraint |
+| `Species` | biodiversity | GBIF taxonomy |
+| `Occurrence` | biodiversity | GBIF occurrences with BigInt key |
 | `Alert` | alerts | Severity, status, district link |
-| `IngestionJob` | ingestion | Status machine, retry fields, linked to Provider |
-| `AuditEvent` | audit | All write operations |
+| `AlertSubscription` | notifications | District or nationwide, min severity |
+| `NotificationDelivery` | notifications | Per-delivery status tracking |
+| `IngestionJob` | ingestion | Status machine, linked to Provider — now actively written |
+| `FloodForecast` | flood | Daily GloFAS river-discharge forecasts per district |
+| `CurrentWeatherReading` | weather | District-level current weather |
+| `HourlyWeatherForecast` | weather | District-level hourly forecast |
+| `DailyWeatherForecast` | weather | District-level daily forecast |
+| `HourlyAirQuality` | weather | District-level hourly air quality |
+| `Permission` | permissions | Named permission definitions |
+| `RolePermission` | permissions | Role → permission grants |
+| `RefreshToken` | auth | SHA-256 hashed opaque tokens |
+| `AuditEvent` | audit | All write operations (25 action types) |
 
 ---
 

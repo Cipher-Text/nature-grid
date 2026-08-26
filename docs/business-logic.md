@@ -49,9 +49,10 @@ A citizen report is an incident record. Someone saw something — water turning 
 | `ILLEGAL_DUMPING` | Solid waste disposal in non-designated locations — open land, rivers, roadways |
 | `DEFORESTATION` | Tree cutting, land clearing, or habitat removal — especially near protected areas |
 | `WILDLIFE_INCIDENT` | Injured, trapped, or dead wildlife; poaching evidence; human-wildlife conflict |
-| `FLOOD_IMPACT` | Local flood conditions, damage, or displacement not yet captured by official alerts |
-| `HEAT_IMPACT` | Extreme heat affecting communities — related infrastructure failure, health incidents |
+| `FLOODING` | Local flood conditions, damage, or displacement not yet captured by official alerts |
 | `OTHER` | Environmental issues that do not fit the above categories |
+
+These are the seven values in the `ReportCategory` Prisma enum. The categories should not be extended without a schema migration.
 
 These categories exist so that reports can be filtered, clustered, and analyzed by type. A district with twenty water-pollution reports in one month is a signal worth investigating. A category structure makes that pattern visible.
 

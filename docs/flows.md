@@ -47,29 +47,29 @@ Visitor opens public Reports
 
 ```text
 Visitor opens public Observations
-  -> sees verified observations
+  -> sees RESEARCH_GRADE and COMMUNITY observations (FLAGGED hidden by default)
   -> clicks Add Observation
   -> system asks for login
   -> user adds observation type, location, date, and evidence
-  -> system stores observation as unverified
-  -> researcher/moderator validates
-  -> observation becomes community_supported or research_grade
+  -> system stores observation as UNVERIFIED
+  -> researcher or admin validates (PATCH /observations/:id/trust)
+  -> observation trust level updated to COMMUNITY or RESEARCH_GRADE (audit event written)
   -> observation contributes to maps, biodiversity records, or datasets
 ```
 
 ## Dataset Ingestion Flow
 
 ```text
-Scheduler or admin starts ingestion job
-  -> job status queued
-  -> worker starts job
-  -> job status running
-  -> provider data fetched
-  -> raw response logged
-  -> records normalized into dataset tables
-  -> derived summaries updated
-  -> job status succeeded or failed
+Cron scheduler fires (weather every 15min/2h/12h; GBIF and flood daily/6h)
+  -> IngestionService.startJob() creates IngestionJob with RUNNING status
+  -> provider HTTP client fetches data (3-attempt retry with fixed backoff)
+  -> records upserted into typed tables (no raw JSON stored)
+  -> IngestionService.completeJob() marks SUCCEEDED, updates Dataset.lastSyncedAt
+  -> on outer failure: IngestionService.failJob() marks FAILED with error message
+  -> admin can view job history at GET /ingestion/jobs
 ```
+
+No job queue or manual trigger exists — scheduled crons serve as periodic retry. `QUEUED` and `CANCELLED` statuses are defined in the schema but not yet written by any code.
 
 ## Alert Publishing Flow
 

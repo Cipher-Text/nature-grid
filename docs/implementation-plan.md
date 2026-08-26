@@ -24,7 +24,7 @@ Build persistence and ingestion before features. Real environmental data in the 
 
 ## ~~Milestone 4: Database Foundation~~ — Done
 
-`packages/database` — Migration `20260814204043_init` applied. 9 enums, 13 models. PostgreSQL 16 on port 5433 (remapped — local Postgres occupies 5432). Auto-seed on boot via OnModuleInit.
+`packages/database` — Initial schema established and auto-seeding wired. Current state: 1 migration (`20260826150548_init`), 35 models, 20 enums. PostgreSQL on port 5432. Auto-seed on boot via OnModuleInit hooks (`LocationsService`, `DatasetsService`, `ProvidersService`, `PermissionsService`, `SeedService`).
 
 ---
 
@@ -282,7 +282,7 @@ Basic internal console for the operational views most needed first.
 
 ### Definition of done
 
-- Admin users can perform moderation and monitoring tasks without direct DB access. — **Met** for reports, users, alerts, and datasets. Ingestion monitoring remains blocked (task 2).
+- Admin users can perform moderation and monitoring tasks without direct DB access. — **Met** — all 6 tasks done, including ingestion monitoring (task 2) which now shows live `IngestionJob` records.
 
 ---
 
@@ -383,7 +383,7 @@ Both phases landed back-to-back; see `docs/progress.md` "Phase 6a Complete" and 
 - ESLint — `.eslintrc.json` added for `apps/api`, `apps/web`, `apps/admin`; `pnpm lint` runs cleanly.
 
 **Phase 6b (regression safety net)** — partially done:
-- First test suite (56 → 60 tests) and CI workflow — Done (2026-08-21).
+- First test suite (52 tests across 5 spec files) and CI workflow — Done (2026-08-21).
 - ESLint — Done (2026-08-21, see 6a).
 - API contract enforcement — Done (2026-08-22). `@nature-grid/contracts` added as devDep to `apps/api`. `src/common/contract-types.typecheck.ts` uses `Jsonified<T>` utility + TypeScript structural assignment to verify service return types match contract types; caught by `tsc --noEmit` in CI. Also fixed `include`→`select` discipline in `datasets.service.ts`, `reports.service.ts` (`getById`), `alerts.service.ts` (`getById`), and four weather read methods.
 - E2e tests — Not started.

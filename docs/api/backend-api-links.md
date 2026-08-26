@@ -32,8 +32,10 @@ Refresh tokens are opaque, Postgres-backed, and rotated on use — not Redis, no
 | --- | --- | --- | --- | --- |
 | GET | `/users` | Admin | ✓ | Paginated user list |
 | GET | `/users/:id` | Admin | ✓ | User detail |
+| GET | `/users/audit-events` | Admin | ✓ | Paginated audit event log (`?action`, `?userId`, `?entityType`) |
 | PATCH | `/users/:id/role` | Admin | ✓ | Update user role (audited, records from/to) |
 | PATCH | `/users/:id/deactivate` | Admin | ✓ | Deactivate user (audited) |
+| PATCH | `/users/:id/reactivate` | Admin | ✓ | Re-enable a deactivated user account |
 
 ## Organizations
 
@@ -184,3 +186,21 @@ Provider job-tracking API for scheduled external syncs. Weather, GBIF, and Flood
 | Method | Path | Access | Status | Purpose |
 | --- | --- | --- | --- | --- |
 | GET | `/metrics/platform` | Public | ✓ | Six live counts: active/emergency alerts, verified reports, public datasets, research-grade observations, districts covered |
+
+## Permissions
+
+| Method | Path | Access | Status | Purpose |
+| --- | --- | --- | --- | --- |
+| GET | `/admin/permissions` | Admin | ✓ | All permissions with their current role assignments |
+| POST | `/admin/permissions/roles` | Admin | ✓ | Grant a permission to a role (idempotent) |
+| DELETE | `/admin/permissions/roles` | Admin | ✓ | Revoke a permission from a role |
+
+## Analytics
+
+| Method | Path | Access | Status | Purpose |
+| --- | --- | --- | --- | --- |
+| GET | `/analytics/admin` | Admin | ✓ | Admin dashboard: users by role, report queue, alert severity, org count, species count |
+| GET | `/analytics/moderator` | Moderator | ✓ | Moderator dashboard: report queue breakdown, category counts, submission trend |
+| GET | `/analytics/government` | Government | ✓ | Government dashboard: active alerts by division, verified reports by district/category, 30d climate averages |
+| GET | `/analytics/researcher` | Researcher | ✓ | Researcher dashboard: biodiversity totals, top species, observation trust breakdown |
+| GET | `/analytics/orgadmin` | Organization Admin | ✓ | Org admin dashboard: restoration project counts, engagement metrics, top projects by participants |

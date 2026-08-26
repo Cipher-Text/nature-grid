@@ -1,6 +1,6 @@
 # Progress
 
-Last updated: 2026-08-25 (OpenMeteo Flood integration — separate Flood module, initial sync on an empty table, daily GloFAS discharge persistence for all district coordinates, six-hour scheduler, public forecast routes, ingestion tracking, Prisma migration, and Data Hub detail preview; see "OpenMeteo Flood" below. Previously: 2026-08-24 ingestion module + dataset access — `IngestionService`/`IngestionController` implemented, weather, GBIF, and Flood schedulers now write `IngestionJob` records, `Dataset.lastSyncedAt` now updated on successful syncs, GBIF provider seeded, admin ingestion dashboard live; dataset download endpoint with full 5-policy access enforcement, access-request flow, admin approve/reject, and dataset detail pages live.)
+Last updated: 2026-08-27 (Permissions module — DB-backed permission model with `Permission`/`RolePermission` models, `PermissionsGuard`, admin grant/revoke endpoints, 11 named permissions, default role grants; Analytics module — role-scoped dashboard endpoints for admin/moderator/government/researcher/orgadmin; SeedService — 6 dev user accounts + seed organization seeded on boot; Users reactivate endpoint; Prisma schema now 35 models, 20 enums. Previously: 2026-08-25 OpenMeteo Flood integration; 2026-08-24 ingestion module + dataset access.)
 
 ## Status Legend
 
@@ -24,19 +24,19 @@ Last updated: 2026-08-25 (OpenMeteo Flood integration — separate Flood module,
 | Frontend "app shell" layout (sidebar pages) — M15 | Done | Established via `/profile`, powers all 7 pages. `/data`, `/reports`, `/alerts`, `/observations`, `/restoration`, and now `/biodiversity` (all real backend data) — only `/community` still shows an honest empty state (no API module planned for it at all yet). See "App-Shell Pages: Data, Reports, Alerts", "App-Shell Pages: Observations, Biodiversity, Restoration, Community", "Observations Module", "Restoration Projects Module", and "Biodiversity + GBIF Module" below. |
 | Shared types and contracts — M2 | Done | Full enums, DTOs, paginated envelopes, request/response types, route contract map |
 | Backend foundation — M3 | Done | Auth (JWT/bcrypt), users, orgs, locations (8 div/64 district auto-seed), providers, datasets (catalog seed), reports (status workflow + audit), alerts (severity + audit), global validation, guard infrastructure. **Caveat:** role-gated endpoints shipped with a casing bug that rejected every user until 2026-08-17 — see "Critical RBAC Fix" below. |
-| Prisma schema | Done | 20 enums, 32 models — includes dedicated organization membership and editable user profile/social-link models; client regenerated |
-| Database migration — M4 | Done | 18 migrations applied, 32 tables live (latest: `20260825150000_add_user_profiles`); Postgres on port 5433 (remapped — local Postgres occupies 5432) |
+| Prisma schema | Done | 20 enums, 35 models — includes Permission/RolePermission models for DB-backed permission grants; client regenerated |
+| Database migration | Done | 1 migration applied (`20260826150548_init`) — full schema in a single fresh migration; 35 tables live; Postgres on port 5432 |
 | District coordinates | Done | Migration `add_district_coordinates`; all 64 districts backfilled with real lat/lng sourced from `open-nature`'s district registry (`LocationsService.onModuleInit` backfills on boot if missing) |
 | Seed data | Done | LocationsService auto-seeds 8 divisions + 64 districts (with coordinates) on boot; DatasetsService auto-seeds 5 catalog records; ProvidersService auto-seeds `OpenMeteo` and `GBIF` providers (2026-08-24 — GBIF added) on boot idempotently; no separate seed script needed |
 | Auth — refresh / logout | Done | Postgres-backed `RefreshToken` model (not Redis — see "Auth Refresh/Logout" below), opaque tokens with rotation, daily cleanup cron |
-| Automated tests | Done (first suite) | 60 tests in `apps/api` covering auth (incl. failed-login audit), RBAC, env validation — 2026-08-21/22. No e2e tests, no web/admin tests. See "First Test Suite + CI" below. |
+| Automated tests | Done (first suite) | 52 tests in 5 spec files in `apps/api` covering auth (incl. failed-login audit), RBAC, env validation — 2026-08-21/22. No e2e tests, no web/admin tests. See "First Test Suite + CI" below. |
 | CI | Done | `.github/workflows/ci.yml` — 2026-08-21. Needs a git remote to execute. |
 | API contract enforcement | Done | 2026-08-22 — `contract-types.typecheck.ts` + `select` discipline in 4 services. Checked by `tsc --noEmit` in CI. See "Phase 6b: API Contract Enforcement" below. |
 | Notification delivery — Phase 6c | Done | 2026-08-22 — `AlertSubscription` + `NotificationDelivery` schema, Nodemailer email service, fire-and-forget dispatch on alert activation. See "Phase 6c: Notification Delivery" below. |
 | JWT secret handling | Done | Fixed 2026-08-21 — boot-time validation, no fallback. See "JWT Secret Fail-Fast" below. |
 | Security headers (`helmet`) | Done | 2026-08-21 — see "Phase 6a Complete" below. |
 | Rate limiting (`@nestjs/throttler`) | Done | 2026-08-21 — global 120 req/60 s; auth endpoints 5/20 req/60 s. See "Phase 6a Complete" below. |
-| Audit coverage | Done | 21 of 21 `AuditAction` values now written (2026-08-24) — `DATASET_ACCESS` and `DATASET_ACCESS_DECISION` added with the dataset download/access-request endpoints. `DATASET_DOWNLOAD` reused as `DATASET_ACCESS` (same semantic). See "Audit Coverage Gap", "Phase 6a Complete", and "Ingestion Module + Dataset Access" below. |
+| Audit coverage | Done | 25 `AuditAction` values defined and all written. Latest additions: `PERMISSION_GRANT`/`PERMISSION_REVOKE` (permissions module), `OBSERVATION_UPDATE`/`OBSERVATION_DELETE`. See "Audit Coverage Gap", "Phase 6a Complete", and "Ingestion Module + Dataset Access" below. |
 | ESLint | Done | 2026-08-21 — `.eslintrc.json` for api/web/admin apps. See "Phase 6a Complete" below. |
 | RBAC / role guard casing bug | Done | Fixed 2026-08-17 — see "Critical RBAC Fix" below. Every role-gated endpoint (`POST /alerts`, `PATCH /alerts/:id`, `PATCH /reports/:id/status`, `PATCH /users/:id/role`, `PATCH /users/:id/deactivate`) previously rejected all users, including admins. |
 | PostGIS / geospatial fields | Planned | `lat/lng` Float on `District` (populated) and `CitizenReport`; replace with PostGIS `geography` type when ready |
@@ -54,6 +54,10 @@ Last updated: 2026-08-25 (OpenMeteo Flood integration — separate Flood module,
 | Admin frontend — M12 | Done | Full console at port 3002: login/logout, report moderation, user management, alert management, dataset management, and organization management. The Organizations menu and API use the RBAC permission `organizations.manage`; users can be attached to multiple organizations as `ADMIN` or `MEMBER`. |
 | Consumer detail pages + profile activity | Done | 2026-08-23 — detail pages for reports, alerts, observations, restoration projects, and biodiversity species; all list pages now have clickable rows; `GET /reports/mine` + `GET /observations/mine` authenticated endpoints; profile page shows live report/observation history. See "Consumer Frontend" below. |
 | Data worker | Planned | Python skeleton; no active jobs |
+| Permissions module | Done | DB-backed `Permission`/`RolePermission` models, `PermissionsGuard`, 11 named permissions, default role grants, admin grant/revoke endpoints (`POST/DELETE /admin/permissions/roles`), audited (`PERMISSION_GRANT`/`PERMISSION_REVOKE`). |
+| Analytics module | Done | Role-scoped dashboard endpoints: admin, moderator, government, researcher, org admin — each returns aggregated stats relevant to that role. |
+| Seed service | Done | `SeedService` registered in `AppModule`; seeds 6 dev user accounts (one per role, password `NatureGrid123!`) and 1 seed organization on first boot. |
+| Users reactivate endpoint | Done | `PATCH /users/:id/reactivate` re-enables deactivated accounts. |
 
 ## Ingestion Module + Dataset Access (2026-08-24)
 
@@ -109,7 +113,7 @@ Five new endpoints completing the access-policy enforcement layer that the catal
 
 Download response is honest: no file URL exists yet. Returns dataset metadata + a list of API endpoints where the data is accessible (`resolveApiEndpoints` maps category → real API routes).
 
-**Audit events closed:** `DATASET_ACCESS` and `DATASET_ACCESS_DECISION` are now written. All 21 `AuditAction` values are written — the three dataset ones were the last gap.
+**Audit events closed:** `DATASET_ACCESS` and `DATASET_ACCESS_DECISION` are now written. The three dataset ones were the last gap at this point; `OBSERVATION_UPDATE`, `OBSERVATION_DELETE`, `PERMISSION_GRANT`, and `PERMISSION_REVOKE` were added subsequently. `AuditAction` now has 25 values, all written.
 
 ---
 
@@ -306,7 +310,7 @@ An alerting platform with `EMERGENCY` severity but no delivery mechanism is not 
 - Send is sequential per subscriber (not parallel) — avoids SMTP thundering herd on large subscriber lists. Queue-based parallel dispatch is the right v2 solution when subscriber counts grow.
 - `onDelete: Cascade` on `NotificationDelivery.subscription` — delivery history is operational audit data, not compliance records; acceptable to lose with the subscription for v1.
 
-`tsc --noEmit` clean. All 60 tests pass.
+`tsc --noEmit` clean. 52 tests pass (5 spec files).
 
 ## Phase 6b: API Contract Enforcement (2026-08-22)
 
@@ -348,7 +352,7 @@ Both branches capture `ipAddress` from the request. The HTTP response remains a 
 
 **ESLint** — `.eslintrc.json` added for `apps/api`, `apps/web`, and `apps/admin`. `pnpm lint` now runs cleanly. Kept out of CI for now until the rule set is confirmed stable; `pnpm lint` should be run locally before any PR.
 
-Result: `AuditAction` now has 18 values, 15 of which are actively written. The three unwritten (`DATASET_ACCESS`, `DATASET_DOWNLOAD`, `DATASET_ACCESS_DECISION`) belong to dataset download/access-request endpoints that don't exist yet.
+Result of this pass: `AuditAction` had 18 values; 15 were actively written at this point. The three unwritten (`DATASET_ACCESS`, `DATASET_DOWNLOAD`, `DATASET_ACCESS_DECISION`) were added later when dataset download/access-request endpoints shipped (2026-08-24). Additional values were added subsequently: `OBSERVATION_UPDATE`, `OBSERVATION_DELETE`, `PERMISSION_GRANT`, `PERMISSION_REVOKE`. `AuditAction` now has 25 values, all written.
 
 ## First Test Suite + CI (2026-08-21)
 
@@ -358,7 +362,7 @@ The repo had **zero test files and no `.github/` directory**. Both now exist.
 
 Deliberately excluded: `pnpm lint` (ESLint was not yet installed when CI was written; added in Phase 6a, 2026-08-21, but kept out of the workflow until the rule set is stable) and the `web`/`admin` test stubs. Both would land red and train everyone to ignore the badge.
 
-**Tests** — 56 across 5 suites in `apps/api`, all fully mocked, no database or running service:
+**Tests** — 52 across 5 suites in `apps/api`, all fully mocked, no database or running service (24 + 7 + 7 + 5 + 9):
 
 - `roles.guard.spec.ts` — role matching, missing metadata, unauthenticated requests, and a dedicated case-sensitivity block covering all 6 Prisma roles
 - `jwt-auth.guard.spec.ts` — `@Public()` short-circuits without consulting passport; `handleRequest` throws rather than returning a falsy user
@@ -402,11 +406,11 @@ Fixed:
 - `reports.service.ts` — `create` writes `REPORT_SUBMIT`, using the same sequential pattern as `observations` (`entityId` is not known until the row exists, so the array-form `$transaction` cannot reference it).
 - `AuditAction.USER_DEACTIVATE` did not exist and required migration `20260819185617_add_user_deactivate_audit_action` — a single additive `ALTER TYPE ... ADD VALUE`. `prisma migrate status` was checked first to confirm no drift, since `migrate dev` resets the database if it finds any.
 
-Result: 14 of 17 values written. Every implemented mutating endpoint is audited; the only gaps are the three `DATASET_*` values whose endpoints do not exist.
+Result at this pass: 14 of 17 values written. Every implemented mutating endpoint was audited; the only gaps at this point were the three `DATASET_*` values whose endpoints did not exist yet.
 
 Verified live against real Postgres for all six actions: 2x register, login, 3x logout (exactly 1 `USER_LOGOUT` written — idempotency held), role change with correct actor/target attribution, deactivation (plus a 401 confirming the user could no longer log in), and report submission with `entityId` matching the created report. Report status transitions and the invalid-transition 403 were re-checked as a regression guard, since `reports.service.ts` was touched. All test data deleted afterward and the database confirmed back to its exact prior baseline.
 
-Known remaining gap: failed logins are not audited — there is no `USER_LOGIN_FAILED` enum value. Worth considering before production, since brute-force attempts currently leave no trace.
+Known gap at this pass: failed logins were not audited — there was no `USER_LOGIN_FAILED` enum value. This was fixed in Phase 6a (2026-08-21) — see "Phase 6a Complete" below.
 
 ## Weather Ingestion (built 2026-08-16)
 

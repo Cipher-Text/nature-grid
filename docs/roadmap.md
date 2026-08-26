@@ -126,18 +126,18 @@ Exit criteria:
 
 ## Phase 5: Advanced Domains
 
-Status: Planned
+Status: Largely done — biodiversity, restoration, notifications, and role-scoped analytics all shipped. Community campaigns and environmental event/hazard history remain planned.
 
 Goal: Add richer product areas after the core is stable.
 
 Deliverables:
 
-- Biodiversity taxonomy and occurrence model
-- Restoration/project domain
-- Community campaigns and education resources
-- Notification subscriptions
-- Environmental event/hazard history
-- Researcher and government workflows
+- ~~Biodiversity taxonomy and occurrence model~~ Done (2026-08-19) — GBIF daily sync, species/occurrence endpoints, data hub preview.
+- ~~Restoration/project domain~~ Done (2026-08-19) — CRUD, ownership-gated updates, idempotent join workflow.
+- Community campaigns and education resources — *Planned*; no API module yet.
+- ~~Notification subscriptions~~ Done (2026-08-22) — `AlertSubscription` + email delivery via Nodemailer.
+- Environmental event/hazard history — *Planned*.
+- ~~Researcher and government role-scoped workflows~~ Done — analytics endpoints for government/researcher/orgadmin.
 
 Exit criteria:
 
@@ -146,7 +146,7 @@ Exit criteria:
 
 ## Phase 6: Production Hardening
 
-Status: In Progress — 6a fully done (2026-08-21); 6b lint and first test suite done (2026-08-21); 6c and 6d not started.
+Status: Done — 6a security (2026-08-21), 6b test suite + CI + API contract enforcement (2026-08-21/22), 6c notification delivery (2026-08-22), 6d Dockerfiles (2026-08-22). Remaining: end-to-end tests, accessibility pass.
 
 Goal: Prepare the system for real users and operational trust.
 
@@ -161,7 +161,7 @@ Ordered roughly by risk: the security items are cheap and block any real deploym
 
 ### 6b. Regression safety net
 
-- ~~First test suite covering `auth` and RBAC.~~ Done (2026-08-21). 56 tests across `RolesGuard`, `JwtAuthGuard`, `AuthService`, the refresh-token utilities and env validation. Fully mocked — no database needed. Each historical bug has a named regression test, and all six were mutation-checked: reintroducing the bug makes the suite fail.
+- ~~First test suite covering `auth` and RBAC.~~ Done (2026-08-21). 52 tests across `RolesGuard`, `JwtAuthGuard`, `AuthService`, the refresh-token utilities and env validation. Fully mocked — no database needed. Each historical bug has a named regression test, and all six were mutation-checked: reintroducing the bug makes the suite fail.
 - ~~CI on pull requests.~~ Done (2026-08-21). `.github/workflows/ci.yml` runs `prisma generate`/`validate`, `tsc --noEmit` on all three apps, the api test suite, and `pnpm build`. Note the repo has no git remote yet, so nothing runs until one is added.
 - ~~Install a working lint setup.~~ Done (2026-08-21). `.eslintrc.json` added for `apps/api`, `apps/web`, and `apps/admin`. `pnpm lint` now runs cleanly across all three apps; added to local verification workflow but deliberately kept out of CI until the rule set is stable.
 - ~~API contract tests.~~ Done (2026-08-22). `@nature-grid/contracts` added as a devDependency to `apps/api`. `src/common/contract-types.typecheck.ts` uses TypeScript's structural type system to assert that every service's return type (after JSON serialisation — `Date`→`string` via a `Jsonified<T>` utility) is assignable to its contract type. Checked by the existing `tsc --noEmit` step in CI. Also fixed `include`→`select` discipline in `datasets.service.ts`, `reports.service.ts` (`getById`), `alerts.service.ts` (`getById`), and four weather read methods — eliminating unintended field leakage (e.g. `createdAt` from weather readings not in the contract).
@@ -195,7 +195,7 @@ Exit criteria:
 - ~~Brute-force attempts leave a visible audit trail.~~ **Met** (2026-08-21) — `USER_LOGIN_FAILED` written on every rejected login; see 6a.
 - An `EMERGENCY` alert reaches a subscribed user, and a failed delivery is visible. — **Not met.** See 6c.
 - Public and authenticated flows are tested. — **Partially met.** Auth, RBAC and env validation have unit coverage (56 + 5 new login-failure tests = 61 total). No end-to-end or contract tests yet, and `apps/web`/`apps/admin` still have no tests.
-- Sensitive actions are auditable. — **Met for everything built** (2026-08-21). 15 of 18 `AuditAction` values are written (`USER_LOGIN_FAILED` added 2026-08-21). Every implemented mutating endpoint audits. The three unwritten `DATASET_*` values belong to endpoints that do not exist yet.
+- Sensitive actions are auditable. — **Met** (complete as of 2026-08-27). All 25 `AuditAction` values are written. Every implemented mutating endpoint audits.
 - Deployment and operations are repeatable. — **Not met.** No container image or deployment path exists.
 
 ---

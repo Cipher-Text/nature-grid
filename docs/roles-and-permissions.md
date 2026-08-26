@@ -49,19 +49,47 @@ Nature Grid starts with seven product roles. Keep the initial permission model s
 
 What the code actually enforces today, for cross-checking against the matrix above:
 
-| Endpoint | Roles |
+| Endpoint | Roles / Permissions |
 | --- | --- |
-| `POST /alerts`, `PATCH /alerts/:id` | `GOVERNMENT`, `MODERATOR`, `ADMIN` |
+| `POST /alerts`, `PATCH /alerts/:id` | `GOVERNMENT`, `MODERATOR`, `ADMIN` (also requires `alerts.manage` permission — same roles hold it by default) |
 | `PATCH /reports/:id/status` | `MODERATOR`, `ADMIN` |
 | `PATCH /observations/:id/trust` | `RESEARCHER`, `ADMIN` — **not** moderator |
 | `POST /restoration/projects` | `ORGANIZATION_ADMIN`, `ADMIN` |
 | `PATCH /restoration/projects/:id` | any authenticated user at the guard; creator-or-`ADMIN` enforced inside the service |
 | All `/users/*` routes | `ADMIN` (controller-level `@Roles('ADMIN')`) |
 | `POST /reports`, `POST /observations`, `POST /restoration/projects/:id/join` | any authenticated user |
-| `/admin/organizations*` | `organizations.manage` permission |
+| `/admin/organizations*` | `organizations.manage` permission (via `PermissionsGuard`) |
+| `/admin/permissions*` | `ADMIN` role |
+| `/analytics/admin` | `ADMIN` role |
+| `/analytics/moderator` | `MODERATOR` role |
+| `/analytics/government` | `GOVERNMENT` role |
+| `/analytics/researcher` | `RESEARCHER` role |
+| `/analytics/orgadmin` | `ORGANIZATION_ADMIN` role |
+| `GET /ingestion/jobs`, `GET /ingestion/jobs/:id` | `MODERATOR`, `ADMIN` |
 
-Everything else public-facing is `@Public()`. Dataset downloads and access requests are implemented with policy checks; advanced filters and API-key management remain future work.
-- Government alert permissions should be configurable per organization or agency before production use.
+Everything else public-facing is `@Public()`. Dataset downloads and access requests are implemented with policy checks. Advanced filters and API-key management remain future work.
+
+## DB-Backed Permission Model
+
+`PermissionsGuard` checks DB-backed permission grants for routes decorated with `@RequirePermissions(...)`. Named permissions seeded on first boot:
+
+| Permission | Default role holders |
+| --- | --- |
+| `reports.create` | CITIZEN, RESEARCHER, ORGANIZATION_ADMIN, GOVERNMENT, MODERATOR |
+| `reports.moderate` | MODERATOR |
+| `alerts.manage` | GOVERNMENT, MODERATOR |
+| `restoration.create` | ORGANIZATION_ADMIN |
+| `restoration.join` | CITIZEN, RESEARCHER, ORGANIZATION_ADMIN, GOVERNMENT, MODERATOR |
+| `observations.create` | CITIZEN, RESEARCHER, ORGANIZATION_ADMIN, GOVERNMENT, MODERATOR |
+| `observations.verify` | RESEARCHER |
+| `observations.delete` | MODERATOR |
+| `organizations.access` | ORGANIZATION_ADMIN |
+| `organizations.manage` | (none by default; platform ADMIN bypasses the guard) |
+| `users.manage` | (none by default; platform ADMIN bypasses the guard) |
+
+`ADMIN` bypasses every `PermissionsGuard` check regardless of DB state. Admins can grant or revoke any permission from any role via `POST/DELETE /admin/permissions/roles` — this is an audited, runtime-configurable operation; no code change or redeploy is needed.
+
+Government alert permissions should be configurable per organization or agency before production use.
 
 ## Future Scopes
 

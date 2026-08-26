@@ -23,12 +23,12 @@
 | --- | --- |
 | NestJS | Modular API framework |
 | PostgreSQL | Primary transactional database |
-| PostGIS | Geospatial storage and queries |
+| PostGIS | Docker image provides it, but **not yet enabled** — no migration enables the extension; all geography fields use plain `Float` lat/lng for now |
 | Prisma | Database schema, migrations, typed client |
-| `@nestjs/schedule` | Cron scheduling for weather, GBIF, Flood, and token cleanup jobs — the only background-job mechanism actually in use |
+| `@nestjs/schedule` | Cron scheduling for weather, GBIF, Flood, location-climate, and token cleanup jobs — the only background-job mechanism actually in use |
 | Redis / BullMQ | **Planned, not installed.** A Redis container runs in `docker-compose.yml` and `REDIS_URL` is set, but no client or queue library is in any manifest. Revisit when a job needs retry, concurrency control, or worker isolation. |
 | JWT | API authentication |
-| OpenAPI | API documentation and frontend contract source |
+| OpenAPI / Swagger | API documentation — available at `/api/docs` when the API is running |
 
 ## Frontend
 

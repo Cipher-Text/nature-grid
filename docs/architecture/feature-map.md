@@ -32,9 +32,9 @@ Legend: **Done** | **Partial** | *Planned* | ~~Deferred~~
 | Air quality ingestion — hourly (OpenMeteo) | `weather` | **Done** |
 | Urban AQI — station-level (WAQI) | `weather` | *Planned* — free key needed at aqicn.org |
 | Dataset catalog with access policy | `datasets` | **Done** |
-| Dataset download + access request endpoints | `datasets` | *Planned* |
+| Dataset download + access request endpoints | `datasets` | **Done** |
 | Biodiversity — species and occurrence records (GBIF daily sync) | `biodiversity` | **Done** |
-| Ingestion job lifecycle (queue, track, retry, audit) | `ingestion` | *Planned* — stub only |
+| Ingestion job lifecycle (queue, track, retry, audit) | `ingestion` | **Partial** — job tracking implemented (RUNNING → SUCCEEDED/FAILED); no retry queue or manual trigger endpoint |
 | BMD / FFWC government data | `ingestion` | *Planned* — requires gov access or scraping |
 
 ---
@@ -83,8 +83,8 @@ Legend: **Done** | **Partial** | *Planned* | ~~Deferred~~
 | Feature | Module / App | Status |
 | --- | --- | --- |
 | Research publication records | — | *Planned* (Phase 7) |
-| Dataset access request workflow | `datasets` | **Partial** — schema only; endpoints not built |
-| Government and researcher role-gated datasets | `datasets` | **Partial** — access policy enforced on reads; download endpoint not built |
+| Dataset access request workflow | `datasets` | **Done** — `POST /datasets/:id/access-request`, admin list + approve/reject |
+| Government and researcher role-gated datasets | `datasets` | **Done** — all 5 access policies enforced on `GET /datasets/:id/download` |
 
 ---
 
@@ -105,11 +105,14 @@ Legend: **Done** | **Partial** | *Planned* | ~~Deferred~~
 | --- | --- | --- |
 | Login / logout (MODERATOR + ADMIN only) | `apps/admin` | **Done** |
 | Report moderation queue | `apps/admin` | **Done** |
-| User management (role change, deactivate) | `apps/admin` | **Done** |
+| User management (role change, deactivate, reactivate) | `apps/admin` | **Done** |
 | Alert management (create, cancel, status tabs) | `apps/admin` | **Done** |
 | Dataset management (publish toggle, access policy) | `apps/admin` | **Done** |
 | Organization management and memberships | `apps/admin` | **Done** — RBAC permission `organizations.manage`; users can belong to multiple organizations |
-| Ingestion monitoring dashboard | `apps/admin` | *Planned* — blocked until ingestion module ships |
+| Ingestion monitoring dashboard | `apps/admin` | **Done** — status tabs, per-job detail, provider name, error messages |
+| Permission management (grant/revoke per role) | `permissions` | **Done** — `GET/POST/DELETE /admin/permissions/roles`; admin matrix view |
+| Role-scoped analytics dashboards | `analytics` | **Done** — admin/moderator/government/researcher/orgadmin endpoints with tailored aggregations |
+| Seed data for local development | `seed` | **Done** — 6 user accounts (one per role) + 1 organization seeded on boot |
 
 ---
 

@@ -2,11 +2,11 @@
 
 All NestJS modules live under `apps/api/src/`. The `DatabaseModule` is global and injects `PrismaService` everywhere.
 
-Global prefix is `/api/v1` (see `packages/contracts/src/index.ts` for the canonical route map). `JwtAuthGuard` and `RolesGuard` are applied globally in `main.ts`, so every route is authenticated unless marked `@Public()`.
+Global prefix is `/api/v1` (see `packages/contracts/src/index.ts` for the canonical route map). `JwtAuthGuard`, `RolesGuard`, and `PermissionsGuard` are applied globally in `main.ts`; `ThrottlerGuard` is registered via `APP_GUARD` in `AppModule`. Every route is authenticated unless marked `@Public()`. Permission-gated routes additionally require a DB-backed permission grant checked by `PermissionsGuard`.
 
 Legend: ✓ Implemented | ~ Stub only | ✗ Not started
 
-Registered in `app.module.ts`: `database`, `auth`, `users`, `organizations`, `locations`, `locations/climate`, `providers`, `datasets`, `reports`, `alerts`, `biodiversity`, `observations`, `restoration`, `media`, `ingestion`, `weather`, `flood`, `metrics`, `notifications`.
+Registered in `app.module.ts`: `database`, `auth`, `users`, `organizations`, `locations`, `locations/climate`, `providers`, `datasets`, `reports`, `alerts`, `biodiversity`, `observations`, `restoration`, `media`, `ingestion`, `weather`, `flood`, `metrics`, `notifications`, `permissions`, `analytics`. `SeedService` is also registered directly in `AppModule` (not its own module) and seeds dev users + a seed organization on first boot.
 
 ## database ✓
 
@@ -48,12 +48,14 @@ Roles (all in `UserRole`): `CITIZEN | RESEARCHER | ORGANIZATION_ADMIN | GOVERNME
 | --- | --- | --- |
 | GET | `/users` | Admin |
 | GET | `/users/:id` | Admin |
+| GET | `/users/audit-events` | Admin |
 | PATCH | `/users/:id/role` | Admin |
 | PATCH | `/users/:id/deactivate` | Admin |
+| PATCH | `/users/:id/reactivate` | Admin |
 
-`@Roles('ADMIN')` is applied at the controller level, so all four routes are admin-only.
+`@Roles('ADMIN')` is applied at the controller level, so all routes are admin-only.
 
-Both mutating routes audit in the same transaction as the update, recording the acting admin as `userId` and the target as `entityId`: `PATCH /users/:id/role` writes `USER_ROLE_CHANGE` with `{from, to}` in `meta`, and `PATCH /users/:id/deactivate` writes `USER_DEACTIVATE` with `{wasActive}`.
+`PATCH /users/:id/role` writes `USER_ROLE_CHANGE` with `{from, to}` in `meta`. `PATCH /users/:id/deactivate` writes `USER_DEACTIVATE` with `{wasActive}`. `PATCH /users/:id/reactivate` re-enables a deactivated account. `GET /users/audit-events` returns a paginated, filterable list of all `AuditEvent` rows (filterable by `action`, `userId`, `entityType`).
 
 ## organizations ✓
 
@@ -262,7 +264,35 @@ Status: **empty `@Module({})`** — no controller, service, or schema model. `Me
 
 Owns provider job visibility for scheduled external data fetches, using the `IngestionJob` model (`QUEUED | RUNNING | SUCCEEDED | FAILED | CANCELLED`).
 
-Status: implemented service + read controller. `WeatherScheduler` and `BiodiversityScheduler` call `IngestionService.startJob`, `completeJob`, and `failJob`; successful jobs update `Dataset.lastSyncedAt` for matching dataset categories. Admin/moderator routes expose `GET /ingestion/jobs` and `GET /ingestion/jobs/:id`. There is no queue worker, manual trigger endpoint, or retry endpoint yet; recurring cron jobs are the retry mechanism.
+Status: implemented service + read controller. `WeatherScheduler`, `BiodiversityScheduler`, and `FloodScheduler` call `IngestionService.startJob`, `completeJob`, and `failJob`; successful jobs update `Dataset.lastSyncedAt` for matching dataset categories. Admin/moderator routes expose `GET /ingestion/jobs` and `GET /ingestion/jobs/:id`. There is no queue worker, manual trigger endpoint, or retry endpoint; recurring cron jobs are the retry mechanism.
+
+## permissions ✓
+
+Owns the DB-backed permission model: `Permission` (key, description) and `RolePermission` (role → permission join). Seeds 11 named permissions and default grants for all non-ADMIN roles on first boot.
+
+| Method | Path | Access |
+| --- | --- | --- |
+| GET | `/admin/permissions` | Admin |
+| POST | `/admin/permissions/roles` | Admin — grant permission to a role |
+| DELETE | `/admin/permissions/roles` | Admin — revoke permission from a role |
+
+`PermissionsService.getPermissionsForRole(role)` is the runtime path; results are cached per role for 5 minutes. `ADMIN` always receives every permission regardless of DB state. Grant and revoke each write `PERMISSION_GRANT` / `PERMISSION_REVOKE` audit events.
+
+Named permissions: `reports.create`, `reports.moderate`, `alerts.manage`, `restoration.create`, `restoration.join`, `observations.create`, `observations.verify`, `observations.delete`, `organizations.access`, `organizations.manage`, `users.manage`.
+
+## analytics ✓
+
+Owns role-scoped dashboard queries returning aggregated platform statistics.
+
+| Method | Path | Access |
+| --- | --- | --- |
+| GET | `/analytics/admin` | Admin |
+| GET | `/analytics/moderator` | Moderator |
+| GET | `/analytics/government` | Government |
+| GET | `/analytics/researcher` | Researcher |
+| GET | `/analytics/orgadmin` | Organization Admin |
+
+Each endpoint returns a tailored summary: admin sees user counts by role, report queue, alert severity counts, organizations, and species count; moderator sees queue breakdown and report submission trend; government sees active alerts by division, verified reports by category/district, and 30-day climate averages per division; researcher sees biodiversity totals, top species, and observation trust breakdown; org admin sees restoration project counts and engagement metrics.
 
 ## audit (embedded)
 
@@ -272,21 +302,29 @@ Services that write audit events:
 
 | Service | Actions written |
 | --- | --- |
-| `auth` | `USER_REGISTER`, `USER_LOGIN`, `USER_LOGOUT` |
+| `auth` | `USER_REGISTER`, `USER_LOGIN`, `USER_LOGIN_FAILED`, `USER_LOGOUT` |
 | `users` | `USER_ROLE_CHANGE`, `USER_DEACTIVATE` |
 | `alerts` | `ALERT_CREATE`, `ALERT_STATUS_CHANGE` |
-| `observations` | `OBSERVATION_SUBMIT`, `OBSERVATION_TRUST_CHANGE` |
-| `reports` | `REPORT_SUBMIT`, `REPORT_STATUS_CHANGE` |
+| `observations` | `OBSERVATION_SUBMIT`, `OBSERVATION_TRUST_CHANGE`, `OBSERVATION_UPDATE`, `OBSERVATION_DELETE` |
+| `reports` | `REPORT_SUBMIT`, `REPORT_STATUS_CHANGE`, `REPORT_COMMENT_ADD`, `REPORT_MEDIA_ADD` |
 | `restoration` | `RESTORATION_PROJECT_CREATE`, `RESTORATION_PROJECT_UPDATE`, `RESTORATION_PROJECT_JOIN` |
+| `datasets` | `DATASET_ACCESS`, `DATASET_DOWNLOAD`, `DATASET_UPDATE`, `DATASET_ACCESS_DECISION` |
+| `permissions` | `PERMISSION_GRANT`, `PERMISSION_REVOKE` |
 
-`AuditAction` declares 21 values and all 21 are written. Dataset access, access decisions, dataset updates, report enrichment, authentication, moderation, observations, and restoration actions are covered.
+`AuditAction` declares 25 values. All are written by a service.
 
 `auth` is the only service that populates `AuditEvent.ipAddress`, because it already captures request metadata for `RefreshToken` rows. The others leave it null.
 
-`USER_DEACTIVATE` was added in migration `20260819185617_add_user_deactivate_audit_action` (2026-08-20), so every sensitive action in `auth` and `users` is now audited. `REPORT_SUBMIT` was wired the same day, bringing `reports` in line with `observations` (both now audit submission as well as status/trust changes).
-
 If audit event volume grows, extract to a dedicated `AuditModule` with its own service and queue.
+
+## seed (embedded)
+
+`SeedService` is registered directly in `AppModule` (not its own module) and seeds development fixtures on first boot via `OnModuleInit`:
+- 6 user accounts (one per role: CITIZEN, RESEARCHER, ORGANIZATION_ADMIN, GOVERNMENT, MODERATOR, ADMIN) with password `NatureGrid123!`
+- 1 seed organization (`Nature Grid Bangladesh`, `NGO`) with the org-admin user attached as an `ADMIN` member
+
+These accounts exist only for local development and should not be created in production.
 
 ## Coverage note
 
-`app.module.ts` registers 20 modules: `database` plus 19 feature modules (including `locations/climate`, `flood`, and `notifications`). All are implemented except the `media` stub; `ingestion` now owns provider job tracking. Advanced domains not yet represented by a module — satellite ingestion, long-range climate projections, emissions, carbon accounting, research publications, structured surveys — are planned for Phase 7. See `docs/roadmap.md` and `docs/architecture/feature-map.md`.
+`app.module.ts` registers 22 modules: `database` plus 21 feature modules (including `locations/climate`, `flood`, `notifications`, `permissions`, and `analytics`). All are implemented except the `media` stub. `ingestion` owns provider job tracking; `permissions` owns the DB-backed permission model; `analytics` serves role-scoped dashboard data. Advanced domains not yet represented by a module — satellite ingestion, long-range climate projections, emissions, carbon accounting, research publications, structured surveys — are planned for Phase 7. See `docs/roadmap.md` and `docs/architecture/feature-map.md`.

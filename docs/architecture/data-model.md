@@ -2,13 +2,15 @@
 
 Nature Grid uses PostgreSQL as the primary database. The Prisma schema lives at `packages/database/prisma/schema.prisma`. The Prisma client is regenerated via `pnpm run db:generate` from the `packages/database` directory.
 
-Current state: **30 models, 17 enums, 1 migration applied (`20260826150548_init`).**
+Current state: **35 models, 20 enums, 1 migration applied (`20260826150548_init`).**
 
 ## Enums
 
 | Enum | Values |
 | --- | --- |
 | `UserRole` | `CITIZEN RESEARCHER ORGANIZATION_ADMIN GOVERNMENT MODERATOR ADMIN` |
+| `OrganizationMemberRole` | `ADMIN MEMBER` |
+| `ProfileVisibility` | `PUBLIC MEMBERS_ONLY PRIVATE` |
 | `AlertSeverity` | `INFO WATCH WARNING EMERGENCY` |
 | `AlertStatus` | `DRAFT ACTIVE EXPIRED CANCELLED` |
 | `ReportStatus` | `SUBMITTED UNDER_REVIEW VERIFIED REJECTED RESOLVED` |
@@ -25,9 +27,9 @@ Current state: **30 models, 17 enums, 1 migration applied (`20260826150548_init`
 | `IngestionStatus` | `QUEUED RUNNING SUCCEEDED FAILED CANCELLED` |
 | `NotificationChannel` | `EMAIL` |
 | `DeliveryStatus` | `PENDING SENT FAILED` |
-| `AuditAction` | `USER_REGISTER USER_LOGIN USER_LOGIN_FAILED USER_LOGOUT USER_ROLE_CHANGE USER_DEACTIVATE REPORT_SUBMIT REPORT_STATUS_CHANGE REPORT_COMMENT_ADD REPORT_MEDIA_ADD ALERT_CREATE ALERT_STATUS_CHANGE DATASET_ACCESS DATASET_DOWNLOAD DATASET_UPDATE OBSERVATION_SUBMIT OBSERVATION_TRUST_CHANGE RESTORATION_PROJECT_CREATE RESTORATION_PROJECT_UPDATE RESTORATION_PROJECT_JOIN DATASET_ACCESS_DECISION` |
+| `AuditAction` | `USER_REGISTER USER_LOGIN USER_LOGIN_FAILED USER_LOGOUT USER_ROLE_CHANGE USER_DEACTIVATE REPORT_SUBMIT REPORT_STATUS_CHANGE REPORT_COMMENT_ADD REPORT_MEDIA_ADD ALERT_CREATE ALERT_STATUS_CHANGE DATASET_ACCESS DATASET_DOWNLOAD DATASET_UPDATE OBSERVATION_SUBMIT OBSERVATION_TRUST_CHANGE OBSERVATION_UPDATE OBSERVATION_DELETE RESTORATION_PROJECT_CREATE RESTORATION_PROJECT_UPDATE RESTORATION_PROJECT_JOIN DATASET_ACCESS_DECISION PERMISSION_GRANT PERMISSION_REVOKE` |
 
-18 of these 21 actions are written by a service. The three unwritten (`DATASET_ACCESS`, `DATASET_DOWNLOAD`, `DATASET_ACCESS_DECISION`) belong to the dataset download and access-request endpoints, which are not yet implemented. See the `audit` section in [modules.md](modules.md) for which services write what.
+All 25 `AuditAction` values are written by services. See the `audit` section in [modules.md](modules.md) for which services write what.
 
 ## Users & Auth
 
@@ -117,7 +119,16 @@ The unique constraint on `(projectId, userId)` is what makes joining a project i
 | `IngestionJob` | `id`, `providerId`, `status IngestionStatus`, `startedAt?`, `endedAt?`, `errorMsg?` | → `Provider` |
 | `AuditEvent` | `id`, `action AuditAction`, `userId?`, `entityType?`, `entityId?`, `meta Json?`, `ipAddress?` | → `User?` |
 
-`IngestionJob` exists in the schema but **no code writes to it** — neither the `weather` nor the `biodiversity` module uses job tracking. See the `ingestion` module note in [modules.md](modules.md).
+`IngestionJob` records are written by `IngestionService.startJob`/`completeJob`/`failJob`, called from `WeatherScheduler`, `BiodiversityScheduler`, and `FloodScheduler` on every cron run. Successful jobs set `Dataset.lastSyncedAt` for matching dataset categories. See the `ingestion` module in [modules.md](modules.md).
+
+## Permissions
+
+| Model | Key Fields | Relations |
+| --- | --- | --- |
+| `Permission` | `id`, `key unique`, `description` | → `RolePermission[]` |
+| `RolePermission` | `role UserRole`, `permissionId`; unique `(role, permissionId)` | → `Permission` |
+
+Seeded on first boot by `PermissionsService.onModuleInit` with 11 named permissions and default role grants. Queried by `PermissionsGuard` for fine-grained access control on routes decorated with `@RequirePermissions(...)`. ADMIN bypasses all permission checks in the guard. Results cached per role for 5 minutes.
 
 ## Weather Models
 
@@ -207,7 +218,7 @@ QUEUED → RUNNING → SUCCEEDED
                 ↘ FAILED → (retry → QUEUED)
          CANCELLED
 ```
-Defined in the schema; no code writes these transitions yet.
+`IngestionService` writes these transitions. Weather, GBIF, and Flood schedulers call `startJob` (→ `RUNNING`) then `completeJob` (→ `SUCCEEDED`) or `failJob` (→ `FAILED`). No manual trigger, retry endpoint, or `QUEUED`/`CANCELLED` transition is implemented yet — scheduled crons serve as periodic retry.
 
 ## Database Setup
 
@@ -224,8 +235,8 @@ pnpm run db:studio            # Open Prisma Studio at localhost:5555
 
 | Migration | Adds |
 | --- | --- |
-| `20260826150548_init` | Full schema — all 30 tables and 17 enums in a single fresh migration |
+| `20260826150548_init` | Full schema — all 35 tables and 20 enums in a single fresh migration |
 
-30 tables live.
+35 tables live.
 
-The `LocationsService`, `DatasetsService`, and `ProvidersService` auto-seed geography, catalog, and provider data on first boot via `OnModuleInit`. `LocationsService` seeds 8 divisions, 64 districts (56 with GeoJSON boundary), 494 upazilas, and 4,540 unions — all with lat/lng. All coordinates are hardcoded in `apps/api/src/locations/seed/bangladesh.ts`; no runtime file reads are required. `DatasetsService` seeds 6 catalog records. `ProvidersService` seeds both the OpenMeteo and GBIF provider records. No separate seed script is required for those tables.
+The `LocationsService`, `DatasetsService`, `ProvidersService`, `PermissionsService`, and `SeedService` auto-seed data on first boot via `OnModuleInit`. `LocationsService` seeds 8 divisions, 64 districts (56 with GeoJSON boundary), 494 upazilas, and 4,540 unions — all with lat/lng. All coordinates are hardcoded in `apps/api/src/locations/seed/bangladesh.ts`; no runtime file reads are required. `DatasetsService` seeds 6 catalog records. `ProvidersService` seeds both the OpenMeteo and GBIF provider records. `PermissionsService` seeds 11 named permissions and default role grants. `SeedService` seeds 6 dev user accounts (one per role) and a seed organization for local development. No separate seed script is required for those tables.

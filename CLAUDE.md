@@ -57,18 +57,20 @@ Global setup in `apps/api/src/main.ts`:
 - `helmet()` applied first — security headers on every response including errors
 - Prefix `/api/v1`
 - `ValidationPipe` with `whitelist: true`, `forbidNonWhitelisted: true`, `transform: true`
-- `JwtAuthGuard` + `RolesGuard` registered via `useGlobalGuards`; `ThrottlerGuard` registered via `APP_GUARD` in `AppModule` (needs DI)
+- `JwtAuthGuard` + `RolesGuard` + `PermissionsGuard` registered via `useGlobalGuards`; `ThrottlerGuard` registered via `APP_GUARD` in `AppModule` (needs DI)
 - Rate limits: global 120 req / 60 s; auth endpoints tightened — login/register 5 req / 60 s, refresh 20 req / 60 s
 
-**Feature modules** (`apps/api/src/`): `auth`, `users`, `organizations`, `locations`, `locations/climate`, `providers`, `datasets`, `reports`, `alerts`, `observations`, `restoration`, `biodiversity`, `weather`, `metrics`, `notifications`, `database`, `common`. Stubs with no implementation: `media`, `ingestion`.
+**Feature modules** (`apps/api/src/`): `auth`, `users`, `organizations`, `locations`, `locations/climate`, `providers`, `datasets`, `reports`, `alerts`, `observations`, `restoration`, `biodiversity`, `weather`, `flood`, `metrics`, `notifications`, `permissions`, `analytics`, `database`, `common`. Also registered in `AppModule`: a `SeedService` (seeds dev users + organization on boot). Stub with no implementation: `media`. Implemented: `ingestion`.
 
 Each feature module follows: `*.module.ts` → `*.controller.ts` → `*.service.ts` → `dto/` folder.
 
 **Auth & guard stack:**
 - `JwtAuthGuard` (extends `AuthGuard('jwt')`) — checks `@Public()` reflector metadata; skips JWT validation if present
 - `RolesGuard` — checks `@Roles(...)` metadata against `request.user.role`; skips if no `@Roles` decorator applied
+- `PermissionsGuard` — checks `@RequirePermissions(...)` metadata against DB-backed role-permission grants; ADMIN bypasses all permission checks; results are cached per role for 5 minutes
 - `@Public()` — `SetMetadata(PUBLIC_KEY, true)` — bypasses `JwtAuthGuard` entirely
 - `@Roles('ADMIN', ...)` — role gate; values must be UPPERCASE matching Prisma enum exactly
+- `@RequirePermissions('organizations.manage', ...)` — fine-grained permission gate backed by `Permission`/`RolePermission` models
 - `@CurrentUser()` — param decorator injecting `JwtPayload` from `request.user`
 
 **Refresh tokens:** Opaque crypto-random bytes stored as SHA-256 hash in Postgres (`RefreshToken` model). Not JWTs. Redeemable only via `POST /api/v1/auth/refresh`. Rotated on use; daily cleanup cron removes expired rows.
@@ -77,23 +79,25 @@ Each feature module follows: `*.module.ts` → `*.controller.ts` → `*.service.
 
 ### Database (Prisma)
 
-Schema: `packages/database/prisma/schema.prisma` — 30 models, 17 enums. Single migration: `packages/database/prisma/migrations/20260826150548_init`.
+Schema: `packages/database/prisma/schema.prisma` — 35 models, 20 enums. Single migration: `packages/database/prisma/migrations/20260826150548_init`.
 
 **All IDs are Prisma CUIDs** (e.g. `cmstewlrj0012usw17sqz1d3n`). Use `@IsString()` in DTO validators, never `@IsUUID()`.
 
 **All enum values are UPPERCASE** and defined in `packages/shared`. A previous bug had them lowercase, causing `RolesGuard` to reject every request including admins. The shared package is the canonical source — Prisma, guards, and DTOs must all agree.
 
-Seeding happens in service `onModuleInit()` hooks (idempotent `count()` check):
+Seeding happens in service `onModuleInit()` hooks (idempotent upserts):
 - `LocationsService` — seeds 8 divisions, 64 districts (56 with GeoJSON boundary), 494 upazilas, 4,540 unions — all with lat/lng. Hardcoded in `apps/api/src/locations/seed/bangladesh.ts` (no runtime file reads). Regenerate with `scripts/gen-bangladesh-seed.py` from `administrative.json` + `districts.geojson`.
 - `ProvidersService` — seeds OpenMeteo + GBIF provider records
 - `DatasetsService` — seeds 6 dataset catalog records
+- `PermissionsService` — seeds 11 named permissions (`reports.create`, `reports.moderate`, `alerts.manage`, `restoration.create`, `restoration.join`, `observations.create`, `observations.verify`, `observations.delete`, `organizations.access`, `organizations.manage`, `users.manage`) and default role grants
+- `SeedService` — seeds 6 dev user accounts (one per role, password `NatureGrid123!`) and a seed organization for local development
 
 Every mutation writes an `AuditEvent` record (action, userId, entityType, entityId, meta, ipAddress).
 
 Notable schema decisions:
 - `Occurrence.gbifOccurrenceKey` is `BigInt` — real GBIF keys exceed `INT4` range (caught on first live sync)
 - Geography fields are plain `Float` lat/lng, not PostGIS `geography` — the PostGIS image runs but the type is not yet used in schema
-- No org-membership model — `ORGANIZATION_ADMIN` is a bare role, not scoped to a specific organization
+- `OrganizationMembership` model links users to organizations with `ADMIN` or `MEMBER` role — users may belong to multiple organizations. `ORGANIZATION_ADMIN` is also a platform-level role in `UserRole`, separate from org-scoped membership.
 - All 4 geography models (`Division`, `District`, `Upazila`, `Union`) carry 11 climate columns (`avgTemp30d`, `minTemp30d`, `maxTemp30d`, `avgHumidity30d`, `totalPrecip30d`, `avgWindSpeed30d`, `avgCloudCover30d`, `avgPm25_30d`, `avgPm10_30d`, `avgUvIndex30d`, `climateUpdatedAt`) — populated nightly by `LocationClimateModule`
 - `UnionDailyClimate` — raw daily history per union; the source for 30-day rolling averages
 
@@ -121,24 +125,25 @@ Route groups: `(auth)` — `/login`; `(admin)` — all other pages behind a dark
 
 **Nav:** `components/admin-nav.tsx` is `'use client'` (uses `usePathname()` for active-link state); Datasets and Users links are ADMIN-only. The layout itself stays a Server Component.
 
-Pages: Reports (moderation queue, 5-status tabs), Users (role change, deactivate), Alerts (create, cancel, status tabs), Datasets (publish toggle, access policy). Ingestion dashboard blocked — `IngestionModule` is an empty stub.
+Pages: Reports (moderation queue, 5-status tabs), Users (role change, deactivate, reactivate), Alerts (create, cancel, status tabs), Datasets (publish toggle, access policy), Organizations (create, membership management), Ingestion (job history, status tabs, per-job detail).
 
-### Weather, Biodiversity & Location Climate modules
+### Weather, Biodiversity, Flood & Location Climate modules
 
-All three are self-contained; none is wired to the generic `ingestion` module stubs.
+These modules handle external data ingestion. All use `IngestionService` (imported from `IngestionModule`) to write `IngestionJob` records per scheduler run.
 
 - `weather/` — OpenMeteo HTTP client (`WeatherOpenMeteoClient`, exported from `WeatherModule`), three cron jobs (current every 15 min, hourly/AQ every 2 h, daily every 12 h), public read endpoints. Fetches at **district** level (64 locations).
-- `biodiversity/` — GBIF HTTP client, daily sync cron (fetches 1 000 occurrences), species + occurrence read endpoints
-- `locations/climate/` — `LocationClimateModule` with a daily cron (`0 0 0 * * *`). Fetches OpenMeteo at **union** level using the batch API (up to 1,000 coords per HTTP request — 4,540 unions = 6 total requests). Stores raw daily data in `UnionDailyClimate`, then recomputes 30-day rolling averages bottom-up: Union → Upazila → District → Division via bulk `UPDATE … FROM (SELECT … GROUP BY)` SQL. Reuses `WeatherOpenMeteoClient` from `WeatherModule` (import `WeatherModule` to get it).
+- `biodiversity/` — GBIF HTTP client, daily sync cron (fetches 1,000 occurrences), species + occurrence read endpoints
+- `flood/` — OpenMeteo Flood / GloFAS HTTP client, six-hour scheduler (initial sync on empty table), public forecast endpoints. Fetches 30-day discharge forecasts at **district** level.
+- `locations/climate/` — `LocationClimateModule` with a daily cron (`0 0 0 * * *`). Fetches OpenMeteo at **union** level using the batch API (up to 1,000 coords per HTTP request — 4,540 unions = 6 total requests). Stores raw daily data in `UnionDailyClimate`, then recomputes 30-day rolling averages bottom-up: Union → Upazila → District → Division via bulk `UPDATE … FROM (SELECT … GROUP BY)` SQL. Reuses `WeatherOpenMeteoClient` from `WeatherModule` (import `WeatherModule` to get it). Does not write `IngestionJob` records (scheduler-only, no read endpoints).
 
 ### Testing
 
-61 unit tests in 5 spec files under `apps/api/src/` (all fully mocked — no DB, no running server):
-- `roles.guard.spec.ts` — all 6 roles, case-sensitivity regression
-- `jwt-auth.guard.spec.ts` — `@Public()` bypass, error handling
-- `auth.service.spec.ts` — register/login/refresh/logout, token rotation, audit events, `USER_LOGIN_FAILED` in all three failure branches
-- `refresh-token.util.spec.ts` — opaque format, hash isolation
-- `env.validation.spec.ts` — placeholder rejection, 31/32-char boundary
+52 unit tests in 5 spec files under `apps/api/src/` (all fully mocked — no DB, no running server):
+- `roles.guard.spec.ts` — all 6 roles, case-sensitivity regression (9 tests)
+- `jwt-auth.guard.spec.ts` — `@Public()` bypass, error handling (5 tests)
+- `auth.service.spec.ts` — register/login/refresh/logout, token rotation, audit events, `USER_LOGIN_FAILED` in all three failure branches (24 tests)
+- `refresh-token.util.spec.ts` — opaque format, hash isolation (7 tests)
+- `env.validation.spec.ts` — placeholder rejection, 31/32-char boundary (7 tests)
 
 `apps/web` and `apps/admin` have no tests (`echo "No web tests configured yet"`).
 
