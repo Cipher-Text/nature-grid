@@ -36,13 +36,15 @@ Nature Grid is built to change that. It is not a scientific data warehouse and n
 
 The home page (`/`) surfaces:
 
-- Live weather conditions and 30-day climate summaries for each of Bangladesh's 8 divisions, 64 districts, 495 upazilas, and 4,540 unions
+- Live weather conditions and 30-day climate summaries for each of Bangladesh's 8 divisions, 64 districts, 494 upazilas, and 4,540 unions
 - Active environmental alerts with severity and affected zone
 - Recent verified citizen reports from across the country
 - Biodiversity highlights — species sightings and occurrence records from GBIF
 - Restoration project highlights — active conservation work by NGOs and organizations
-- Air quality readings from OpenMeteo, updated regularly
-- Dataset summaries for weather, air quality, water, biodiversity, and geospatial reference data
+- Air quality and solar radiation readings from OpenMeteo, updated regularly
+- Marine wave and swell forecasts for coastal districts (Cox's Bazar, Chattogram, Khulna, etc.)
+- River discharge flood forecasts via OpenMeteo/GloFAS
+- Dataset summaries for weather, air quality, water, marine, biodiversity, and geospatial reference data
 
 ---
 
@@ -76,9 +78,9 @@ packages/shared    Enum values (canonical source)
 packages/contracts Route map + DTOs (web only)
 ```
 
-**Database:** PostgreSQL on port 5433 (docker-compose), 5432 (local). Prisma ORM with CUIDs.
+**Database:** PostgreSQL on port 5432 (local only — the docker-compose no longer runs a Postgres container). Prisma ORM with CUIDs.
 
-**Data ingestion:** OpenMeteo (weather, air quality, climate) and GBIF (biodiversity occurrences) are ingested by self-contained NestJS modules with cron schedulers — not the generic `ingestion` module stubs.
+**Data ingestion:** OpenMeteo (weather, air quality, flood/GloFAS, satellite radiation, marine wave/swell) and GBIF (biodiversity occurrences) are ingested by self-contained NestJS modules with cron schedulers. Emissions tracking (factories, power plants, vehicle fleets) is user-submitted via the `emissions` module.
 
 Detailed architecture: [docs/architecture/](docs/architecture/)
 
@@ -95,9 +97,6 @@ Detailed architecture: [docs/architecture/](docs/architecture/)
 ### Local development
 
 ```bash
-# Start PostgreSQL 16/PostGIS on :5433 and Redis on :6379
-docker-compose up -d
-
 # Install dependencies
 pnpm install
 
@@ -111,7 +110,7 @@ pnpm db:migrate
 pnpm dev
 ```
 
-Copy `.env.example` to `.env` in `apps/api` and fill in `DATABASE_URL` and `JWT_SECRET`. Generate a secret with:
+PostgreSQL 16 must be running locally on port 5432 before running migrations. Copy `.env.example` to `.env` in `apps/api` and fill in `DATABASE_URL` and `JWT_SECRET`. Generate a secret with:
 
 ```bash
 openssl rand -base64 48
