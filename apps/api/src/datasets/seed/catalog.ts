@@ -49,4 +49,20 @@ export const SEED_DATASETS: {
     source: 'forest-department',
     description: 'Mangrove health and wildlife monitoring data from the Forest Department.',
   },
+  {
+    name: 'OpenMeteo Marine Weather',
+    category: DatasetCategory.WATER,
+    accessPolicy: DatasetAccessPolicy.PUBLIC,
+    source: 'openmeteo-marine',
+    description:
+      'Daily wave height, swell, and wind-wave forecasts for Bangladesh coastal districts via OpenMeteo Marine Weather API (GFS Wave / ERA5).',
+  },
+  {
+    name: 'OpenMeteo Satellite Radiation',
+    category: DatasetCategory.MONITORING,
+    accessPolicy: DatasetAccessPolicy.PUBLIC,
+    source: 'openmeteo-satellite',
+    description:
+      'Daily satellite-derived solar radiation totals, sunshine duration, and daylight duration for Bangladesh districts via OpenMeteo Satellite Radiation API.',
+  },
 ];

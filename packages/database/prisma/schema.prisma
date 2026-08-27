@@ -384,11 +384,13 @@ model District {
   occurrences Occurrence[]
   alertSubscriptions AlertSubscription[]
 
-  currentWeatherReadings CurrentWeatherReading[]
-  hourlyWeatherForecasts HourlyWeatherForecast[]
-  dailyWeatherForecasts  DailyWeatherForecast[]
-  airQualityReadings     HourlyAirQuality[]
-  floodForecasts         FloodForecast[]
+  currentWeatherReadings    CurrentWeatherReading[]
+  hourlyWeatherForecasts    HourlyWeatherForecast[]
+  dailyWeatherForecasts     DailyWeatherForecast[]
+  airQualityReadings        HourlyAirQuality[]
+  floodForecasts            FloodForecast[]
+  satelliteRadiationReadings SatelliteRadiationReading[]
+  marineForecasts            MarineForecast[]
 
   @@unique([name, divisionId])
   @@index([divisionId])
@@ -800,6 +802,57 @@ model FloodForecast {
   @@unique([districtId, forecastDate])
   @@index([districtId])
   @@index([forecastDate])
+}
+
+// ─── Marine Weather (OpenMeteo Marine API) ───────────────────────────────────
+// Daily wave, swell, and wind-wave forecasts for each district's nearest marine grid cell.
+// Wave heights in metres; directions in degrees; periods in seconds.
+// Inland districts will have no rows — the marine API only resolves sea grid cells.
+
+model MarineForecast {
+  id                        String   @id @default(cuid())
+  districtId                String
+  district                  District @relation(fields: [districtId], references: [id])
+  lat                       Float
+  lng                       Float
+  forecastDate              DateTime @db.Date
+  waveHeightMax             Float?
+  waveDirectionDominant     Float?
+  wavePeriodMax             Float?
+  windWaveHeightMax         Float?
+  windWaveDirectionDominant Float?
+  windWavePeriodMax         Float?
+  windWavePeakPeriodMax     Float?
+  swellWaveHeightMax        Float?
+  swellWaveDirectionDominant Float?
+  swellWavePeriodMax        Float?
+  swellWavePeakPeriodMax    Float?
+  createdAt                 DateTime @default(now())
+
+  @@unique([districtId, forecastDate])
+  @@index([districtId])
+  @@index([forecastDate])
+}
+
+// ─── Satellite Radiation (OpenMeteo Satellite API) ───────────────────────────
+// Daily solar radiation totals and sunshine for each district.
+// shortwaveRadiationSum in Wh/m²; sunshineDuration and daylightDuration in seconds.
+
+model SatelliteRadiationReading {
+  id                    String   @id @default(cuid())
+  districtId            String
+  district              District @relation(fields: [districtId], references: [id])
+  lat                   Float
+  lng                   Float
+  readingDate           DateTime @db.Date
+  shortwaveRadiationSum Float?
+  sunshineDuration      Float?
+  daylightDuration      Float?
+  createdAt             DateTime @default(now())
+
+  @@unique([districtId, readingDate])
+  @@index([districtId])
+  @@index([readingDate])
 }
 
 // ─── Weather ──────────────────────────────────────────────────────────────────

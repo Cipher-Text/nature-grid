@@ -20,6 +20,8 @@ import { MediaModule } from './media/media.module';
 import { IngestionModule } from './ingestion/ingestion.module';
 import { WeatherModule } from './weather/weather.module';
 import { FloodModule } from './flood/flood.module';
+import { MarineModule } from './marine/marine.module';
+import { RadiationModule } from './radiation/radiation.module';
 import { LocationClimateModule } from './locations/climate/location-climate.module';
 import { MetricsModule } from './metrics/metrics.module';
 import { NotificationsModule } from './notifications/notifications.module';
@@ -51,6 +53,8 @@ import { SeedService } from './seed/seed.service';
     IngestionModule,
     WeatherModule,
     FloodModule,
+    MarineModule,
+    RadiationModule,
     LocationClimateModule,
     MetricsModule,
     NotificationsModule,
