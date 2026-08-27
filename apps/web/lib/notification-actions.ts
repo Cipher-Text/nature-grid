@@ -11,8 +11,8 @@ export async function subscribeAction(formData: FormData) {
   if (!accessToken) redirect('/login');
 
   const rawDistrictId = formData.get('districtId');
-  const districtId = rawDistrictId ? String(rawDistrictId) : undefined;
-  const minSeverity = String(formData.get('minSeverity') ?? 'INFO');
+  const districtId    = rawDistrictId ? String(rawDistrictId) : undefined;
+  const minSeverity   = String(formData.get('minSeverity') ?? 'INFO');
 
   try {
     await apiPostAuthed<AlertSubscription>(
@@ -22,10 +22,10 @@ export async function subscribeAction(formData: FormData) {
     );
   } catch (err) {
     const message = err instanceof ApiError ? err.message : 'Failed to subscribe';
-    redirect(`/profile?sub_error=${encodeURIComponent(message)}`);
+    redirect(`/profile?tab=alerts&sub_error=${encodeURIComponent(message)}`);
   }
 
-  redirect('/profile?subscribed=1');
+  redirect('/profile?tab=alerts&subscribed=1');
 }
 
 export async function unsubscribeAction(subscriptionId: string) {
@@ -36,8 +36,8 @@ export async function unsubscribeAction(subscriptionId: string) {
     await apiDeleteAuthed(routes.notifications.unsubscribe(subscriptionId), accessToken);
   } catch (err) {
     const message = err instanceof ApiError ? err.message : 'Failed to unsubscribe';
-    redirect(`/profile?sub_error=${encodeURIComponent(message)}`);
+    redirect(`/profile?tab=alerts&sub_error=${encodeURIComponent(message)}`);
   }
 
-  redirect('/profile?unsubscribed=1');
+  redirect('/profile?tab=alerts&unsubscribed=1');
 }

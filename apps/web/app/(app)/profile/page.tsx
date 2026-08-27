@@ -17,13 +17,33 @@ import { ENVIRONMENTAL_EXPERTISE, ENVIRONMENTAL_RESEARCH_INTERESTS } from '@natu
 import TagInput from '../../../components/tag-input';
 import DistrictSelect, { type DistrictWithDivision } from '../../../components/district-select';
 
+// ── Constants ────────────────────────────────────────────────────────────────
+
+type ProfileTab = 'personal' | 'location' | 'alerts' | 'security';
+
+const TABS: { id: ProfileTab; label: string }[] = [
+  { id: 'personal', label: 'Personal Info' },
+  { id: 'location', label: 'Location & Scope' },
+  { id: 'alerts',   label: 'Alert Subscriptions' },
+  { id: 'security', label: 'Security' },
+];
+
 const ROLE_LABELS: Record<string, string> = {
-  CITIZEN:           'Citizen contributor',
-  RESEARCHER:        'Researcher',
-  ORGANIZATION_ADMIN:'Organization admin',
-  GOVERNMENT:        'Government',
-  MODERATOR:         'Moderator',
-  ADMIN:             'Admin',
+  CITIZEN:            'Citizen contributor',
+  RESEARCHER:         'Researcher',
+  ORGANIZATION_ADMIN: 'Organization admin',
+  GOVERNMENT:         'Government official',
+  MODERATOR:          'Moderator',
+  ADMIN:              'Administrator',
+};
+
+const ROLE_BADGE_CLASS: Record<string, string> = {
+  CITIZEN:            'role-citizen',
+  RESEARCHER:         'role-researcher',
+  ORGANIZATION_ADMIN: 'role-org-admin',
+  GOVERNMENT:         'role-government',
+  MODERATOR:          'role-moderator',
+  ADMIN:              'role-admin',
 };
 
 const REPORT_STATUS_VARIANT: Record<string, string> = {
@@ -55,12 +75,17 @@ const SEVERITY_VARIANT: Record<string, string> = {
   EMERGENCY: 'danger',
 };
 
-type DistrictOption = DistrictWithDivision;
+const SOCIAL_PLATFORMS = [
+  'googleScholar', 'researchGate', 'orcid',
+  'linkedin', 'website', 'github', 'facebook',
+] as const;
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function initials(displayName: string): string {
   const parts = displayName.trim().split(/\s+/);
   const first = parts[0]?.[0] ?? '';
-  const last = parts.length > 1 ? parts[parts.length - 1][0] : '';
+  const last  = parts.length > 1 ? parts[parts.length - 1][0] : '';
   return (first + last).toUpperCase();
 }
 
@@ -68,12 +93,36 @@ function monthYear(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 }
 
+function groupByDivision(districts: DistrictWithDivision[]): Map<string, DistrictWithDivision[]> {
+  const map = new Map<string, DistrictWithDivision[]>();
+  for (const d of districts) {
+    const div = d.division?.name ?? 'Other';
+    if (!map.has(div)) map.set(div, []);
+    map.get(div)!.push(d);
+  }
+  return map;
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
+
 export default async function ProfilePage({
   searchParams,
 }: {
-  searchParams: { subscribed?: string; unsubscribed?: string; sub_error?: string; profileSaved?: string; profileError?: string };
+  searchParams: {
+    tab?: string;
+    subscribed?: string;
+    unsubscribed?: string;
+    sub_error?: string;
+    profileSaved?: string;
+    profileError?: string;
+  };
 }) {
-  const user = await getCurrentUser();
+  const activeTab: ProfileTab =
+    searchParams.tab && TABS.some((t) => t.id === searchParams.tab)
+      ? (searchParams.tab as ProfileTab)
+      : 'personal';
+
+  const user        = await getCurrentUser();
   const accessToken = cookies().get(ACCESS_TOKEN_COOKIE)?.value ?? '';
 
   const [myReports, myObservations, subscriptions, districts] = await Promise.all([
@@ -86,91 +135,437 @@ export default async function ProfilePage({
     apiGetAuthed<AlertSubscription[]>(routes.notifications.subscriptions, accessToken).catch(
       (): AlertSubscription[] => [],
     ),
-    apiGet<DistrictOption[]>(routes.locations.districts),
+    apiGet<DistrictWithDivision[]>(routes.locations.districts),
   ]);
-  const profile = user?.profile;
-  const social = Object.fromEntries((user?.socialLinks ?? []).map((link) => [link.platform, link.url]));
+
+  const profile  = user?.profile;
+  const social   = Object.fromEntries((user?.socialLinks ?? []).map((l) => [l.platform, l.url]));
+  const districtsByDivision = groupByDivision(districts);
 
   return (
     <>
-      {/* ── Hero ── */}
-      <header className="profile-hero" aria-label="Your profile">
-        <div className="avatar" aria-hidden="true">
-          {user ? initials(user.displayName) : '?'}
-        </div>
-        <div>
-          <p className="eyebrow">{user ? (ROLE_LABELS[user.role] ?? user.role) : ''}</p>
-          <h1>{user?.displayName}</h1>
-          <p>{user?.email}</p>
-          <div className="stat-row" aria-label="Account details">
-            <div>
-              <strong>{myReports.total}</strong>
-              <span>Reports</span>
-            </div>
-            <div>
-              <strong>{myObservations.total}</strong>
-              <span>Observations</span>
-            </div>
-            <div>
-              <strong>{user ? monthYear(user.createdAt) : '—'}</strong>
-              <span>Member since</span>
-            </div>
+      {/* ── Profile Banner ─────────────────────────────────────────────────── */}
+      <div className="profile-banner" aria-label="Your profile">
+        <div className="profile-banner-top" aria-hidden="true" />
+        <div className="profile-banner-body">
+          <div className="profile-avatar-xl" aria-hidden="true">
+            {user ? initials(user.displayName) : '?'}
           </div>
-        </div>
-      </header>
 
-      {searchParams.profileSaved && <div className="flash flash-success">Profile updated.</div>}
-      {searchParams.profileError && <div className="flash flash-error">{searchParams.profileError}</div>}
+          <div className="profile-banner-info">
+            <h1>{user?.displayName ?? 'Your Profile'}</h1>
 
-      <article className="panel">
-        <div className="panel-header">
-          <div>
-            <h2>Profile information</h2>
-            <p>Keep your professional identity and public links up to date.</p>
-          </div>
-        </div>
-        <form action={updateProfileAction} className="profile-form">
-          <div className="profile-form-grid">
-            <label>Name<input name="displayName" defaultValue={user?.displayName} required /></label>
-            <label>Email<input value={user?.email} readOnly /></label>
-            <label>Phone<input name="phone" defaultValue={profile?.phone ?? ''} placeholder="Optional" /></label>
-            <label>Occupation<input name="occupation" defaultValue={profile?.occupation ?? ''} placeholder="Researcher, ecologist..." /></label>
-            <label>Education<input name="education" defaultValue={profile?.education ?? ''} placeholder="Degree or qualification" /></label>
-            <label>Institution<input name="institution" defaultValue={profile?.institution ?? ''} placeholder="University or employer" /></label>
-            <label>District<select name="locationDistrict" defaultValue={profile?.locationDistrict ?? ''}>
-              <option value="">Select district</option>
-              {districts.map((district) => (
-                <option key={district.id} value={district.name}>{district.name}</option>
+            <div className="profile-banner-meta">
+              {user && (
+                <span className={`profile-role-badge ${ROLE_BADGE_CLASS[user.role] ?? 'role-citizen'}`}>
+                  {ROLE_LABELS[user.role] ?? user.role}
+                </span>
+              )}
+              {profile?.locationDistrict && (
+                <span className="profile-location-badge">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 21s-8-7.3-8-13a8 8 0 0 1 16 0c0 5.7-8 13-8 13z"/><circle cx="12" cy="8" r="3"/></svg>
+                  {profile.locationDistrict}
+                </span>
+              )}
+              <span className="profile-location-badge">{user?.email}</span>
+              {user?.organizations?.filter((o) => o.isVerified).map((org) => (
+                <span key={org.id} className="profile-org-badge">{org.name}</span>
               ))}
-            </select></label>
-            <label>Country<input value={profile?.locationCountry ?? 'Bangladesh'} readOnly /></label>
-          </div>
-          <label>Biography<textarea name="bio" defaultValue={profile?.bio ?? ''} rows={3} placeholder="A short introduction" /></label>
-          <div className="profile-form-grid">
-            <TagInput name="expertise" label="Expertise" initialValues={profile?.expertise ?? []} suggestions={ENVIRONMENTAL_EXPERTISE} placeholder="Add expertise" />
-            <TagInput name="researchInterests" label="Research interests" initialValues={profile?.researchInterests ?? []} suggestions={ENVIRONMENTAL_RESEARCH_INTERESTS} placeholder="Add research interest" />
-          </div>
-          <h3>Professional and social links</h3>
-          <div className="profile-form-grid">
-            <label>Google Scholar<input name="googleScholar" defaultValue={social.googleScholar ?? ''} placeholder="https://scholar.google.com/..." /></label>
-            <label>ResearchGate<input name="researchGate" defaultValue={social.researchGate ?? ''} placeholder="https://researchgate.net/..." /></label>
-            <label>ORCID<input name="orcid" defaultValue={social.orcid ?? ''} placeholder="https://orcid.org/..." /></label>
-            <label>LinkedIn<input name="linkedin" defaultValue={social.linkedin ?? ''} placeholder="https://linkedin.com/in/..." /></label>
-            <label>Personal website<input name="website" defaultValue={social.website ?? ''} placeholder="https://..." /></label>
-            <label>GitHub<input name="github" defaultValue={social.github ?? ''} placeholder="https://github.com/..." /></label>
-            <label>Facebook<input name="facebook" defaultValue={social.facebook ?? ''} placeholder="https://facebook.com/..." /></label>
-          </div>
-          <h3>Visibility</h3>
-          <div className="profile-form-grid">
-            <label>Profile visibility<select name="profileVisibility" defaultValue={profile?.profileVisibility ?? 'PUBLIC'}><option value="PUBLIC">Public</option><option value="MEMBERS_ONLY">Members only</option><option value="PRIVATE">Private</option></select></label>
-            <label>Contact visibility<select name="contactVisibility" defaultValue={profile?.contactVisibility ?? 'PRIVATE'}><option value="PUBLIC">Public</option><option value="MEMBERS_ONLY">Members only</option><option value="PRIVATE">Private</option></select></label>
-            <label>Links visibility<select name="linksVisibility" defaultValue={profile?.linksVisibility ?? 'PUBLIC'}><option value="PUBLIC">Public</option><option value="MEMBERS_ONLY">Members only</option><option value="PRIVATE">Private</option></select></label>
-          </div>
-          <button className="button" type="submit">Save profile</button>
-        </form>
-      </article>
+            </div>
 
-      {/* ── My reports ── */}
+            <div className="profile-banner-stats" aria-label="Activity summary">
+              <div className="profile-banner-stat">
+                <strong>{myReports.total}</strong>
+                <span>Reports</span>
+              </div>
+              <div className="profile-banner-stat">
+                <strong>{myObservations.total}</strong>
+                <span>Observations</span>
+              </div>
+              <div className="profile-banner-stat">
+                <strong>{subscriptions.length}</strong>
+                <span>Subscriptions</span>
+              </div>
+              <div className="profile-banner-stat">
+                <strong>{user ? monthYear(user.createdAt) : '—'}</strong>
+                <span>Member since</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Flash notifications ─────────────────────────────────────────────── */}
+      {searchParams.profileSaved && (
+        <div className="flash flash-success" role="status">Profile updated successfully.</div>
+      )}
+      {searchParams.profileError && (
+        <div className="flash flash-error" role="alert">{searchParams.profileError}</div>
+      )}
+
+      {/* ── Tab navigation ──────────────────────────────────────────────────── */}
+      <nav className="tab-nav" aria-label="Profile sections">
+        {TABS.map((tab) => (
+          <Link
+            key={tab.id}
+            href={`/profile?tab=${tab.id}`}
+            className={activeTab === tab.id ? 'active' : ''}
+            aria-current={activeTab === tab.id ? 'page' : undefined}
+          >
+            {tab.label}
+            {tab.id === 'alerts' && subscriptions.length > 0 && (
+              <span className="tab-badge" aria-label={`${subscriptions.length} active`}>
+                {subscriptions.length}
+              </span>
+            )}
+          </Link>
+        ))}
+      </nav>
+
+      {/* ══ Personal Info Tab ═══════════════════════════════════════════════ */}
+      {activeTab === 'personal' && (
+        <article className="panel">
+          <div className="panel-header">
+            <div>
+              <h2>Personal information</h2>
+              <p>Update your public identity and professional profile details.</p>
+            </div>
+          </div>
+
+          <form action={updateProfileAction} className="profile-form">
+            <input type="hidden" name="_tab" value="personal" />
+
+            {/* Identity */}
+            <h3>Identity</h3>
+            <div className="profile-form-grid">
+              <label>
+                Display name
+                <input name="displayName" defaultValue={user?.displayName} required placeholder="Your full name" />
+              </label>
+              <label>
+                Email address
+                <input value={user?.email ?? ''} readOnly aria-describedby="email-hint" />
+                <small id="email-hint" className="field-hint">Contact an admin to change your email.</small>
+              </label>
+              <label>
+                Phone number
+                <input name="phone" type="tel" defaultValue={profile?.phone ?? ''} placeholder="+880 ..." />
+              </label>
+              <label>
+                Country
+                <input value={profile?.locationCountry ?? 'Bangladesh'} readOnly />
+              </label>
+            </div>
+
+            {/* Professional */}
+            <h3>Professional details</h3>
+            <div className="profile-form-grid">
+              <label>
+                Occupation
+                <input name="occupation" defaultValue={profile?.occupation ?? ''} placeholder="e.g. Field researcher, Ecologist" />
+              </label>
+              <label>
+                Institution / Employer
+                <input name="institution" defaultValue={profile?.institution ?? ''} placeholder="e.g. IUCN Bangladesh" />
+              </label>
+              <label>
+                Education
+                <input name="education" defaultValue={profile?.education ?? ''} placeholder="Degree or qualification" />
+              </label>
+            </div>
+            <label>
+              Biography
+              <textarea name="bio" defaultValue={profile?.bio ?? ''} rows={4} placeholder="A short introduction to yourself and your environmental work..." />
+            </label>
+
+            {/* Expertise */}
+            <h3>Expertise &amp; research interests</h3>
+            <div className="profile-form-grid">
+              <TagInput
+                name="expertise"
+                label="Expertise areas"
+                initialValues={profile?.expertise ?? []}
+                suggestions={ENVIRONMENTAL_EXPERTISE}
+                placeholder="Add expertise..."
+              />
+              <TagInput
+                name="researchInterests"
+                label="Research interests"
+                initialValues={profile?.researchInterests ?? []}
+                suggestions={ENVIRONMENTAL_RESEARCH_INTERESTS}
+                placeholder="Add interest..."
+              />
+            </div>
+
+            {/* Social links */}
+            <h3>Professional &amp; social links</h3>
+            <div className="profile-form-3col">
+              <label>Google Scholar<input name="googleScholar" defaultValue={social.googleScholar ?? ''} placeholder="https://scholar.google.com/..." /></label>
+              <label>ResearchGate<input name="researchGate"   defaultValue={social.researchGate   ?? ''} placeholder="https://researchgate.net/..." /></label>
+              <label>ORCID<input name="orcid"          defaultValue={social.orcid          ?? ''} placeholder="https://orcid.org/..." /></label>
+              <label>LinkedIn<input name="linkedin"       defaultValue={social.linkedin       ?? ''} placeholder="https://linkedin.com/in/..." /></label>
+              <label>Personal website<input name="website"         defaultValue={social.website         ?? ''} placeholder="https://..." /></label>
+              <label>GitHub<input name="github"         defaultValue={social.github         ?? ''} placeholder="https://github.com/..." /></label>
+              <label>Facebook<input name="facebook"       defaultValue={social.facebook       ?? ''} placeholder="https://facebook.com/..." /></label>
+            </div>
+
+            {/* Visibility */}
+            <h3>Privacy &amp; visibility</h3>
+            <div className="profile-form-3col">
+              <label>
+                Profile visibility
+                <select name="profileVisibility" defaultValue={profile?.profileVisibility ?? 'PUBLIC'}>
+                  <option value="PUBLIC">Public — anyone can view</option>
+                  <option value="MEMBERS_ONLY">Members only</option>
+                  <option value="PRIVATE">Private</option>
+                </select>
+              </label>
+              <label>
+                Contact visibility
+                <select name="contactVisibility" defaultValue={profile?.contactVisibility ?? 'PRIVATE'}>
+                  <option value="PUBLIC">Public</option>
+                  <option value="MEMBERS_ONLY">Members only</option>
+                  <option value="PRIVATE">Private — hidden</option>
+                </select>
+              </label>
+              <label>
+                Links visibility
+                <select name="linksVisibility" defaultValue={profile?.linksVisibility ?? 'PUBLIC'}>
+                  <option value="PUBLIC">Public</option>
+                  <option value="MEMBERS_ONLY">Members only</option>
+                  <option value="PRIVATE">Private</option>
+                </select>
+              </label>
+            </div>
+
+            {/* Action bar */}
+            <div className="profile-save-bar">
+              <button className="button" type="submit">Save changes</button>
+              <Link className="button ghost" href="/profile?tab=personal">Cancel</Link>
+            </div>
+          </form>
+        </article>
+      )}
+
+      {/* ══ Location & Geo-Scope Tab ════════════════════════════════════════ */}
+      {activeTab === 'location' && (
+        <article className="panel">
+          <div className="panel-header">
+            <div>
+              <h2>Location &amp; geo-scope</h2>
+              <p>Set your primary administrative location for localized data and reporting defaults.</p>
+            </div>
+          </div>
+
+          <form action={updateProfileAction} className="profile-form">
+            <input type="hidden" name="_tab" value="location" />
+            {/* Preserve all other profile fields unchanged */}
+            <input type="hidden" name="displayName"      value={user?.displayName ?? ''} />
+            <input type="hidden" name="phone"            value={profile?.phone ?? ''} />
+            <input type="hidden" name="occupation"       value={profile?.occupation ?? ''} />
+            <input type="hidden" name="bio"              value={profile?.bio ?? ''} />
+            <input type="hidden" name="education"        value={profile?.education ?? ''} />
+            <input type="hidden" name="institution"      value={profile?.institution ?? ''} />
+            <input type="hidden" name="expertise"        value={(profile?.expertise ?? []).join(',')} />
+            <input type="hidden" name="researchInterests" value={(profile?.researchInterests ?? []).join(',')} />
+            <input type="hidden" name="profileVisibility"  value={profile?.profileVisibility  ?? 'PUBLIC'} />
+            <input type="hidden" name="contactVisibility"  value={profile?.contactVisibility  ?? 'PRIVATE'} />
+            <input type="hidden" name="linksVisibility"    value={profile?.linksVisibility    ?? 'PUBLIC'} />
+            {SOCIAL_PLATFORMS.map((p) => (
+              <input key={p} type="hidden" name={p} value={social[p] ?? ''} />
+            ))}
+
+            <h3>Primary district</h3>
+
+            <div className="access-note">
+              <p>Your selected district sets the default geo-scope for weather summaries, environmental data views, and alert suggestions. You can still report from any district.</p>
+            </div>
+
+            <div className="profile-form-grid">
+              <div>
+                <label
+                  htmlFor="locationDistrict-select"
+                  style={{ display: 'block', marginBottom: '6px', fontSize: '0.8rem', fontWeight: 700, color: 'var(--muted)' }}
+                >
+                  District
+                </label>
+                <select
+                  id="locationDistrict-select"
+                  name="locationDistrict"
+                  className="select-field"
+                  defaultValue={profile?.locationDistrict ?? ''}
+                  style={{ width: '100%' }}
+                >
+                  <option value="">Not specified</option>
+                  {[...districtsByDivision.entries()].map(([divName, divDistricts]) => (
+                    <optgroup key={divName} label={divName}>
+                      {divDistricts.map((d) => (
+                        <option key={d.id} value={d.name}>{d.name}</option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+              </div>
+              <label>
+                Country
+                <input value={profile?.locationCountry ?? 'Bangladesh'} readOnly />
+              </label>
+            </div>
+
+            {user?.organizations && user.organizations.length > 0 && (
+              <>
+                <h3>Organization affiliations</h3>
+                <div className="subscription-list">
+                  {user.organizations.map((org) => (
+                    <div key={org.id} className="subscription-row">
+                      <div className="subscription-info">
+                        <strong>{org.name}</strong>
+                        <span className="tag muted">{titleCase(org.type)}</span>
+                        {org.isVerified && <span className="tag success">Verified</span>}
+                        <span className="tag info">{org.membershipRole}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
+            <div className="profile-save-bar">
+              <button className="button" type="submit">Save location</button>
+              <Link className="button ghost" href="/profile?tab=location">Cancel</Link>
+            </div>
+          </form>
+        </article>
+      )}
+
+      {/* ══ Alert Subscriptions Tab ═════════════════════════════════════════ */}
+      {activeTab === 'alerts' && (
+        <article className="panel">
+          <div className="panel-header">
+            <div>
+              <h2>Alert subscriptions</h2>
+              <p>Receive email notifications when environmental alerts are issued for selected locations.</p>
+            </div>
+          </div>
+
+          {searchParams.subscribed && (
+            <div className="flash flash-success" role="status">Subscription created successfully.</div>
+          )}
+          {searchParams.unsubscribed && (
+            <div className="flash flash-success" role="status">Unsubscribed successfully.</div>
+          )}
+          {searchParams.sub_error && (
+            <div className="flash flash-error" role="alert">{searchParams.sub_error}</div>
+          )}
+
+          {subscriptions.length === 0 ? (
+            <p className="muted-text">No active subscriptions. Add one below.</p>
+          ) : (
+            <div className="subscription-list">
+              {subscriptions.map((sub) => (
+                <div key={sub.id} className="subscription-row">
+                  <div className="subscription-info">
+                    <strong>{sub.district?.name ?? 'Nationwide'}</strong>
+                    <span className={`tag ${SEVERITY_VARIANT[sub.minSeverity] ?? 'muted'}`}>
+                      {SEVERITY_LABEL[sub.minSeverity] ?? sub.minSeverity}
+                    </span>
+                    {!sub.district && <span className="tag muted">All districts</span>}
+                  </div>
+                  <form action={unsubscribeAction.bind(null, sub.id)}>
+                    <button
+                      className="button ghost"
+                      type="submit"
+                      aria-label={`Remove subscription for ${sub.district?.name ?? 'nationwide'}`}
+                    >
+                      Remove
+                    </button>
+                  </form>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="subscription-form-section">
+            <h3>Add subscription</h3>
+            <form action={subscribeAction} className="subscription-form">
+              <div className="subscription-form-fields">
+                <div className="field">
+                  <label htmlFor="districtId">Location</label>
+                  <DistrictSelect districts={districts} emptyLabel="Nationwide (all districts)" />
+                </div>
+                <div className="field">
+                  <label htmlFor="minSeverity">Minimum severity</label>
+                  <select id="minSeverity" name="minSeverity" className="select-field">
+                    <option value="INFO">All alerts (Info+)</option>
+                    <option value="WATCH">Watch and above</option>
+                    <option value="WARNING">Warning and above</option>
+                    <option value="EMERGENCY">Emergency only</option>
+                  </select>
+                </div>
+              </div>
+              <div className="profile-save-bar">
+                <button className="button" type="submit">Add subscription</button>
+              </div>
+            </form>
+          </div>
+        </article>
+      )}
+
+      {/* ══ Security Tab ════════════════════════════════════════════════════ */}
+      {activeTab === 'security' && (
+        <article className="panel">
+          <div className="panel-header">
+            <div>
+              <h2>Security &amp; account</h2>
+              <p>Review your login credentials and account details.</p>
+            </div>
+          </div>
+
+          <h3>Account details</h3>
+          <div className="subscription-list">
+            <div className="profile-security-row">
+              <div>
+                <strong className="profile-security-label">Email address</strong>
+                <span className="profile-security-value">{user?.email}</span>
+              </div>
+              <span className="tag success">Verified</span>
+            </div>
+            <div className="profile-security-row">
+              <div>
+                <strong className="profile-security-label">Account role</strong>
+                <span className="profile-security-value">{ROLE_LABELS[user?.role ?? ''] ?? user?.role}</span>
+              </div>
+              <span className={`profile-role-badge ${ROLE_BADGE_CLASS[user?.role ?? ''] ?? 'role-citizen'}`}>
+                {user?.role}
+              </span>
+            </div>
+            <div className="profile-security-row">
+              <div>
+                <strong className="profile-security-label">Last login</strong>
+                <span className="profile-security-value">
+                  {user?.lastLoginAt ? relativeTime(user.lastLoginAt) : 'Unknown'}
+                </span>
+              </div>
+            </div>
+            <div className="profile-security-row">
+              <div>
+                <strong className="profile-security-label">Member since</strong>
+                <span className="profile-security-value">
+                  {user?.createdAt ? monthYear(user.createdAt) : '—'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <h3>Password</h3>
+          <div className="access-note">
+            <p>Password self-service is coming soon.</p>
+            <span>To change your password now, contact an administrator or use the account recovery flow from the login page.</span>
+          </div>
+        </article>
+      )}
+
+      {/* ── My Reports (always visible) ─────────────────────────────────────── */}
       <article className="panel">
         <div className="panel-header">
           <div>
@@ -182,8 +577,7 @@ export default async function ProfilePage({
 
         {myReports.data.length === 0 ? (
           <div className="empty-state">
-            No reports yet.{' '}
-            <Link href="/reports">Submit your first report</Link>.
+            No reports yet. <Link href="/reports">Submit your first report</Link>.
           </div>
         ) : (
           <div className="table" role="table" aria-label="My reports">
@@ -194,12 +588,7 @@ export default async function ProfilePage({
               <span>Submitted</span>
             </div>
             {myReports.data.map((r) => (
-              <Link
-                key={r.id}
-                className="table-row table-row-link"
-                role="row"
-                href={`/reports/${r.id}`}
-              >
+              <Link key={r.id} className="table-row table-row-link" role="row" href={`/reports/${r.id}`}>
                 <strong>{r.title}</strong>
                 <span>{r.district?.name ?? '—'}</span>
                 <span className={`tag ${REPORT_STATUS_VARIANT[r.status] ?? 'muted'}`}>
@@ -212,7 +601,7 @@ export default async function ProfilePage({
         )}
       </article>
 
-      {/* ── My observations ── */}
+      {/* ── My Observations (always visible) ────────────────────────────────── */}
       <article className="panel">
         <div className="panel-header">
           <div>
@@ -224,8 +613,7 @@ export default async function ProfilePage({
 
         {myObservations.data.length === 0 ? (
           <div className="empty-state">
-            No observations yet.{' '}
-            <Link href="/observations">Submit your first observation</Link>.
+            No observations yet. <Link href="/observations">Submit your first observation</Link>.
           </div>
         ) : (
           <div className="table" role="table" aria-label="My observations">
@@ -236,12 +624,7 @@ export default async function ProfilePage({
               <span>Observed</span>
             </div>
             {myObservations.data.map((o) => (
-              <Link
-                key={o.id}
-                className="table-row table-row-link"
-                role="row"
-                href={`/observations/${o.id}`}
-              >
+              <Link key={o.id} className="table-row table-row-link" role="row" href={`/observations/${o.id}`}>
                 <span>{titleCase(o.category)}</span>
                 <span>{o.district?.name ?? '—'}</span>
                 <span className={`tag ${TRUST_VARIANT[o.trustLevel] ?? 'muted'}`}>
@@ -252,70 +635,6 @@ export default async function ProfilePage({
             ))}
           </div>
         )}
-      </article>
-
-      {/* ── Alert subscriptions ── */}
-      <article className="panel">
-        <div className="panel-header">
-          <div>
-            <h2>Alert subscriptions</h2>
-            <p>Get email notifications when new alerts are issued</p>
-          </div>
-        </div>
-
-        {searchParams.subscribed && (
-          <p className="form-success">Subscription created.</p>
-        )}
-        {searchParams.unsubscribed && (
-          <p className="form-success">Unsubscribed successfully.</p>
-        )}
-        {searchParams.sub_error && (
-          <p className="form-error">{searchParams.sub_error}</p>
-        )}
-
-        {subscriptions.length > 0 ? (
-          <div className="subscription-list">
-            {subscriptions.map((sub) => (
-              <div key={sub.id} className="subscription-row">
-                <div className="subscription-info">
-                  <strong>{sub.district?.name ?? 'Nationwide'}</strong>
-                  <span className={`tag ${SEVERITY_VARIANT[sub.minSeverity] ?? 'muted'}`}>
-                    {SEVERITY_LABEL[sub.minSeverity] ?? sub.minSeverity}
-                  </span>
-                </div>
-                <form action={unsubscribeAction.bind(null, sub.id)}>
-                  <button className="button ghost" type="submit">Remove</button>
-                </form>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="muted-text">No subscriptions yet.</p>
-        )}
-
-        <div className="subscription-form-section">
-          <h3>Add subscription</h3>
-          <form action={subscribeAction} className="subscription-form">
-            <div className="subscription-form-fields">
-              <div className="field">
-                <label htmlFor="districtId">Location</label>
-                <DistrictSelect districts={districts} emptyLabel="Nationwide (all districts)" />
-              </div>
-              <div className="field">
-                <label htmlFor="minSeverity">Minimum severity</label>
-                <select id="minSeverity" name="minSeverity" className="select-field">
-                  <option value="INFO">All alerts (Info+)</option>
-                  <option value="WATCH">Watch and above</option>
-                  <option value="WARNING">Warning and above</option>
-                  <option value="EMERGENCY">Emergency only</option>
-                </select>
-              </div>
-            </div>
-            <button className="button" type="submit" style={{ marginTop: '16px' }}>
-              Subscribe
-            </button>
-          </form>
-        </div>
       </article>
     </>
   );
