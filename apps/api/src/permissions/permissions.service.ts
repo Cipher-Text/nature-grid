@@ -21,6 +21,8 @@ const ALL_PERMISSIONS: { key: string; description: string }[] = [
   { key: 'organizations.access', description: 'View own organization memberships' },
   { key: 'organizations.manage', description: 'Full organization CRUD in admin console' },
   { key: 'users.manage',        description: 'Manage user roles and deactivate accounts' },
+  { key: 'emissions.manage',    description: 'Register and update pollution sources' },
+  { key: 'emissions.report',    description: 'Log emission measurements against pollution sources' },
 ];
 
 // Default grants seeded on first boot. ADMIN is excluded from the DB rows —
@@ -47,6 +49,11 @@ const DEFAULT_GRANTS: { role: string; key: string }[] = [
   { role: 'MODERATOR',          key: 'alerts.manage' },
   { role: 'MODERATOR',          key: 'restoration.join' },
   { role: 'MODERATOR',          key: 'observations.delete' },
+  { role: 'GOVERNMENT',         key: 'emissions.manage' },
+  { role: 'GOVERNMENT',         key: 'emissions.report' },
+  { role: 'RESEARCHER',         key: 'emissions.manage' },
+  { role: 'RESEARCHER',         key: 'emissions.report' },
+  { role: 'ORGANIZATION_ADMIN', key: 'emissions.report' },
 ];
 
 @Injectable()

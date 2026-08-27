@@ -107,6 +107,37 @@ enum IngestionStatus {
   CANCELLED
 }
 
+enum PollutionSourceType {
+  FACTORY
+  POWER_PLANT
+  VEHICLE_FLEET
+  AGRICULTURE
+  CONSTRUCTION
+  WASTE_FACILITY
+  OTHER
+}
+
+enum PollutantType {
+  CO2
+  CH4
+  N2O
+  PM25
+  PM10
+  NOX
+  SOX
+  VOC
+  CO
+  OTHER
+}
+
+enum EmissionUnit {
+  TONS_PER_YEAR
+  KG_PER_DAY
+  GRAMS_PER_HOUR
+  MG_PER_M3
+  OTHER
+}
+
 enum AuditAction {
   USER_REGISTER
   USER_LOGIN
@@ -133,6 +164,8 @@ enum AuditAction {
   DATASET_ACCESS_DECISION
   PERMISSION_GRANT
   PERMISSION_REVOKE
+  EMISSION_SOURCE_CREATE
+  EMISSION_ENTRY_CREATE
 }
 
 enum DatasetAccessRequestStatus {
@@ -210,6 +243,8 @@ model User {
   organizationMemberships OrganizationMembership[]
   profile UserProfile?
   socialLinks UserSocialLink[]
+  pollutionSourcesCreated PollutionSource[]
+  emissionEntriesReported EmissionEntry[]
 
   @@index([email])
   @@index([role])
@@ -283,6 +318,7 @@ model Organization {
   providers Provider[]
   restorationProjects RestorationProject[]
   memberships OrganizationMembership[]
+  pollutionSources PollutionSource[]
 }
 
 model OrganizationMembership {
@@ -391,6 +427,7 @@ model District {
   floodForecasts            FloodForecast[]
   satelliteRadiationReadings SatelliteRadiationReading[]
   marineForecasts            MarineForecast[]
+  pollutionSources           PollutionSource[]
 
   @@unique([name, divisionId])
   @@index([divisionId])
@@ -945,6 +982,53 @@ model HourlyAirQuality {
 
   @@unique([districtId, forecastTime])
   @@index([districtId])
+}
+
+// ─── Emissions ────────────────────────────────────────────────────────────────
+// Source-level pollution tracking — distinct from ambient HourlyAirQuality readings.
+
+model PollutionSource {
+  id             String            @id @default(cuid())
+  name           String
+  type           PollutionSourceType
+  description    String?
+  districtId     String?
+  district       District?         @relation(fields: [districtId], references: [id])
+  lat            Float?
+  lng            Float?
+  organizationId String?
+  organization   Organization?     @relation(fields: [organizationId], references: [id])
+  isActive       Boolean           @default(true)
+  createdById    String
+  createdBy      User              @relation(fields: [createdById], references: [id])
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  entries EmissionEntry[]
+
+  @@index([districtId])
+  @@index([type])
+  @@index([isActive])
+}
+
+model EmissionEntry {
+  id                String        @id @default(cuid())
+  sourceId          String
+  source            PollutionSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  pollutant         PollutantType
+  value             Float
+  unit              EmissionUnit
+  measurementMethod String?
+  periodStart       DateTime?
+  periodEnd         DateTime?
+  notes             String?
+  reportedById      String?
+  reportedBy        User?         @relation(fields: [reportedById], references: [id])
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  @@index([sourceId])
+  @@index([pollutant])
 }
 
 // ─── Permissions ──────────────────────────────────────────────────────────────

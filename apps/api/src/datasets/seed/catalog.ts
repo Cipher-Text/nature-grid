@@ -50,6 +50,14 @@ export const SEED_DATASETS: {
     description: 'Mangrove health and wildlife monitoring data from the Forest Department.',
   },
   {
+    name: 'Emissions Inventory',
+    category: DatasetCategory.AIR_QUALITY,
+    accessPolicy: DatasetAccessPolicy.PUBLIC,
+    source: 'platform',
+    description:
+      'Source-level pollution measurements from factories, power plants, vehicle fleets, and other emission sources across Bangladesh. Distinct from ambient air-quality readings.',
+  },
+  {
     name: 'OpenMeteo Marine Weather',
     category: DatasetCategory.WATER,
     accessPolicy: DatasetAccessPolicy.PUBLIC,

@@ -18,6 +18,7 @@ import { ObservationsModule } from './observations/observations.module';
 import { RestorationModule } from './restoration/restoration.module';
 import { MediaModule } from './media/media.module';
 import { IngestionModule } from './ingestion/ingestion.module';
+import { EmissionsModule } from './emissions/emissions.module';
 import { WeatherModule } from './weather/weather.module';
 import { FloodModule } from './flood/flood.module';
 import { MarineModule } from './marine/marine.module';
@@ -51,6 +52,7 @@ import { SeedService } from './seed/seed.service';
     RestorationModule,
     MediaModule,
     IngestionModule,
+    EmissionsModule,
     WeatherModule,
     FloodModule,
     MarineModule,
