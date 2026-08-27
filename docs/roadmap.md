@@ -202,20 +202,22 @@ Exit criteria:
 
 ## Phase 7: Advanced Platform Domains
 
-Status: Planned
+Status: In Progress — emissions tracking done (2026-08-28); satellite radiation and marine weather implemented as data-ingestion additions (2026-08-28, not originally scoped in Phase 7 but logically grouped here); remaining domains still planned.
 
 Goal: Extend Nature Grid into the richer environmental science domains that the core platform was designed to support but that require deeper infrastructure, specialist data sources, or a larger user base before they pay off. Each domain here either has a clear data dependency on Phase 3–6 work, or requires specialist review before scoping.
 
 Order is not fixed. Satellite ingestion is the most infrastructure-heavy and depends on PostGIS, media storage, and the Python data-worker all landing first, so it is likely last.
 
-| Domain | What it adds | Dependencies |
+| Domain | What it adds | Status |
 | --- | --- | --- |
-| **Emissions tracking** | Source-level pollution measurement (factories, industrial sites, vehicles) — distinct from ambient readings in `HourlyAirQuality`. Adds a `PollutionSource` model and per-source emission entries with units and measurement method. | None |
-| **Climate forecasting** | Platform-generated predictions (flood risk, drought early warning, heat index). Adds a model registry, prediction storage, and accuracy tracking — separate from the provider forecasts already in `HourlyWeatherForecast`/`DailyWeatherForecast`. | Python data-worker; ML pipeline |
-| **Carbon accounting** | Per-user and per-organisation footprint entries with calculation methodology and offset tracking. `HourlyAirQuality.carbonMonoxide` is a pollutant measurement and unrelated to this feature. | None |
-| **Research platform** | Publication records, authorship, citations, and institution linkage. Gives the `RESEARCHER` role a meaningful place to publish and cite findings from the platform's own data. | None |
-| **Structured surveys** | Solicited, structured data collection campaigns. Distinct from `CitizenReport` (unsolicited incident reporting) and `Observation` (point-in-time measurements) — surveys target specific questions with a defined form schema and response lifecycle. | None |
-| **Satellite / remote sensing** | Satellite imagery ingestion (NASA MODIS, Sentinel-2), change-detection analysis, and automated deforestation/flooding alerts. Fills the gap where `DEFORESTATION` and `FLOODING` report categories currently only have citizen-reported evidence. | PostGIS geometry fields, object storage, Python data-worker |
+| **Emissions tracking** | Source-level pollution measurement (factories, industrial sites, vehicles) — distinct from ambient readings in `HourlyAirQuality`. `PollutionSource` + `EmissionEntry` models, 3 enums, 2 permissions (`emissions.manage`, `emissions.report`), 6 endpoints. | **Done (2026-08-28)** |
+| **Satellite radiation data** | Daily solar radiation totals, sunshine duration, and daylight duration for all 64 districts via OpenMeteo Satellite API. `SatelliteRadiationReading` model, `RadiationScheduler`. | **Done (2026-08-28)** |
+| **Marine weather data** | Bay of Bengal wave/swell/wind-wave forecasts for coastal Bangladesh districts via OpenMeteo Marine API. `MarineForecast` model, `MarineScheduler`. | **Done (2026-08-28)** |
+| **Climate forecasting** | Platform-generated predictions (flood risk, drought early warning, heat index). Adds a model registry, prediction storage, and accuracy tracking — separate from the provider forecasts already in `HourlyWeatherForecast`/`DailyWeatherForecast`. | *Planned* — requires Python data-worker + ML pipeline |
+| **Carbon accounting** | Per-user and per-organisation footprint entries with calculation methodology and offset tracking. `HourlyAirQuality.carbonMonoxide` is a pollutant measurement and unrelated to this feature. | *Planned* |
+| **Research platform** | Publication records, authorship, citations, and institution linkage. Gives the `RESEARCHER` role a meaningful place to publish and cite findings from the platform's own data. | *Planned* |
+| **Structured surveys** | Solicited, structured data collection campaigns. Distinct from `CitizenReport` (unsolicited incident reporting) and `Observation` (point-in-time measurements) — surveys target specific questions with a defined form schema and response lifecycle. | *Planned* |
+| **Satellite / remote sensing** | Satellite imagery ingestion (NASA MODIS, Sentinel-2), change-detection analysis, and automated deforestation/flooding alerts. Fills the gap where `DEFORESTATION` and `FLOODING` report categories currently only have citizen-reported evidence. | *Planned* — requires PostGIS geometry fields, object storage, Python data-worker |
 
 Exit criteria:
 

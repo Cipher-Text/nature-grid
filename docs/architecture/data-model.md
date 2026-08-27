@@ -2,7 +2,7 @@
 
 Nature Grid uses PostgreSQL as the primary database. The Prisma schema lives at `packages/database/prisma/schema.prisma`. The Prisma client is regenerated via `pnpm run db:generate` from the `packages/database` directory.
 
-Current state: **35 models, 20 enums, 1 migration applied (`20260826150548_init`).**
+Current state: **39 models, 23 enums, 1 migration applied (`20260826150548_init`).**
 
 ## Enums
 
@@ -27,9 +27,12 @@ Current state: **35 models, 20 enums, 1 migration applied (`20260826150548_init`
 | `IngestionStatus` | `QUEUED RUNNING SUCCEEDED FAILED CANCELLED` |
 | `NotificationChannel` | `EMAIL` |
 | `DeliveryStatus` | `PENDING SENT FAILED` |
-| `AuditAction` | `USER_REGISTER USER_LOGIN USER_LOGIN_FAILED USER_LOGOUT USER_ROLE_CHANGE USER_DEACTIVATE REPORT_SUBMIT REPORT_STATUS_CHANGE REPORT_COMMENT_ADD REPORT_MEDIA_ADD ALERT_CREATE ALERT_STATUS_CHANGE DATASET_ACCESS DATASET_DOWNLOAD DATASET_UPDATE OBSERVATION_SUBMIT OBSERVATION_TRUST_CHANGE OBSERVATION_UPDATE OBSERVATION_DELETE RESTORATION_PROJECT_CREATE RESTORATION_PROJECT_UPDATE RESTORATION_PROJECT_JOIN DATASET_ACCESS_DECISION PERMISSION_GRANT PERMISSION_REVOKE` |
+| `PollutionSourceType` | `FACTORY POWER_PLANT VEHICLE_FLEET AGRICULTURE CONSTRUCTION WASTE_FACILITY OTHER` |
+| `PollutantType` | `CO2 CH4 N2O PM25 PM10 NOX SOX VOC CO OTHER` |
+| `EmissionUnit` | `TONS_PER_YEAR KG_PER_DAY GRAMS_PER_HOUR MG_PER_M3 OTHER` |
+| `AuditAction` | `USER_REGISTER USER_LOGIN USER_LOGIN_FAILED USER_LOGOUT USER_ROLE_CHANGE USER_DEACTIVATE REPORT_SUBMIT REPORT_STATUS_CHANGE REPORT_COMMENT_ADD REPORT_MEDIA_ADD ALERT_CREATE ALERT_STATUS_CHANGE DATASET_ACCESS DATASET_DOWNLOAD DATASET_UPDATE OBSERVATION_SUBMIT OBSERVATION_TRUST_CHANGE OBSERVATION_UPDATE OBSERVATION_DELETE RESTORATION_PROJECT_CREATE RESTORATION_PROJECT_UPDATE RESTORATION_PROJECT_JOIN DATASET_ACCESS_DECISION PERMISSION_GRANT PERMISSION_REVOKE EMISSION_SOURCE_CREATE EMISSION_ENTRY_CREATE` |
 
-All 25 `AuditAction` values are written by services. See the `audit` section in [modules.md](modules.md) for which services write what.
+All 27 `AuditAction` values are written by services. See the `audit` section in [modules.md](modules.md) for which services write what.
 
 ## Users & Auth
 
@@ -119,7 +122,7 @@ The unique constraint on `(projectId, userId)` is what makes joining a project i
 | `IngestionJob` | `id`, `providerId`, `status IngestionStatus`, `startedAt?`, `endedAt?`, `errorMsg?` | → `Provider` |
 | `AuditEvent` | `id`, `action AuditAction`, `userId?`, `entityType?`, `entityId?`, `meta Json?`, `ipAddress?` | → `User?` |
 
-`IngestionJob` records are written by `IngestionService.startJob`/`completeJob`/`failJob`, called from `WeatherScheduler`, `BiodiversityScheduler`, and `FloodScheduler` on every cron run. Successful jobs set `Dataset.lastSyncedAt` for matching dataset categories. See the `ingestion` module in [modules.md](modules.md).
+`IngestionJob` records are written by `IngestionService.startJob`/`completeJob`/`failJob`, called from `WeatherScheduler`, `BiodiversityScheduler`, `FloodScheduler`, `RadiationScheduler`, `MarineScheduler`, and `LocationClimateScheduler` on every cron run. Successful jobs set `Dataset.lastSyncedAt` for matching dataset categories. See the `ingestion` module in [modules.md](modules.md).
 
 ## Permissions
 
@@ -128,7 +131,7 @@ The unique constraint on `(projectId, userId)` is what makes joining a project i
 | `Permission` | `id`, `key unique`, `description` | → `RolePermission[]` |
 | `RolePermission` | `role UserRole`, `permissionId`; unique `(role, permissionId)` | → `Permission` |
 
-Seeded on first boot by `PermissionsService.onModuleInit` with 11 named permissions and default role grants. Queried by `PermissionsGuard` for fine-grained access control on routes decorated with `@RequirePermissions(...)`. ADMIN bypasses all permission checks in the guard. Results cached per role for 5 minutes.
+Seeded on first boot by `PermissionsService.onModuleInit` with 13 named permissions and default role grants. Queried by `PermissionsGuard` for fine-grained access control on routes decorated with `@RequirePermissions(...)`. ADMIN bypasses all permission checks in the guard. Results cached per role for 5 minutes.
 
 ## Weather Models
 
@@ -140,6 +143,26 @@ Seeded on first boot by `PermissionsService.onModuleInit` with 11 named permissi
 | `HourlyAirQuality` | `id`, `districtId`, `lat`, `lng`, `forecastTime`, `pm10?`, `pm25?`, `carbonMonoxide?`, `nitrogenDioxide?`, `sulphurDioxide?`, `ozone?`, `uvIndex?` | → `District`; unique `(districtId, forecastTime)` |
 
 All 4 weather tables are keyed by `districtId`, not raw `lat`/`lng` proximity matching — every fetch already targets a known district's coordinates, so a direct FK is simpler and exact. `lat`/`lng` are still stored on each row for provenance, duplicating the district's coordinates at fetch time. Field sets are trimmed relative to the OpenMeteo API's full parameter list (see `docs/ingestion-plan.md` for the parameters actually requested) — no soil temperature/moisture or multi-height wind data. Populated by the `weather` module (`apps/api/src/weather/`); see `docs/progress.md` "Weather Ingestion".
+
+## Satellite Radiation and Marine Models
+
+| Model | Key Fields | Relations |
+| --- | --- | --- |
+| `SatelliteRadiationReading` | `id`, `districtId`, `lat`, `lng`, `readingDate Date`, `shortwaveRadiationSum Float?`, `sunshineDuration Float?`, `daylightDuration Float?`; unique `(districtId, readingDate)` | → `District` |
+| `MarineForecast` | `id`, `districtId`, `lat`, `lng`, `forecastDate Date`, 11 Float? wave/swell/wind-wave fields (`waveHeightMax`, `waveDirectionDominant`, `wavePeriodMax`, `windWaveHeightMax`, `windWaveDirectionDominant`, `windWavePeriodMax`, `windWavePeakPeriodMax`, `swellWaveHeightMax`, `swellWaveDirectionDominant`, `swellWavePeriodMax`, `swellWavePeakPeriodMax`); unique `(districtId, forecastDate)` | → `District` |
+
+`SatelliteRadiationReading` is populated daily at 1am by `RadiationScheduler` (`apps/api/src/radiation/`). Fetches 3 daily variables for all 64 districts via `satellite-api.open-meteo.com`. Public endpoints: `GET /radiation/daily` and `GET /radiation/daily/:districtId`.
+
+`MarineForecast` is populated daily at 2am by `MarineScheduler` (`apps/api/src/marine/`). Fetches 11 daily wave/swell/wind-wave aggregates for all 64 district centroids via `marine-api.open-meteo.com`. Inland districts produce no valid marine grid cell — these are logged as `warn` and skipped; only coastal districts (Cox's Bazar, Chattogram, Khulna, Satkhira, Barguna, Patuakhali, Bhola, Noakhali, etc.) generate rows. Public endpoints: `GET /marine/forecast` and `GET /marine/forecast/:districtId`. SST and ocean current variables are hourly-only in the Marine API and are not yet stored.
+
+## Emissions
+
+| Model | Key Fields | Relations |
+| --- | --- | --- |
+| `PollutionSource` | `id`, `name`, `type PollutionSourceType`, `districtId?`, `lat?`, `lng?`, `organizationId?`, `createdById`, `isActive Boolean default true`, `description?` | → `District?`, `Organization?`, `User` (creator), `EmissionEntry[]` |
+| `EmissionEntry` | `id`, `sourceId`, `pollutant PollutantType`, `value Float`, `unit EmissionUnit`, `measurementMethod?`, `periodStart DateTime?`, `periodEnd DateTime?`, `notes?`, `reportedById?` | → `PollutionSource`, `User?` |
+
+`PollutionSource` records factory, power plant, vehicle fleet, and other anthropogenic emission points. `EmissionEntry` captures per-source pollutant measurements with unit, measurement method, and optional reporting period. Both write audit events (`EMISSION_SOURCE_CREATE`, `EMISSION_ENTRY_CREATE`). Gated by `emissions.manage` (create/update sources, requires GOVERNMENT or RESEARCHER) and `emissions.report` (log emission entries, additionally available to ORGANIZATION_ADMIN). Implemented in `apps/api/src/emissions/`; dataset catalog entry: "Emissions Inventory" (AIR_QUALITY / PUBLIC).
 
 Note `carbonMonoxide` on `HourlyAirQuality` is an OpenMeteo air-quality pollutant reading. It is unrelated to carbon accounting or footprint tracking, which Nature Grid does not model yet — that is roadmap Phase 7.
 
@@ -167,13 +190,12 @@ Future candidates for proper geometry fields:
 | `Habitat` | Phase 3 | Habitat records linked to districts |
 | `MediaAsset` | Phase 3 | Uploaded photos/files for reports and observations |
 | `WaterBody` | Phase 3 | Rivers, haors, wetlands, ponds |
-| `PollutionSource` | Phase 3 | Known or reported pollution source points |
 | `CampaignPost` | Phase 5 | Community campaigns and education resources |
 | `Notification` | ~~Phase 5~~ **Done (Phase 6c, 2026-08-22)** | Built as `AlertSubscription` + `NotificationDelivery` — see schema above |
 
 `Observation`, `Species`, and `RestorationProject` were previously listed here and are now in the schema (M9, M10, M11 — all 2026-08-17 to 2026-08-19).
 
-Advanced domain models — emissions sources, climate forecasts, carbon footprint, research publications, structured surveys — are planned for Phase 7 and get their schema when that phase starts. See `docs/roadmap.md` Phase 7 and `docs/architecture/feature-map.md`.
+Advanced domain models — climate forecasts, carbon footprint, research publications, structured surveys — are planned for Phase 7 and get their schema when that phase starts. Emissions tracking (`PollutionSource`, `EmissionEntry`) shipped in Phase 7 as the first domain (2026-08-28). See `docs/roadmap.md` Phase 7 and `docs/architecture/feature-map.md`.
 
 ## Status Workflows
 
@@ -235,8 +257,8 @@ pnpm run db:studio            # Open Prisma Studio at localhost:5555
 
 | Migration | Adds |
 | --- | --- |
-| `20260826150548_init` | Full schema — all 35 tables and 20 enums in a single fresh migration |
+| `20260826150548_init` | Full schema — all 39 tables and 23 enums in a single fresh migration (includes `SatelliteRadiationReading`, `MarineForecast`, `PollutionSource`, `EmissionEntry` and the 3 emission enums added 2026-08-28) |
 
-35 tables live.
+39 tables live.
 
-The `LocationsService`, `DatasetsService`, `ProvidersService`, `PermissionsService`, and `SeedService` auto-seed data on first boot via `OnModuleInit`. `LocationsService` seeds 8 divisions, 64 districts (56 with GeoJSON boundary), 494 upazilas, and 4,540 unions — all with lat/lng. All coordinates are hardcoded in `apps/api/src/locations/seed/bangladesh.ts`; no runtime file reads are required. `DatasetsService` seeds 6 catalog records. `ProvidersService` seeds both the OpenMeteo and GBIF provider records. `PermissionsService` seeds 11 named permissions and default role grants. `SeedService` seeds 6 dev user accounts (one per role) and a seed organization for local development. No separate seed script is required for those tables.
+The `LocationsService`, `DatasetsService`, `ProvidersService`, `PermissionsService`, and `SeedService` auto-seed data on first boot via `OnModuleInit`. `LocationsService` seeds 8 divisions, 64 districts (56 with GeoJSON boundary), 494 upazilas, and 4,540 unions — all with lat/lng. All coordinates are hardcoded in `apps/api/src/locations/seed/bangladesh.ts`; no runtime file reads are required. `DatasetsService` seeds 9 catalog records (OpenMeteo Weather, OpenMeteo Flood, District Air Quality Index, Water Body Registry, Biodiversity Occurrences, Sundarbans Monitoring, Emissions Inventory, OpenMeteo Marine Weather, OpenMeteo Satellite Radiation). `ProvidersService` seeds both the OpenMeteo and GBIF provider records. `PermissionsService` seeds 13 named permissions and default role grants. `SeedService` seeds 6 dev user accounts (one per role) and a seed organization for local development. No separate seed script is required for those tables.

@@ -60,7 +60,7 @@ Global setup in `apps/api/src/main.ts`:
 - `JwtAuthGuard` + `RolesGuard` + `PermissionsGuard` registered via `useGlobalGuards`; `ThrottlerGuard` registered via `APP_GUARD` in `AppModule` (needs DI)
 - Rate limits: global 120 req / 60 s; auth endpoints tightened — login/register 5 req / 60 s, refresh 20 req / 60 s
 
-**Feature modules** (`apps/api/src/`): `auth`, `users`, `organizations`, `locations`, `locations/climate`, `providers`, `datasets`, `reports`, `alerts`, `observations`, `restoration`, `biodiversity`, `weather`, `flood`, `metrics`, `notifications`, `permissions`, `analytics`, `database`, `common`. Also registered in `AppModule`: a `SeedService` (seeds dev users + organization on boot). Stub with no implementation: `media`. Implemented: `ingestion`.
+**Feature modules** (`apps/api/src/`): `auth`, `users`, `organizations`, `locations`, `locations/climate`, `providers`, `datasets`, `reports`, `alerts`, `observations`, `restoration`, `biodiversity`, `weather`, `flood`, `radiation`, `marine`, `emissions`, `metrics`, `notifications`, `permissions`, `analytics`, `database`, `common`. Also registered in `AppModule`: a `SeedService` (seeds dev users + organization on boot). Stub with no implementation: `media`. Implemented: `ingestion`.
 
 Each feature module follows: `*.module.ts` → `*.controller.ts` → `*.service.ts` → `dto/` folder.
 
@@ -79,7 +79,7 @@ Each feature module follows: `*.module.ts` → `*.controller.ts` → `*.service.
 
 ### Database (Prisma)
 
-Schema: `packages/database/prisma/schema.prisma` — 35 models, 20 enums. Single migration: `packages/database/prisma/migrations/20260826150548_init`.
+Schema: `packages/database/prisma/schema.prisma` — 39 models, 23 enums. Single migration: `packages/database/prisma/migrations/20260826150548_init`.
 
 **All IDs are Prisma CUIDs** (e.g. `cmstewlrj0012usw17sqz1d3n`). Use `@IsString()` in DTO validators, never `@IsUUID()`.
 
@@ -88,8 +88,8 @@ Schema: `packages/database/prisma/schema.prisma` — 35 models, 20 enums. Single
 Seeding happens in service `onModuleInit()` hooks (idempotent upserts):
 - `LocationsService` — seeds 8 divisions, 64 districts (56 with GeoJSON boundary), 494 upazilas, 4,540 unions — all with lat/lng. Hardcoded in `apps/api/src/locations/seed/bangladesh.ts` (no runtime file reads). Regenerate with `scripts/gen-bangladesh-seed.py` from `administrative.json` + `districts.geojson`.
 - `ProvidersService` — seeds OpenMeteo + GBIF provider records
-- `DatasetsService` — seeds 6 dataset catalog records
-- `PermissionsService` — seeds 11 named permissions (`reports.create`, `reports.moderate`, `alerts.manage`, `restoration.create`, `restoration.join`, `observations.create`, `observations.verify`, `observations.delete`, `organizations.access`, `organizations.manage`, `users.manage`) and default role grants
+- `DatasetsService` — seeds 9 dataset catalog records (OpenMeteo Weather, OpenMeteo Flood, District Air Quality Index, Water Body Registry, Biodiversity Occurrences, Sundarbans Monitoring, Emissions Inventory, OpenMeteo Marine Weather, OpenMeteo Satellite Radiation)
+- `PermissionsService` — seeds 13 named permissions (`reports.create`, `reports.moderate`, `alerts.manage`, `restoration.create`, `restoration.join`, `observations.create`, `observations.verify`, `observations.delete`, `organizations.access`, `organizations.manage`, `users.manage`, `emissions.manage`, `emissions.report`) and default role grants
 - `SeedService` — seeds 6 dev user accounts (one per role, password `NatureGrid123!`) and a seed organization for local development
 
 Every mutation writes an `AuditEvent` record (action, userId, entityType, entityId, meta, ipAddress).
@@ -127,14 +127,16 @@ Route groups: `(auth)` — `/login`; `(admin)` — all other pages behind a dark
 
 Pages: Reports (moderation queue, 5-status tabs), Users (role change, deactivate, reactivate), Alerts (create, cancel, status tabs), Datasets (publish toggle, access policy), Organizations (create, membership management), Ingestion (job history, status tabs, per-job detail).
 
-### Weather, Biodiversity, Flood & Location Climate modules
+### Weather, Biodiversity, Flood, Radiation, Marine & Location Climate modules
 
 These modules handle external data ingestion. All use `IngestionService` (imported from `IngestionModule`) to write `IngestionJob` records per scheduler run.
 
 - `weather/` — OpenMeteo HTTP client (`WeatherOpenMeteoClient`, exported from `WeatherModule`), three cron jobs (current every 15 min, hourly/AQ every 2 h, daily every 12 h), public read endpoints. Fetches at **district** level (64 locations).
 - `biodiversity/` — GBIF HTTP client, daily sync cron (fetches 1,000 occurrences), species + occurrence read endpoints
 - `flood/` — OpenMeteo Flood / GloFAS HTTP client, six-hour scheduler (initial sync on empty table), public forecast endpoints. Fetches 30-day discharge forecasts at **district** level.
-- `locations/climate/` — `LocationClimateModule` with a daily cron (`0 0 0 * * *`). Fetches OpenMeteo at **union** level using the batch API (up to 1,000 coords per HTTP request — 4,540 unions = 6 total requests). Stores raw daily data in `UnionDailyClimate`, then recomputes 30-day rolling averages bottom-up: Union → Upazila → District → Division via bulk `UPDATE … FROM (SELECT … GROUP BY)` SQL. Reuses `WeatherOpenMeteoClient` from `WeatherModule` (import `WeatherModule` to get it). Does not write `IngestionJob` records (scheduler-only, no read endpoints).
+- `radiation/` — OpenMeteo Satellite Radiation HTTP client (`RadiationOpenMeteoClient`), daily cron at 1am, initial sync on empty table. Fetches `shortwave_radiation_sum`, `sunshine_duration`, `daylight_duration` for all 64 districts (7-day window). Upserts per `(districtId, readingDate)`. Public endpoints: `GET /radiation/daily`, `GET /radiation/daily/:districtId`.
+- `marine/` — OpenMeteo Marine Weather HTTP client (`MarineOpenMeteoClient`), daily cron at 2am, initial sync on empty table. Fetches 11 daily wave/swell/wind-wave variables for all 64 district centroids; inland districts produce a fetch error that is logged as `warn` and skipped. Public endpoints: `GET /marine/forecast`, `GET /marine/forecast/:districtId`.
+- `locations/climate/` — `LocationClimateModule` with a daily cron (`0 0 0 * * *`). Fetches OpenMeteo at **union** level using the batch API (up to 1,000 coords per HTTP request — 4,540 unions = 6 total requests). Stores raw daily data in `UnionDailyClimate`, then recomputes 30-day rolling averages bottom-up: Union → Upazila → District → Division via bulk `UPDATE … FROM (SELECT … GROUP BY)` SQL wrapped in a single Prisma `$transaction`. Reuses `WeatherOpenMeteoClient` from `WeatherModule` (import `WeatherModule` to get it). Writes `IngestionJob` records via `IngestionService` (categories `WEATHER` + `AIR_QUALITY`).
 
 ### Testing
 

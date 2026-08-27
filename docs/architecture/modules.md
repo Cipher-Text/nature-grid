@@ -6,7 +6,7 @@ Global prefix is `/api/v1` (see `packages/contracts/src/index.ts` for the canoni
 
 Legend: ✓ Implemented | ~ Stub only | ✗ Not started
 
-Registered in `app.module.ts`: `database`, `auth`, `users`, `organizations`, `locations`, `locations/climate`, `providers`, `datasets`, `reports`, `alerts`, `biodiversity`, `observations`, `restoration`, `media`, `ingestion`, `weather`, `flood`, `metrics`, `notifications`, `permissions`, `analytics`. `SeedService` is also registered directly in `AppModule` (not its own module) and seeds dev users + a seed organization on first boot.
+Registered in `app.module.ts`: `database`, `auth`, `users`, `organizations`, `locations`, `locations/climate`, `providers`, `datasets`, `reports`, `alerts`, `biodiversity`, `observations`, `restoration`, `media`, `ingestion`, `weather`, `flood`, `marine`, `radiation`, `emissions`, `metrics`, `notifications`, `permissions`, `analytics`. `SeedService` is also registered directly in `AppModule` (not its own module) and seeds dev users + a seed organization on first boot.
 
 ## database ✓
 
@@ -231,7 +231,7 @@ Scheduler cadence: current every 15 min (`0 */15 * * * *`), hourly + air quality
 | GET | `/weather/air-quality` | Public — latest reading for every district |
 | GET | `/weather/air-quality/:districtId` | Public |
 
-Also consumed by `DatasetsModule` to serve `/datasets/weather/current` and `/datasets/air-quality/current`, and by `apps/web`'s `map-section.tsx` (public homepage "Current conditions" sidebar, with fallback to static data if the API is unreachable).
+Also consumed by `DatasetsModule` to serve `/datasets/weather/current` and `/datasets/air-quality/current`, and by `apps/web`'s `map-section.tsx` (public homepage "Current conditions" sidebar, with fallback to static data if the API is unreachable). `WeatherOpenMeteoClient` is exported from `WeatherModule` and reused by `LocationClimateModule` for batch union-level fetches.
 
 ## flood ✓
 
@@ -243,6 +243,49 @@ Owns the OpenMeteo Flood / GloFAS integration: provider client, daily discharge 
 | GET | `/flood/forecast/:districtId` | Public — forecast rows (`?from`, `?to`) |
 
 When `FloodForecast` is empty, the module starts an initial sync on application boot. It then fetches a 30-day forecast for every district with coordinates at `0:30` every six hours. The stored data has daily resolution. OpenMeteo Flood returns simulated river discharge, not an official Bangladesh flood warning; official FFWC integration remains a separate future source.
+
+## radiation ✓
+
+Owns the OpenMeteo Satellite Radiation integration: HTTP client, daily persistence, scheduler, ingestion tracking, and public read endpoints.
+
+Fetches three daily variables (`shortwave_radiation_sum` Wh/m², `sunshine_duration` seconds, `daylight_duration` seconds) for all 64 districts. Scheduler runs at 1am (`@Cron('0 0 1 * * *')`) and triggers an initial sync on first boot if the table is empty. Each run creates an `IngestionJob` record.
+
+| Method | Path | Access |
+| --- | --- | --- |
+| GET | `/radiation/daily` | Public — latest reading for every district |
+| GET | `/radiation/daily/:districtId` | Public (`?from`, `?to`) |
+
+## marine ✓
+
+Owns the OpenMeteo Marine Weather integration: HTTP client, daily forecast persistence, scheduler, ingestion tracking, and public read endpoints.
+
+Fetches 11 daily wave/swell/wind-wave variables for all 64 districts. OpenMeteo snaps coordinates to the nearest marine grid cell; inland districts produce no rows (errors logged as `warn`). Scheduler runs at 2am (`@Cron('0 0 2 * * *')`) and triggers an initial sync on first boot if the table is empty. Each run creates an `IngestionJob` record.
+
+| Method | Path | Access |
+| --- | --- | --- |
+| GET | `/marine/forecast` | Public — latest forecast for every district that has data |
+| GET | `/marine/forecast/:districtId` | Public (`?from`, `?to`) |
+
+## emissions ✓
+
+Owns source-level pollution tracking — distinct from ambient `HourlyAirQuality` readings. Models pollution facilities and per-source emission measurements.
+
+Source types: `FACTORY | POWER_PLANT | VEHICLE_FLEET | AGRICULTURE | CONSTRUCTION | WASTE_FACILITY | OTHER`
+
+Pollutants: `CO2 | CH4 | N2O | PM25 | PM10 | NOX | SOX | VOC | CO | OTHER`
+
+Units: `TONS_PER_YEAR | KG_PER_DAY | GRAMS_PER_HOUR | MG_PER_M3 | OTHER`
+
+| Method | Path | Access |
+| --- | --- | --- |
+| GET | `/emissions/sources` | Public (`?type`, `?districtId`, `?isActive`, `?page`, `?pageSize`) |
+| GET | `/emissions/sources/:id` | Public — includes district, org, entry count |
+| POST | `/emissions/sources` | `emissions.manage` |
+| PATCH | `/emissions/sources/:id` | `emissions.manage` + creator-or-admin check |
+| GET | `/emissions/sources/:sourceId/entries` | Public (`?pollutant`, `?page`, `?pageSize`) |
+| POST | `/emissions/sources/:sourceId/entries` | `emissions.report` |
+
+Every create writes an audit event (`EMISSION_SOURCE_CREATE` or `EMISSION_ENTRY_CREATE`).
 
 ## metrics ✓
 
@@ -264,7 +307,7 @@ Status: **empty `@Module({})`** — no controller, service, or schema model. `Me
 
 Owns provider job visibility for scheduled external data fetches, using the `IngestionJob` model (`QUEUED | RUNNING | SUCCEEDED | FAILED | CANCELLED`).
 
-Status: implemented service + read controller. `WeatherScheduler`, `BiodiversityScheduler`, and `FloodScheduler` call `IngestionService.startJob`, `completeJob`, and `failJob`; successful jobs update `Dataset.lastSyncedAt` for matching dataset categories. Admin/moderator routes expose `GET /ingestion/jobs` and `GET /ingestion/jobs/:id`. There is no queue worker, manual trigger endpoint, or retry endpoint; recurring cron jobs are the retry mechanism.
+Status: implemented service + read controller. `WeatherScheduler`, `BiodiversityScheduler`, `FloodScheduler`, `RadiationScheduler`, `MarineScheduler`, and `LocationClimateScheduler` all call `IngestionService.startJob`, `completeJob`, and `failJob`; successful jobs update `Dataset.lastSyncedAt` for matching dataset categories. Admin/moderator routes expose `GET /ingestion/jobs` and `GET /ingestion/jobs/:id`. There is no queue worker, manual trigger endpoint, or retry endpoint; recurring cron jobs are the retry mechanism.
 
 ## permissions ✓
 
@@ -278,7 +321,7 @@ Owns the DB-backed permission model: `Permission` (key, description) and `RolePe
 
 `PermissionsService.getPermissionsForRole(role)` is the runtime path; results are cached per role for 5 minutes. `ADMIN` always receives every permission regardless of DB state. Grant and revoke each write `PERMISSION_GRANT` / `PERMISSION_REVOKE` audit events.
 
-Named permissions: `reports.create`, `reports.moderate`, `alerts.manage`, `restoration.create`, `restoration.join`, `observations.create`, `observations.verify`, `observations.delete`, `organizations.access`, `organizations.manage`, `users.manage`.
+Named permissions (13): `reports.create`, `reports.moderate`, `alerts.manage`, `restoration.create`, `restoration.join`, `observations.create`, `observations.verify`, `observations.delete`, `organizations.access`, `organizations.manage`, `users.manage`, `emissions.manage`, `emissions.report`.
 
 ## analytics ✓
 
@@ -310,8 +353,9 @@ Services that write audit events:
 | `restoration` | `RESTORATION_PROJECT_CREATE`, `RESTORATION_PROJECT_UPDATE`, `RESTORATION_PROJECT_JOIN` |
 | `datasets` | `DATASET_ACCESS`, `DATASET_DOWNLOAD`, `DATASET_UPDATE`, `DATASET_ACCESS_DECISION` |
 | `permissions` | `PERMISSION_GRANT`, `PERMISSION_REVOKE` |
+| `emissions` | `EMISSION_SOURCE_CREATE`, `EMISSION_ENTRY_CREATE` |
 
-`AuditAction` declares 25 values. All are written by a service.
+`AuditAction` declares 27 values. All are written by a service.
 
 `auth` is the only service that populates `AuditEvent.ipAddress`, because it already captures request metadata for `RefreshToken` rows. The others leave it null.
 

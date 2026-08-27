@@ -30,8 +30,12 @@ Legend: **Done** | **Partial** | *Planned* | ~~Deferred~~
 | --- | --- | --- |
 | Weather ingestion — current, hourly, daily (OpenMeteo) | `weather` | **Done** |
 | Air quality ingestion — hourly (OpenMeteo) | `weather` | **Done** |
+| Flood discharge forecasts — district-level, 30-day (OpenMeteo/GloFAS) | `flood` | **Done** |
+| Satellite radiation — daily shortwave, sunshine, daylight (OpenMeteo) | `radiation` | **Done** |
+| Marine wave/swell/wind-wave forecasts — coastal districts (OpenMeteo) | `marine` | **Done** |
+| Location climate rolling averages — 30-day, union→district→division (OpenMeteo) | `locations/climate` | **Done** |
 | Urban AQI — station-level (WAQI) | `weather` | *Planned* — free key needed at aqicn.org |
-| Dataset catalog with access policy | `datasets` | **Done** |
+| Dataset catalog with access policy | `datasets` | **Done** — 9 catalog records |
 | Dataset download + access request endpoints | `datasets` | **Done** |
 | Biodiversity — species and occurrence records (GBIF daily sync) | `biodiversity` | **Done** |
 | Ingestion job lifecycle (queue, track, retry, audit) | `ingestion` | **Partial** — job tracking implemented (RUNNING → SUCCEEDED/FAILED); no retry queue or manual trigger endpoint |
@@ -72,7 +76,7 @@ Legend: **Done** | **Partial** | *Planned* | ~~Deferred~~
 | Feature | Module / App | Status |
 | --- | --- | --- |
 | Live platform metrics | `metrics` | **Done** |
-| Emissions source tracking | — | *Planned* (Phase 7) |
+| Emissions source tracking (factories, vehicles, industrial sites) | `emissions` | **Done** — `PollutionSource` + `EmissionEntry` models; `emissions.manage` / `emissions.report` permissions |
 | Climate forecasting and ML predictions | `data-worker` | *Planned* (Phase 7) |
 | Carbon footprint accounting | — | *Planned* (Phase 7) |
 

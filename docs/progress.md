@@ -1,6 +1,6 @@
 # Progress
 
-Last updated: 2026-08-27 (Permissions module — DB-backed permission model with `Permission`/`RolePermission` models, `PermissionsGuard`, admin grant/revoke endpoints, 11 named permissions, default role grants; Analytics module — role-scoped dashboard endpoints for admin/moderator/government/researcher/orgadmin; SeedService — 6 dev user accounts + seed organization seeded on boot; Users reactivate endpoint; Prisma schema now 35 models, 20 enums. Previously: 2026-08-25 OpenMeteo Flood integration; 2026-08-24 ingestion module + dataset access.)
+Last updated: 2026-08-28 (OpenMeteo integration audit — HTTP timeout on all fetch clients, flood loop upserts replaced with batch $transaction, UTC date fix, aggregation transaction fix, ingestion tracking for climate sync; Satellite Radiation module; Marine Weather module; Emissions Tracking domain (PollutionSource + EmissionEntry + 3 enums + 2 permissions); schema now 39 models, 23 enums, 13 permissions, 9 dataset catalog records. Previously: 2026-08-27 Permissions module, Analytics module, SeedService, Users reactivate.)
 
 ## Status Legend
 
@@ -24,8 +24,8 @@ Last updated: 2026-08-27 (Permissions module — DB-backed permission model with
 | Frontend "app shell" layout (sidebar pages) — M15 | Done | Established via `/profile`, powers all 7 pages. `/data`, `/reports`, `/alerts`, `/observations`, `/restoration`, and now `/biodiversity` (all real backend data) — only `/community` still shows an honest empty state (no API module planned for it at all yet). See "App-Shell Pages: Data, Reports, Alerts", "App-Shell Pages: Observations, Biodiversity, Restoration, Community", "Observations Module", "Restoration Projects Module", and "Biodiversity + GBIF Module" below. |
 | Shared types and contracts — M2 | Done | Full enums, DTOs, paginated envelopes, request/response types, route contract map |
 | Backend foundation — M3 | Done | Auth (JWT/bcrypt), users, orgs, locations (8 div/64 district auto-seed), providers, datasets (catalog seed), reports (status workflow + audit), alerts (severity + audit), global validation, guard infrastructure. **Caveat:** role-gated endpoints shipped with a casing bug that rejected every user until 2026-08-17 — see "Critical RBAC Fix" below. |
-| Prisma schema | Done | 20 enums, 35 models — includes Permission/RolePermission models for DB-backed permission grants; client regenerated |
-| Database migration | Done | 1 migration applied (`20260826150548_init`) — full schema in a single fresh migration; 35 tables live; Postgres on port 5432 |
+| Prisma schema | Done | 23 enums, 39 models — includes Permission/RolePermission, SatelliteRadiationReading, MarineForecast, PollutionSource, EmissionEntry; client regenerated |
+| Database migration | Done | 1 migration applied (`20260826150548_init`) — full schema in a single fresh migration; 39 tables live; Postgres on port 5432 |
 | District coordinates | Done | Migration `add_district_coordinates`; all 64 districts backfilled with real lat/lng sourced from `open-nature`'s district registry (`LocationsService.onModuleInit` backfills on boot if missing) |
 | Seed data | Done | LocationsService auto-seeds 8 divisions + 64 districts (with coordinates) on boot; DatasetsService auto-seeds 5 catalog records; ProvidersService auto-seeds `OpenMeteo` and `GBIF` providers (2026-08-24 — GBIF added) on boot idempotently; no separate seed script needed |
 | Auth — refresh / logout | Done | Postgres-backed `RefreshToken` model (not Redis — see "Auth Refresh/Logout" below), opaque tokens with rotation, daily cleanup cron |
@@ -45,6 +45,10 @@ Last updated: 2026-08-27 (Permissions module — DB-backed permission model with
 | Report media (M5) | Done | `ReportMedia` schema + `POST/GET /reports/:id/media` endpoints done (2026-08-22). File upload still deferred — clients register an external URL; no MinIO/S3 wired yet. The `media` module stub is separate and unrelated. |
 | Weather ingestion (OpenMeteo) | Done | Live `weather` module — see "Weather ingestion" below |
 | Flood ingestion (OpenMeteo/GloFAS) | Done | Initial sync on an empty table, daily river-discharge forecasts persisted per district; public `/flood/forecast` routes and six-hour scheduler live — see "OpenMeteo Flood" below |
+| Satellite radiation ingestion (OpenMeteo) | Done | 2026-08-28 — `radiation/` module; daily at 1am; 3 daily variables per district; `SatelliteRadiationReading` model. See "2026-08-28 Integrations" below. |
+| Marine weather ingestion (OpenMeteo) | Done | 2026-08-28 — `marine/` module; daily at 2am; 11 wave/swell/wind-wave variables; coastal districts only; `MarineForecast` model. See "2026-08-28 Integrations" below. |
+| Emissions tracking | Done | 2026-08-28 — `emissions/` module; `PollutionSource` + `EmissionEntry` models; `emissions.manage` / `emissions.report` permissions; `EMISSION_SOURCE_CREATE` / `EMISSION_ENTRY_CREATE` audit events. See "2026-08-28 Integrations" below. |
+| OpenMeteo integration audit | Done | 2026-08-28 — HTTP timeout (AbortController, 30 s) on all 4 fetch clients; flood batch $transaction replacing loop upserts; UTC date fix (setUTCHours); aggregation transaction in climate sync; ingestion tracking for LocationClimateScheduler. See "2026-08-28 OpenMeteo Audit Fixes" below. |
 | Ingestion module (generic) | Done | 2026-08-24 — `IngestionService` + `IngestionController` implemented; weather and GBIF schedulers now write `IngestionJob` records per run (RUNNING → SUCCEEDED/FAILED); `Dataset.lastSyncedAt` updated on every successful sync; GBIF provider seeded; admin ingestion dashboard live at `/ingestion`. See "Ingestion Module + Dataset Access" below. |
 | Environmental monitoring model | Planned | OGC SensorThings-style or simplified internal model — decision pending |
 | Dataset downloads / access requests | Done | 2026-08-24 — `GET /datasets/:id/download` (5-policy access enforcement), `POST /datasets/:id/access-request`, `GET/PATCH /datasets/:id/access-requests/:requestId` (admin approve/reject), `POST /datasets` (admin create). See "Ingestion Module + Dataset Access" below. |
@@ -54,10 +58,131 @@ Last updated: 2026-08-27 (Permissions module — DB-backed permission model with
 | Admin frontend — M12 | Done | Full console at port 3002: login/logout, report moderation, user management, alert management, dataset management, and organization management. The Organizations menu and API use the RBAC permission `organizations.manage`; users can be attached to multiple organizations as `ADMIN` or `MEMBER`. |
 | Consumer detail pages + profile activity | Done | 2026-08-23 — detail pages for reports, alerts, observations, restoration projects, and biodiversity species; all list pages now have clickable rows; `GET /reports/mine` + `GET /observations/mine` authenticated endpoints; profile page shows live report/observation history. See "Consumer Frontend" below. |
 | Data worker | Planned | Python skeleton; no active jobs |
-| Permissions module | Done | DB-backed `Permission`/`RolePermission` models, `PermissionsGuard`, 11 named permissions, default role grants, admin grant/revoke endpoints (`POST/DELETE /admin/permissions/roles`), audited (`PERMISSION_GRANT`/`PERMISSION_REVOKE`). |
+| Permissions module | Done | DB-backed `Permission`/`RolePermission` models, `PermissionsGuard`, 13 named permissions (11 original + `emissions.manage` + `emissions.report`), default role grants, admin grant/revoke endpoints (`POST/DELETE /admin/permissions/roles`), audited (`PERMISSION_GRANT`/`PERMISSION_REVOKE`). |
 | Analytics module | Done | Role-scoped dashboard endpoints: admin, moderator, government, researcher, org admin — each returns aggregated stats relevant to that role. |
 | Seed service | Done | `SeedService` registered in `AppModule`; seeds 6 dev user accounts (one per role, password `NatureGrid123!`) and 1 seed organization on first boot. |
 | Users reactivate endpoint | Done | `PATCH /users/:id/reactivate` re-enables deactivated accounts. |
+
+## 2026-08-28 OpenMeteo Audit Fixes
+
+Audit of all four OpenMeteo integrations (weather, flood, satellite-radiation, marine) and the location climate batch job identified five reliability gaps. All fixed in a single pass.
+
+### HIGH — HTTP timeout (no timeout → AbortController 30 s)
+
+All `fetch()` calls in `WeatherOpenMeteoClient`, `FloodOpenMeteoClient`, `RadiationOpenMeteoClient`, and `MarineOpenMeteoClient` ran with no timeout. A slow or hung upstream would block a scheduler thread indefinitely, eventually stalling NestJS.
+
+Pattern applied to all four clients:
+```typescript
+const FETCH_TIMEOUT_MS = 30_000;
+const controller = new AbortController();
+const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+try {
+  const response = await fetch(url, { signal: controller.signal });
+  clearTimeout(timer);
+  ...
+} catch (err) {
+  clearTimeout(timer);
+  throw err;
+}
+```
+
+### HIGH — Silent data loss on batch size mismatch (location climate)
+
+`LocationClimateService.syncAll()` called the OpenMeteo batch API and zipped the response arrays by index. If OpenMeteo returned fewer entries than requested (e.g. one entry dropped silently), the zip would silently attribute wrong data to wrong districts with no error.
+
+Fix: after normalising `weatherArr`/`aqArr`, assert lengths match the batch before processing:
+```typescript
+if (weatherArr.length !== batch.length || aqArr.length !== batch.length) {
+  throw new Error(`OpenMeteo response size mismatch: expected ${batch.length}, got weather=${weatherArr.length} aq=${aqArr.length}`);
+}
+```
+
+### MEDIUM — Flood loop upserts (N separate transactions → one batch $transaction)
+
+`FloodService.syncDistrict()` ran N sequential `this.prisma.floodForecast.upsert()` calls in a for-loop. Each was an independent transaction, so a failure mid-loop left partial data. Replaced with `this.prisma.$transaction(daily.time.map(...))` — all 30 rows atomic.
+
+### MEDIUM — UTC date bug (setHours → setUTCHours)
+
+`LocationClimateService` used `new Date(); date.setHours(0,0,0,0)` to produce a date-only key. In non-UTC timezones (servers deployed in Asia/Dhaka) this produced the wrong date boundary. Changed to `setUTCHours(0,0,0,0)`.
+
+### MEDIUM — Aggregation queries not in a transaction
+
+The four rolling-average aggregation methods (`updateUnionRollingAverages`, `aggregateUpazilas`, `aggregateDistricts`, `aggregateDivisions`) were `async` methods each awaiting their own `$executeRaw`. A failure after the union step left the hierarchy inconsistent.
+
+Changed each method to return `PrismaPromise` directly (removing `async`/`await`) and wrapped all four in a single `this.prisma.$transaction([...])` in `syncAll()`.
+
+### LOW — Climate sync had no ingestion tracking
+
+`LocationClimateScheduler` ran without calling `IngestionService`, so its runs were invisible in the admin ingestion dashboard. Added `IngestionModule` import to `LocationClimateModule`, wired `IngestionService` into the scheduler, and wrapped each run in `startJob` / `completeJob` / `failJob` with categories `['WEATHER', 'AIR_QUALITY']`.
+
+### LOW — Schema drift comment
+
+The raw SQL column names in the four aggregation SQL blocks are not type-checked by `tsc`. Added a `WARNING` comment above the block listing all hardcoded column names, so any future schema rename can be caught manually.
+
+---
+
+## 2026-08-28 Integrations (Satellite Radiation, Marine Weather, Emissions Tracking)
+
+Three new domains implemented in a single pass.
+
+### OpenMeteo Satellite Radiation (`apps/api/src/radiation/`)
+
+- **Endpoint:** `satellite-api.open-meteo.com/v1/satellite`
+- **Variables fetched:** `shortwave_radiation_sum`, `sunshine_duration`, `daylight_duration` (all daily)
+- **Forecast window:** 7 days
+- **Storage:** `SatelliteRadiationReading` — one row per district per day; unique `(districtId, readingDate)`; upserts in a single `$transaction` per district
+- **Scheduler:** `RadiationScheduler` — `@Cron('0 0 1 * * *')` (daily at 1am); initial sync on first boot if table is empty
+- **Ingestion tracking:** `DatasetCategory.MONITORING` via `IngestionService`
+- **Public endpoints:** `GET /radiation/daily`, `GET /radiation/daily/:districtId?from=&to=`
+- **Dataset catalog:** "OpenMeteo Satellite Radiation" (MONITORING / PUBLIC)
+
+### OpenMeteo Marine Weather (`apps/api/src/marine/`)
+
+- **Endpoint:** `marine-api.open-meteo.com/v1/marine`
+- **Variables fetched:** 11 daily aggregates — `wave_height_max`, `wave_direction_dominant`, `wave_period_max`, `wind_wave_height_max`, `wind_wave_direction_dominant`, `wind_wave_period_max`, `wind_wave_peak_period_max`, `swell_wave_height_max`, `swell_wave_direction_dominant`, `swell_wave_period_max`, `swell_wave_peak_period_max`
+- **Forecast window:** 7 days
+- **Storage:** `MarineForecast` — one row per district per day; unique `(districtId, forecastDate)`; upserts in a single `$transaction` per district. Inland districts produce a fetch error (OpenMeteo snaps to the nearest marine cell — none for inland coordinates); logged as `warn`, skipped, not counted as failure
+- **Coastal districts:** Cox's Bazar, Chattogram, Khulna, Satkhira, Barguna, Patuakhali, Bhola, Noakhali, and others
+- **Scheduler:** `MarineScheduler` — `@Cron('0 0 2 * * *')` (daily at 2am, offset from climate at midnight and radiation at 1am); initial sync on first boot if table is empty
+- **Ingestion tracking:** `DatasetCategory.WATER` via `IngestionService`
+- **Public endpoints:** `GET /marine/forecast`, `GET /marine/forecast/:districtId?from=&to=`
+- **Dataset catalog:** "OpenMeteo Marine Weather" (WATER / PUBLIC)
+- **SST / ocean currents:** not stored — `sea_surface_temperature` and ocean current variables are hourly-only in the Marine API; deferred to a future hourly table
+
+### Emissions Tracking (`apps/api/src/emissions/`)
+
+Source-level pollution measurement — distinct from the ambient air-quality readings in `HourlyAirQuality`.
+
+**New schema models:**
+- `PollutionSource` — name, type (`FACTORY | POWER_PLANT | VEHICLE_FLEET | AGRICULTURE | CONSTRUCTION | WASTE_FACILITY | OTHER`), districtId?, lat?, lng?, organizationId?, createdById, isActive, description?
+- `EmissionEntry` — sourceId, pollutant (`CO2 | CH4 | N2O | PM25 | PM10 | NOX | SOX | VOC | CO | OTHER`), value Float ≥ 0, unit (`TONS_PER_YEAR | KG_PER_DAY | GRAMS_PER_HOUR | MG_PER_M3 | OTHER`), measurementMethod?, periodStart?, periodEnd?, notes?, reportedById?
+
+**New enums (3):** `PollutionSourceType`, `PollutantType`, `EmissionUnit`
+
+**New permissions (2):**
+- `emissions.manage` — create and update pollution sources; granted to GOVERNMENT and RESEARCHER by default
+- `emissions.report` — log emission entries against sources; additionally granted to ORGANIZATION_ADMIN
+
+**Audit events (2):** `EMISSION_SOURCE_CREATE`, `EMISSION_ENTRY_CREATE`
+
+**Endpoints (6):**
+
+| Method | Path | Permission | Notes |
+| --- | --- | --- | --- |
+| `POST` | `/emissions/sources` | `emissions.manage` | Create pollution source |
+| `GET` | `/emissions/sources` | Public | List all sources |
+| `GET` | `/emissions/sources/:id` | Public | Source detail + entries |
+| `PATCH` | `/emissions/sources/:id` | `emissions.manage` | Update (creator or ADMIN) |
+| `POST` | `/emissions/sources/:id/entries` | `emissions.report` | Log emission measurement |
+| `GET` | `/emissions/sources/:id/entries` | Public | List entries for a source |
+
+**Dataset catalog:** "Emissions Inventory" (AIR_QUALITY / PUBLIC) — seeded 2026-08-28.
+
+**Files created:** `dto/create-pollution-source.dto.ts`, `dto/update-pollution-source.dto.ts`, `dto/create-emission-entry.dto.ts`, `emissions.service.ts`, `emissions.controller.ts`, `emissions.module.ts`.
+
+**Files modified:** `packages/shared/src/index.ts` (added `'emissions.manage'` + `'emissions.report'` to `Permission` type union), `apps/api/src/permissions/permissions.service.ts` (13 permissions total, new default grants), `apps/api/src/datasets/seed/catalog.ts` (9 catalog records total), `apps/api/src/app.module.ts` (added `RadiationModule`, `MarineModule`, `EmissionsModule`).
+
+---
 
 ## Ingestion Module + Dataset Access (2026-08-24)
 

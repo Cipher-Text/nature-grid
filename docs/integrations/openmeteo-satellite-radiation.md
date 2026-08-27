@@ -2,9 +2,7 @@
 
 ## Status
 
-Not implemented.
-
-Nature Grid currently integrates OpenMeteo forecast and air-quality APIs only. The OpenMeteo Satellite Radiation API is a separate candidate source for solar irradiance, sunshine, and radiation monitoring.
+Implemented (2026-08-28).
 
 ## Provider
 
@@ -14,9 +12,9 @@ Nature Grid currently integrates OpenMeteo forecast and air-quality APIs only. T
 | API key | Not required for non-commercial use |
 | Official docs | `https://open-meteo.com/en/docs/satellite-radiation-api` |
 | Endpoint | `https://satellite-api.open-meteo.com/v1/satellite` |
-| Current client | None |
-| Current scheduler | None |
-| Current storage | None |
+| Current client | `RadiationOpenMeteoClient` (`apps/api/src/radiation/radiation-openmeteo.client.ts`) |
+| Current scheduler | `RadiationScheduler` — daily at 1am; initial sync on empty table |
+| Current storage | `SatelliteRadiationReading` — one row per district per day |
 
 ## Available Data
 
@@ -74,10 +72,6 @@ Candidate use cases:
 - Agricultural drought or vegetation stress context when combined with rainfall and temperature.
 - Public dashboard cards for daylight, sunshine duration, and radiation intensity.
 
-## Implementation Needed
+## Implementation
 
-- Add a radiation schema or dataset model; current weather tables only store `uv_index_max` in daily weather and do not store solar irradiance time series.
-- Add an OpenMeteo satellite radiation client under `apps/api/src/weather/` or a new `radiation` module.
-- Decide fetch coordinates: all district centroids, selected monitoring locations, or restoration project sites.
-- Add scheduler and ingestion job tracking.
-- Add public API routes and dataset catalog entries.
+Module: `apps/api/src/radiation/`. Fetches the three daily variables (`shortwave_radiation_sum`, `sunshine_duration`, `daylight_duration`) for all 64 district centroids using a 7-day forecast window. Upserts all 7 rows per district atomically in a single `$transaction`. The scheduler runs at 1am daily (offset from the midnight climate sync) and on first boot if the table is empty. Each run creates a shared `IngestionJob` record against the OpenMeteo provider. Public endpoints: `GET /radiation/daily` and `GET /radiation/daily/:districtId?from=&to=`. Dataset catalog entry: "OpenMeteo Satellite Radiation" (MONITORING / PUBLIC).
