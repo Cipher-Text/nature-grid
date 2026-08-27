@@ -39,8 +39,50 @@ export class SeedService implements OnModuleInit {
   constructor(private readonly prisma: PrismaService) {}
 
   async onModuleInit() {
+    if (process.env.NODE_ENV === 'production') {
+      await this.bootstrapProductionAdmin();
+      return;
+    }
     await this.seedUsers();
     await this.seedOrganization();
+  }
+
+  /**
+   * Production-only bootstrap: creates the first ADMIN account from env vars.
+   * Runs only when BOOTSTRAP_ADMIN_EMAIL and BOOTSTRAP_ADMIN_PASSWORD are set,
+   * and only if no ADMIN user exists yet. Safe to leave in production code —
+   * it is a no-op once the account exists or the env vars are removed.
+   *
+   * After first boot: remove BOOTSTRAP_ADMIN_EMAIL and BOOTSTRAP_ADMIN_PASSWORD
+   * from your deployment environment.
+   */
+  private async bootstrapProductionAdmin() {
+    const email = process.env.BOOTSTRAP_ADMIN_EMAIL?.trim();
+    const password = process.env.BOOTSTRAP_ADMIN_PASSWORD?.trim();
+
+    if (!email || !password) return;
+
+    const existing = await this.prisma.user.findFirst({ where: { role: 'ADMIN' } });
+    if (existing) {
+      this.logger.log('Production admin already exists — skipping bootstrap');
+      return;
+    }
+
+    const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+    await this.prisma.user.create({
+      data: {
+        email,
+        displayName: 'Admin',
+        passwordHash,
+        role: 'ADMIN',
+        isActive: true,
+        profile: { create: {} },
+      },
+    });
+
+    this.logger.warn(
+      `Bootstrap admin created: ${email} — remove BOOTSTRAP_ADMIN_EMAIL and BOOTSTRAP_ADMIN_PASSWORD from your environment now`,
+    );
   }
 
   private async seedUsers() {
@@ -62,9 +104,7 @@ export class SeedService implements OnModuleInit {
       });
     }
 
-    this.logger.log(
-      `Seed users ready: ${SEED_USERS.length} accounts, password "${DEFAULT_SEED_PASSWORD}"`,
-    );
+    this.logger.log(`Seed users ready: ${SEED_USERS.length} accounts`);
   }
 
   private async seedOrganization() {

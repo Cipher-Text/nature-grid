@@ -15,9 +15,20 @@ const REJECTED_JWT_SECRETS = [
   'secret',
 ];
 
+const VALID_NODE_ENVS = ['development', 'production', 'test'];
+
 export function validateEnv(config: Record<string, unknown>): Record<string, unknown> {
   const errors: string[] = [];
 
+  // ── NODE_ENV ────────────────────────────────────────────────────────────────
+  const nodeEnv = typeof config.NODE_ENV === 'string' ? config.NODE_ENV.trim() : '';
+  if (nodeEnv && !VALID_NODE_ENVS.includes(nodeEnv)) {
+    errors.push(
+      `NODE_ENV "${nodeEnv}" is not valid — must be one of: ${VALID_NODE_ENVS.join(', ')}`,
+    );
+  }
+
+  // ── JWT_SECRET ──────────────────────────────────────────────────────────────
   const jwtSecret = typeof config.JWT_SECRET === 'string' ? config.JWT_SECRET.trim() : '';
   if (!jwtSecret) {
     errors.push('JWT_SECRET is not set — generate one with `openssl rand -base64 48`');
@@ -29,8 +40,19 @@ export function validateEnv(config: Record<string, unknown>): Record<string, unk
     );
   }
 
+  // ── DATABASE_URL ────────────────────────────────────────────────────────────
   if (!config.DATABASE_URL) {
     errors.push('DATABASE_URL is not set');
+  }
+
+  // ── CORS_ORIGIN ─────────────────────────────────────────────────────────────
+  // In production CORS_ORIGIN must be explicit. Omitting it causes the API to
+  // allow all origins (origin: true), which is a CSRF/XSS risk.
+  if (nodeEnv === 'production' && !config.CORS_ORIGIN) {
+    errors.push(
+      'CORS_ORIGIN is not set — in production this would allow all origins. ' +
+        'Set it to a comma-separated list of allowed origins, e.g. "https://naturegrid.bd"',
+    );
   }
 
   if (errors.length > 0) {

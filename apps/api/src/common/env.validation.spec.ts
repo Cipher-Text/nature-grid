@@ -1,11 +1,11 @@
 import { validateEnv } from './env.validation';
 
 const DB = { DATABASE_URL: 'postgresql://u:p@localhost:5432/db' };
+const VALID = { ...DB, JWT_SECRET: 'a'.repeat(48) };
 
 describe('validateEnv', () => {
   it('accepts a sufficiently long secret', () => {
-    const config = { ...DB, JWT_SECRET: 'a'.repeat(48) };
-    expect(validateEnv(config)).toBe(config);
+    expect(validateEnv(VALID)).toBe(VALID);
   });
 
   describe('rejects an unusable JWT_SECRET', () => {
@@ -65,5 +65,46 @@ describe('validateEnv', () => {
 
   it('points at the fix', () => {
     expect(() => validateEnv({ ...DB })).toThrow(/openssl rand -base64 48/);
+  });
+
+  describe('NODE_ENV', () => {
+    it('accepts valid values', () => {
+      expect(() => validateEnv({ ...VALID, NODE_ENV: 'development' })).not.toThrow();
+      expect(() => validateEnv({ ...VALID, NODE_ENV: 'test' })).not.toThrow();
+      // production also requires CORS_ORIGIN
+      expect(() =>
+        validateEnv({ ...VALID, NODE_ENV: 'production', CORS_ORIGIN: 'https://naturegrid.bd' }),
+      ).not.toThrow();
+    });
+
+    it('rejects an unrecognised value', () => {
+      expect(() => validateEnv({ ...VALID, NODE_ENV: 'staging' })).toThrow(
+        /NODE_ENV "staging" is not valid/,
+      );
+    });
+
+    it('allows NODE_ENV to be absent (defaults gracefully)', () => {
+      expect(() => validateEnv(VALID)).not.toThrow();
+    });
+  });
+
+  describe('CORS_ORIGIN in production', () => {
+    it('requires CORS_ORIGIN when NODE_ENV is production', () => {
+      expect(() =>
+        validateEnv({ ...VALID, NODE_ENV: 'production' }),
+      ).toThrow(/CORS_ORIGIN is not set/);
+    });
+
+    it('accepts production config when CORS_ORIGIN is set', () => {
+      expect(() =>
+        validateEnv({ ...VALID, NODE_ENV: 'production', CORS_ORIGIN: 'https://naturegrid.bd' }),
+      ).not.toThrow();
+    });
+
+    it('does not require CORS_ORIGIN in development', () => {
+      expect(() =>
+        validateEnv({ ...VALID, NODE_ENV: 'development' }),
+      ).not.toThrow();
+    });
   });
 });

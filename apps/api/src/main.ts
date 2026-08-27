@@ -8,6 +8,7 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { PermissionsGuard } from './common/guards/permissions.guard';
 import { PermissionsService } from './permissions/permissions.service';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -22,6 +23,10 @@ async function bootstrap() {
     origin: process.env.CORS_ORIGIN?.split(',') ?? true,
     credentials: true,
   });
+
+  // Catches all unhandled exceptions; sanitises 5xx bodies in production
+  // to prevent stack traces / DB error details from leaking.
+  app.useGlobalFilters(new AllExceptionsFilter());
 
   // Global input validation — strips unknown fields, validates DTOs
   app.useGlobalPipes(
