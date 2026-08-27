@@ -56,6 +56,10 @@ export const apiPrefix = '/api/v1';
 export const routes = {
   health: `${apiPrefix}/health`,
 
+  gamification: {
+    me: `${apiPrefix}/gamification/me`,
+  },
+
   auth: {
     register: `${apiPrefix}/auth/register`,
     login: `${apiPrefix}/auth/login`,
@@ -783,3 +787,38 @@ export interface OrgAdminDashboard {
     topProjects: Array<{ id: string; title: string; participants: number }>;
   };
 }
+
+// ─── Gamification ─────────────────────────────────────────────────────────────
+
+export interface MissingField {
+  key:    string;
+  label:  string;
+  hint:   string;
+  weight: number;
+  href:   string;
+}
+
+export interface BadgeSummary {
+  key:         string;
+  category:    string;
+  tier:        string;
+  label:       string;
+  tierLabel:   string;
+  emoji:       string;
+  description: string;
+  earned:      boolean;
+  current:     number;
+  threshold:   number;
+  points:      number;
+}
+
+export interface GamificationSummary {
+  completeness:    number;
+  missingFields:   MissingField[];
+  badges:          BadgeSummary[];
+  points:          number;
+  level:           number;
+  levelLabel:      string;
+  nextLevelPoints: number; // -1 means max level reached
+}
+

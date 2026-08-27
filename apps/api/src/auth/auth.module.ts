@@ -6,6 +6,7 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './jwt.strategy';
 import { RefreshTokenCleanupScheduler } from './refresh-token-cleanup.scheduler';
+import { GamificationModule } from '../gamification/gamification.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { RefreshTokenCleanupScheduler } from './refresh-token-cleanup.scheduler'
         signOptions: { expiresIn: '15m' },
       }),
     }),
+    GamificationModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy, RefreshTokenCleanupScheduler],

@@ -8,6 +8,7 @@ import { AddMediaDto } from './dto/add-media.dto';
 import type { JwtPayload } from '../common/decorators/current-user.decorator';
 import { clampPagination } from '../common/pagination';
 import { assertDistrictExists } from '../common/validate-district';
+import { GamificationService } from '../gamification/gamification.service';
 
 /** Allowed status transitions per role. */
 const STATUS_TRANSITIONS: Record<ReportStatus, ReportStatus[]> = {
@@ -36,7 +37,10 @@ const REPORT_SELECT = {
 
 @Injectable()
 export class ReportsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly gamification: GamificationService,
+  ) {}
 
   async create(dto: CreateReportDto, user: JwtPayload) {
     if (dto.districtId) await assertDistrictExists(this.prisma, dto.districtId);
@@ -258,6 +262,14 @@ export class ReportsService {
         },
       }),
     ]);
+    // Award civic_guardian / clean_air_defender badges when a report is verified or resolved.
+    if (
+      (dto.status === ReportStatus.VERIFIED || dto.status === ReportStatus.RESOLVED) &&
+      report.reporter?.id
+    ) {
+      this.gamification.evaluateBadges(report.reporter.id).catch(() => {});
+    }
+
     return updated;
   }
 }

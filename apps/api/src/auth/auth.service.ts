@@ -12,6 +12,7 @@ import { LoginDto } from './dto/login.dto';
 import type { JwtPayload } from '../common/decorators/current-user.decorator';
 import { generateRefreshToken, hashRefreshToken } from './refresh-token.util';
 import { PermissionsService } from '../permissions/permissions.service';
+import { GamificationService } from '../gamification/gamification.service';
 import type { UpdateProfileDto } from './dto/update-profile.dto';
 
 const SALT_ROUNDS = 12;
@@ -29,6 +30,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
     private readonly permissionsService: PermissionsService,
+    private readonly gamification: GamificationService,
   ) {}
 
   async register(dto: RegisterDto, deviceMeta: DeviceMeta = {}) {
@@ -142,6 +144,9 @@ export class AuthService {
         }
       }
     });
+    // Re-evaluate badges and completeness without blocking the response.
+    this.gamification.evaluateBadges(userId).catch(() => {});
+
     return this.getProfile(userId);
   }
 

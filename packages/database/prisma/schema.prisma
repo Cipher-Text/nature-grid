@@ -266,6 +266,9 @@ model UserProfile {
   profileVisibility  ProfileVisibility @default(PUBLIC)
   contactVisibility  ProfileVisibility @default(PRIVATE)
   linksVisibility    ProfileVisibility @default(PUBLIC)
+  // ── Gamification ────────────────────────────────────────────────────────
+  earnedBadges       String[]          @default([])
+  contributionPoints Int               @default(0)
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
 

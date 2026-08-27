@@ -9,6 +9,9 @@ import {
   type Observation,
   type AlertSubscription,
   type PaginatedEnvelope,
+  type GamificationSummary,
+  type BadgeSummary,
+  type MissingField,
 } from '@nature-grid/contracts';
 import { titleCase, relativeTime } from '../../../lib/format';
 import { ACCESS_TOKEN_COOKIE } from '../../../lib/session-constants';
@@ -19,13 +22,14 @@ import DistrictSelect, { type DistrictWithDivision } from '../../../components/d
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-type ProfileTab = 'personal' | 'location' | 'alerts' | 'security';
+type ProfileTab = 'personal' | 'location' | 'alerts' | 'security' | 'achievements';
 
 const TABS: { id: ProfileTab; label: string }[] = [
-  { id: 'personal', label: 'Personal Info' },
-  { id: 'location', label: 'Location & Scope' },
-  { id: 'alerts',   label: 'Alert Subscriptions' },
-  { id: 'security', label: 'Security' },
+  { id: 'personal',     label: 'Personal Info' },
+  { id: 'location',     label: 'Location & Scope' },
+  { id: 'alerts',       label: 'Alert Subscriptions' },
+  { id: 'achievements', label: 'Achievements' },
+  { id: 'security',     label: 'Security' },
 ];
 
 const ROLE_LABELS: Record<string, string> = {
@@ -103,6 +107,160 @@ function groupByDivision(districts: DistrictWithDivision[]): Map<string, Distric
   return map;
 }
 
+// ── Profile Strength Widget ───────────────────────────────────────────────────
+
+const CIRCUMFERENCE = 2 * Math.PI * 28; // r=28, cx=cy=36 in a 72x72 viewBox
+
+function ProfileStrengthWidget({ game }: { game: GamificationSummary | null }) {
+  if (!game) return null;
+
+  const { completeness, missingFields, points, level, levelLabel, nextLevelPoints } = game;
+  const offset = CIRCUMFERENCE * (1 - completeness / 100);
+
+  return (
+    <div className="strength-widget" aria-label="Profile strength">
+      <div className="strength-widget-left">
+        <div className="strength-circle-wrap" aria-hidden="true">
+          <svg viewBox="0 0 72 72" width="72" height="72" className="strength-circle">
+            <circle cx="36" cy="36" r="28" fill="none" strokeWidth="6" className="strength-track" />
+            <circle
+              cx="36" cy="36" r="28" fill="none" strokeWidth="6"
+              strokeDasharray={`${CIRCUMFERENCE}`}
+              strokeDashoffset={offset}
+              strokeLinecap="round"
+              className="strength-fill"
+              transform="rotate(-90 36 36)"
+            />
+          </svg>
+          <span className="strength-pct">{completeness}%</span>
+        </div>
+
+        <div className="strength-text">
+          <strong>Profile strength</strong>
+          <span>{completeness === 100 ? 'Complete!' : `${missingFields.length} item${missingFields.length !== 1 ? 's' : ''} remaining`}</span>
+          <span className="strength-level">
+            Lv.{level} · {levelLabel}
+            {nextLevelPoints > 0 && <> · <strong>{points}</strong>/{nextLevelPoints} pts</>}
+            {nextLevelPoints === -1 && <> · <strong>{points}</strong> pts (max)</>}
+          </span>
+        </div>
+      </div>
+
+      {missingFields.length > 0 && (
+        <div className="strength-chips" aria-label="Quick actions to improve profile">
+          {missingFields.slice(0, 4).map((f: MissingField) => (
+            <a key={f.key} href={f.href} className="strength-chip" title={f.hint}>
+              +{f.weight}% {f.label}
+            </a>
+          ))}
+          {missingFields.length > 4 && (
+            <span className="strength-chip strength-chip-more">+{missingFields.length - 4} more</span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Badge Grid ────────────────────────────────────────────────────────────────
+
+const BADGE_CATEGORIES: Array<{ key: string; label: string; emoji: string }> = [
+  { key: 'civic_guardian',        label: 'Civic Guardian',        emoji: '🛡️' },
+  { key: 'water_sentinel',        label: 'Water Sentinel',        emoji: '🌊' },
+  { key: 'clean_air_defender',    label: 'Clean Air Defender',    emoji: '🌬️' },
+  { key: 'biodiversity_explorer', label: 'Biodiversity Explorer', emoji: '🌿' },
+  { key: 'restoration_pioneer',   label: 'Restoration Pioneer',   emoji: '🌳' },
+];
+
+const TIER_ORDER = ['BRONZE', 'SILVER', 'GOLD', 'EMERALD'] as const;
+
+const TIER_CSS: Record<string, string> = {
+  BRONZE:  'badge-tier-bronze',
+  SILVER:  'badge-tier-silver',
+  GOLD:    'badge-tier-gold',
+  EMERALD: 'badge-tier-emerald',
+};
+
+function BadgeCard({ badge }: { badge: BadgeSummary }) {
+  const progressPct = badge.threshold > 0
+    ? Math.round((Math.min(badge.current, badge.threshold) / badge.threshold) * 100)
+    : 0;
+
+  return (
+    <div
+      className={`badge-card ${badge.earned ? 'badge-earned' : 'badge-locked'} ${TIER_CSS[badge.tier] ?? ''}`}
+      title={badge.description}
+      aria-label={`${badge.label} ${badge.tierLabel} badge${badge.earned ? ' — earned' : ` — ${badge.current}/${badge.threshold}`}`}
+    >
+      <div className="badge-card-header">
+        <span className="badge-emoji" aria-hidden="true">{badge.emoji}</span>
+        <span className="badge-tier-label">{badge.tierLabel}</span>
+        {badge.earned && (
+          <span className="badge-earned-mark" aria-label="Earned">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+        )}
+      </div>
+      <p className="badge-description">{badge.description}</p>
+      {!badge.earned && (
+        <div className="badge-progress" aria-label={`Progress: ${badge.current} of ${badge.threshold}`}>
+          <div className="badge-progress-bar" style={{ width: `${progressPct}%` }} />
+          <span className="badge-progress-label">{badge.current}/{badge.threshold}</span>
+        </div>
+      )}
+      <div className="badge-points">{badge.points} pts</div>
+    </div>
+  );
+}
+
+function BadgeGrid({ game }: { game: GamificationSummary | null }) {
+  if (!game) {
+    return (
+      <div className="empty-state">
+        Achievement data is unavailable. Reload the page to try again.
+      </div>
+    );
+  }
+
+  const earnedCount = game.badges.filter((b) => b.earned).length;
+
+  return (
+    <div className="badge-grid">
+      <div className="badge-grid-summary">
+        <strong>{earnedCount}</strong> of <strong>{game.badges.length}</strong> badges earned
+        &nbsp;·&nbsp;
+        <strong>{game.points}</strong> contribution points
+        &nbsp;·&nbsp;
+        Level {game.level} — {game.levelLabel}
+        {game.nextLevelPoints > 0 && (
+          <> &nbsp;·&nbsp; <strong>{game.nextLevelPoints - game.points}</strong> pts to next level</>
+        )}
+      </div>
+
+      {BADGE_CATEGORIES.map(({ key, label, emoji }) => {
+        const catBadges = TIER_ORDER.map((tier) =>
+          game.badges.find((b) => b.category === key && b.tier === tier)
+        ).filter(Boolean) as BadgeSummary[];
+
+        if (catBadges.length === 0) return null;
+
+        return (
+          <section key={key} className="badge-category">
+            <h3 className="badge-category-title">
+              <span aria-hidden="true">{emoji}</span> {label}
+            </h3>
+            <div className="badge-category-grid">
+              {catBadges.map((badge) => (
+                <BadgeCard key={badge.key} badge={badge} />
+              ))}
+            </div>
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default async function ProfilePage({
@@ -125,7 +283,7 @@ export default async function ProfilePage({
   const user        = await getCurrentUser();
   const accessToken = cookies().get(ACCESS_TOKEN_COOKIE)?.value ?? '';
 
-  const [myReports, myObservations, subscriptions, districts] = await Promise.all([
+  const [myReports, myObservations, subscriptions, districts, gameData] = await Promise.all([
     apiGetAuthed<PaginatedEnvelope<CitizenReport>>(routes.reports.mine, accessToken).catch(
       (): PaginatedEnvelope<CitizenReport> => ({ data: [], total: 0, page: 1, pageSize: 10 }),
     ),
@@ -136,6 +294,9 @@ export default async function ProfilePage({
       (): AlertSubscription[] => [],
     ),
     apiGet<DistrictWithDivision[]>(routes.locations.districts),
+    apiGetAuthed<GamificationSummary>(routes.gamification.me, accessToken).catch(
+      (): null => null,
+    ),
   ]);
 
   const profile  = user?.profile;
@@ -195,6 +356,9 @@ export default async function ProfilePage({
         </div>
       </div>
 
+      {/* ── Profile Strength Widget ─────────────────────────────────────────── */}
+      <ProfileStrengthWidget game={gameData} />
+
       {/* ── Flash notifications ─────────────────────────────────────────────── */}
       {searchParams.profileSaved && (
         <div className="flash flash-success" role="status">Profile updated successfully.</div>
@@ -218,6 +382,12 @@ export default async function ProfilePage({
                 {subscriptions.length}
               </span>
             )}
+            {tab.id === 'achievements' && gameData && (() => {
+              const earned = gameData.badges.filter((b) => b.earned).length;
+              return earned > 0
+                ? <span className="tab-badge tab-badge-gold" aria-label={`${earned} badges earned`}>{earned}</span>
+                : null;
+            })()}
           </Link>
         ))}
       </nav>
@@ -508,6 +678,19 @@ export default async function ProfilePage({
               </div>
             </form>
           </div>
+        </article>
+      )}
+
+      {/* ══ Achievements Tab ════════════════════════════════════════════════ */}
+      {activeTab === 'achievements' && (
+        <article className="panel">
+          <div className="panel-header">
+            <div>
+              <h2>Achievements &amp; badges</h2>
+              <p>Earn badges by contributing reports, observations, and participating in restoration projects.</p>
+            </div>
+          </div>
+          <BadgeGrid game={gameData} />
         </article>
       )}
 

@@ -6,6 +6,7 @@ import { UpdateRestorationProjectDto } from './dto/update-restoration-project.dt
 import type { JwtPayload } from '../common/decorators/current-user.decorator';
 import { clampPagination } from '../common/pagination';
 import { assertDistrictExists } from '../common/validate-district';
+import { GamificationService } from '../gamification/gamification.service';
 
 const PROJECT_SELECT = {
   id: true,
@@ -28,7 +29,10 @@ const PROJECT_SELECT = {
 
 @Injectable()
 export class RestorationService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly gamification: GamificationService,
+  ) {}
 
   async create(dto: CreateRestorationProjectDto, user: JwtPayload) {
     if (dto.districtId) await assertDistrictExists(this.prisma, dto.districtId);
@@ -144,6 +148,9 @@ export class RestorationService {
       }
       // Already joined — idempotent no-op.
     }
+
+    // Award restoration_pioneer badges without blocking the response.
+    this.gamification.evaluateBadges(user.sub).catch(() => {});
 
     return this.getById(id);
   }

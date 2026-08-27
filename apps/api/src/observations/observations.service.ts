@@ -12,6 +12,7 @@ import { UpdateObservationTrustDto } from './dto/update-trust.dto';
 import type { JwtPayload } from '../common/decorators/current-user.decorator';
 import { clampPagination } from '../common/pagination';
 import { assertDistrictExists } from '../common/validate-district';
+import { GamificationService } from '../gamification/gamification.service';
 
 const OBSERVATION_SELECT = {
   id: true,
@@ -31,7 +32,10 @@ const OBSERVATION_SELECT = {
 
 @Injectable()
 export class ObservationsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly gamification: GamificationService,
+  ) {}
 
   async create(dto: CreateObservationDto, user: JwtPayload) {
     if (dto.districtId) await assertDistrictExists(this.prisma,dto.districtId);
@@ -177,6 +181,12 @@ export class ObservationsService {
         },
       }),
     ]);
+
+    // Award water_sentinel / biodiversity_explorer / clean_air_defender badges
+    // when an observation reaches RESEARCH_GRADE trust.
+    if (dto.trustLevel === ObservationTrustLevel.RESEARCH_GRADE && observation.observer?.id) {
+      this.gamification.evaluateBadges(observation.observer.id).catch(() => {});
+    }
 
     return updated;
   }

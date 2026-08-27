@@ -4,6 +4,8 @@ import * as bcrypt from 'bcryptjs';
 import { AuthService } from './auth.service';
 import { hashRefreshToken } from './refresh-token.util';
 import type { PrismaService } from '../database/prisma.service';
+import type { PermissionsService } from '../permissions/permissions.service';
+import type { GamificationService } from '../gamification/gamification.service';
 
 /** In-memory Prisma double — only the calls AuthService makes. */
 function mockPrisma() {
@@ -22,15 +24,34 @@ function mockPrisma() {
     auditEvent: {
       create: jest.fn().mockResolvedValue({}),
     },
+    userProfile: {
+      upsert: jest.fn().mockResolvedValue({}),
+    },
+    userSocialLink: {
+      deleteMany: jest.fn().mockResolvedValue({}),
+      createMany: jest.fn().mockResolvedValue({}),
+    },
+    organizationMembership: {
+      findMany: jest.fn().mockResolvedValue([]),
+    },
   };
 }
 
 function build() {
   const prisma = mockPrisma();
   const jwt = { sign: jest.fn().mockReturnValue('signed.access.token') };
+  // Minimal stubs for the two injected-but-not-called-in-these-tests services.
+  const permissions = {
+    getPermissionsForRole: jest.fn().mockResolvedValue([]),
+  } as unknown as PermissionsService;
+  const gamification = {
+    evaluateBadges: jest.fn().mockResolvedValue(undefined),
+  } as unknown as GamificationService;
   const service = new AuthService(
     prisma as unknown as PrismaService,
     jwt as unknown as JwtService,
+    permissions,
+    gamification,
   );
   return { service, prisma, jwt };
 }
