@@ -14,6 +14,7 @@ const FLOOD_PARAMS = [
 const FLOOD_FORECAST_DAYS = 30;
 const MAX_ATTEMPTS = 3;
 const RETRY_DELAYS_MS = [500, 1500];
+const FETCH_TIMEOUT_MS = 30_000;
 
 @Injectable()
 export class FloodOpenMeteoClient {
@@ -27,13 +28,17 @@ export class FloodOpenMeteoClient {
   private async getJson<T>(url: string): Promise<T> {
     let lastError: unknown;
     for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
       try {
-        const response = await fetch(url);
+        const response = await fetch(url, { signal: controller.signal });
+        clearTimeout(timer);
         if (!response.ok) {
           throw new Error(`OpenMeteo Flood request failed: ${response.status} ${response.statusText}`);
         }
         return (await response.json()) as T;
       } catch (err) {
+        clearTimeout(timer);
         lastError = err;
         if (attempt < MAX_ATTEMPTS - 1) {
           await new Promise((resolve) => setTimeout(resolve, RETRY_DELAYS_MS[attempt]));

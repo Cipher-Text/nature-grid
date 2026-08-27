@@ -29,40 +29,45 @@ export class FloodService {
     const daily = response.daily;
     if (!daily?.time?.length) return;
 
-    for (let i = 0; i < daily.time.length; i++) {
-      await this.prisma.floodForecast.upsert({
-        where: {
-          districtId_forecastDate: {
-            districtId: district.id,
-            forecastDate: new Date(daily.time[i]),
+    const lat = response.latitude ?? district.lat;
+    const lng = response.longitude ?? district.lng;
+
+    await this.prisma.$transaction(
+      daily.time.map((dateStr, i) =>
+        this.prisma.floodForecast.upsert({
+          where: {
+            districtId_forecastDate: {
+              districtId: district.id,
+              forecastDate: new Date(dateStr),
+            },
           },
-        },
-        update: {
-          lat: response.latitude ?? district.lat,
-          lng: response.longitude ?? district.lng,
-          riverDischarge: daily.river_discharge?.[i],
-          riverDischargeMean: daily.river_discharge_mean?.[i],
-          riverDischargeMedian: daily.river_discharge_median?.[i],
-          riverDischargeMax: daily.river_discharge_max?.[i],
-          riverDischargeMin: daily.river_discharge_min?.[i],
-          riverDischargeP25: daily.river_discharge_p25?.[i],
-          riverDischargeP75: daily.river_discharge_p75?.[i],
-        },
-        create: {
-          districtId: district.id,
-          lat: response.latitude ?? district.lat,
-          lng: response.longitude ?? district.lng,
-          forecastDate: new Date(daily.time[i]),
-          riverDischarge: daily.river_discharge?.[i],
-          riverDischargeMean: daily.river_discharge_mean?.[i],
-          riverDischargeMedian: daily.river_discharge_median?.[i],
-          riverDischargeMax: daily.river_discharge_max?.[i],
-          riverDischargeMin: daily.river_discharge_min?.[i],
-          riverDischargeP25: daily.river_discharge_p25?.[i],
-          riverDischargeP75: daily.river_discharge_p75?.[i],
-        },
-      });
-    }
+          update: {
+            lat,
+            lng,
+            riverDischarge: daily.river_discharge?.[i],
+            riverDischargeMean: daily.river_discharge_mean?.[i],
+            riverDischargeMedian: daily.river_discharge_median?.[i],
+            riverDischargeMax: daily.river_discharge_max?.[i],
+            riverDischargeMin: daily.river_discharge_min?.[i],
+            riverDischargeP25: daily.river_discharge_p25?.[i],
+            riverDischargeP75: daily.river_discharge_p75?.[i],
+          },
+          create: {
+            districtId: district.id,
+            lat,
+            lng,
+            forecastDate: new Date(dateStr),
+            riverDischarge: daily.river_discharge?.[i],
+            riverDischargeMean: daily.river_discharge_mean?.[i],
+            riverDischargeMedian: daily.river_discharge_median?.[i],
+            riverDischargeMax: daily.river_discharge_max?.[i],
+            riverDischargeMin: daily.river_discharge_min?.[i],
+            riverDischargeP25: daily.river_discharge_p25?.[i],
+            riverDischargeP75: daily.river_discharge_p75?.[i],
+          },
+        }),
+      ),
+    );
   }
 
   getLatestForAllDistricts() {

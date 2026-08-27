@@ -79,10 +79,13 @@ export class LocationClimateService {
 
     this.logger.log(`Union fetch done — ${ok} ok, ${fail} errors`);
 
-    await this.updateUnionRollingAverages();
-    await this.aggregateUpazilas();
-    await this.aggregateDistricts();
-    await this.aggregateDivisions();
+    this.logger.log('Running bottom-up climate aggregation in a single transaction…');
+    await this.prisma.$transaction([
+      this.updateUnionRollingAverages(),
+      this.aggregateUpazilas(),
+      this.aggregateDistricts(),
+      this.aggregateDivisions(),
+    ]);
 
     this.logger.log('Bottom-up climate aggregation complete');
   }
@@ -106,8 +109,24 @@ export class LocationClimateService {
       ? aqRaw
       : [aqRaw];
 
+    if (weatherArr.length !== batch.length || aqArr.length !== batch.length) {
+      throw new Error(
+        `OpenMeteo response size mismatch: expected ${batch.length} entries, ` +
+          `got weather=${weatherArr.length} aq=${aqArr.length}`,
+      );
+    }
+
+    const truncatedCount = weatherArr.filter(
+      (w) => (w.hourly.relative_humidity_2m?.length ?? 0) < 24,
+    ).length;
+    if (truncatedCount > 0) {
+      this.logger.warn(
+        `${truncatedCount}/${batch.length} unions returned fewer than 24 hourly entries — daily averages will be based on partial data`,
+      );
+    }
+
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    today.setUTCHours(0, 0, 0, 0);
 
     const upserts = batch
       .map((union, i) => {
@@ -159,11 +178,18 @@ export class LocationClimateService {
   }
 
   // ─── Bulk aggregation (raw SQL) ────────────────────────────────────────────
+  // WARNING: column names below are hardcoded strings and will NOT be caught by
+  // tsc if the Prisma schema is renamed. If you rename any of the following
+  // columns in schema.prisma, update these SQL statements to match:
+  //   UnionDailyClimate: avgTemp, minTemp, maxTemp, avgHumidity, totalPrecip,
+  //     avgWindSpeed, avgCloudCover, avgPm25, avgPm10, avgUvIndex
+  //   Union / Upazila / District / Division: avgTemp30d, minTemp30d, maxTemp30d,
+  //     avgHumidity30d, totalPrecip30d, avgWindSpeed30d, avgCloudCover30d,
+  //     avgPm25_30d, avgPm10_30d, avgUvIndex30d, climateUpdatedAt
 
   /** Recompute 30-day rolling averages on all Union rows from their daily history. */
-  private async updateUnionRollingAverages(): Promise<void> {
-    this.logger.log('Updating Union 30-day rolling averages…');
-    await this.prisma.$executeRaw`
+  private updateUnionRollingAverages() {
+    return this.prisma.$executeRaw`
       UPDATE "Union" u
       SET
         "avgTemp30d"       = sub.avg_temp,
@@ -198,9 +224,8 @@ export class LocationClimateService {
     `;
   }
 
-  private async aggregateUpazilas(): Promise<void> {
-    this.logger.log('Aggregating climate → Upazila…');
-    await this.prisma.$executeRaw`
+  private aggregateUpazilas() {
+    return this.prisma.$executeRaw`
       UPDATE "Upazila" up
       SET
         "avgTemp30d"       = sub.avg_temp,
@@ -235,9 +260,8 @@ export class LocationClimateService {
     `;
   }
 
-  private async aggregateDistricts(): Promise<void> {
-    this.logger.log('Aggregating climate → District…');
-    await this.prisma.$executeRaw`
+  private aggregateDistricts() {
+    return this.prisma.$executeRaw`
       UPDATE "District" d
       SET
         "avgTemp30d"       = sub.avg_temp,
@@ -272,9 +296,8 @@ export class LocationClimateService {
     `;
   }
 
-  private async aggregateDivisions(): Promise<void> {
-    this.logger.log('Aggregating climate → Division…');
-    await this.prisma.$executeRaw`
+  private aggregateDivisions() {
+    return this.prisma.$executeRaw`
       UPDATE "Division" dv
       SET
         "avgTemp30d"       = sub.avg_temp,
