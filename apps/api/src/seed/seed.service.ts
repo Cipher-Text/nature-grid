@@ -32,6 +32,95 @@ const SEED_ORGANIZATION = {
   isVerified: true,
 };
 
+const SEED_ORGANIZATIONS: {
+  name: string;
+  type: OrganizationType;
+  description: string;
+  website: string;
+  country: string;
+}[] = [
+  {
+    name: 'Bangladesh Poribesh Andolon (BAPA)',
+    type: 'NGO',
+    description:
+      'A nationwide civic movement and advocacy platform focused on river protection, air quality management, urban environment improvement, and climate policy in Bangladesh.',
+    website: 'https://www.bapa.org.bd',
+    country: 'Bangladesh',
+  },
+  {
+    name: 'Bangladesh Environment and Development Society (BEDS)',
+    type: 'NGO',
+    description:
+      'Dedicated to coastal ecosystem restoration, mangrove preservation, biodiversity conservation, and building sustainable eco-villages around the Sundarbans.',
+    website: 'https://www.bedsbd.org',
+    country: 'Bangladesh',
+  },
+  {
+    name: 'Center for Natural Resource Studies (CNRS)',
+    type: 'NGO',
+    description:
+      'A leading non-governmental organization specializing in wetland (Haor) management, community-based natural resource conservation, and ecosystem restoration.',
+    website: 'https://cnrs.org.bd',
+    country: 'Bangladesh',
+  },
+  {
+    name: 'Environment and Social Development Organization (ESDO)',
+    type: 'NGO',
+    description:
+      'Promotes environmental justice, toxic chemical elimination, single-use plastic reduction campaigns, and sustainable waste management policies.',
+    website: 'https://esdo.org',
+    country: 'Bangladesh',
+  },
+  {
+    name: 'WildTeam',
+    type: 'NGO',
+    description:
+      'A wildlife conservation organization focused on Bengal tiger protection, human-wildlife conflict mitigation, and biodiversity research in the Sundarbans.',
+    website: 'https://www.wildteam.org.bd',
+    country: 'Bangladesh',
+  },
+  {
+    name: 'International Centre for Climate Change and Development (ICCCAD)',
+    type: 'RESEARCH_INSTITUTION',
+    description:
+      'A global research institute based in Bangladesh conducting action research, policy analysis, and capacity building on climate change adaptation.',
+    website: 'https://www.icccad.net',
+    country: 'Bangladesh',
+  },
+  {
+    name: 'International Union for Conservation of Nature (IUCN) Bangladesh',
+    type: 'INTERNATIONAL_ORG',
+    description:
+      'Global authority on the status of the natural world, conducting species Red List assessments, nature-based solutions, and ecosystem conservation initiatives.',
+    website: 'https://www.iucn.org',
+    country: 'Bangladesh',
+  },
+  {
+    name: 'Department of Environment (DoE)',
+    type: 'GOVERNMENT_AGENCY',
+    description:
+      'Government department under the Ministry of Environment, Forest and Climate Change responsible for environmental enforcement, pollution control, and clearance.',
+    website: 'http://www.doe.gov.bd',
+    country: 'Bangladesh',
+  },
+  {
+    name: 'Bangladesh Forest Department (BFD)',
+    type: 'GOVERNMENT_AGENCY',
+    description:
+      'Government agency responsible for forest resource management, biodiversity protection, wildlife conservation, and protected areas across Bangladesh.',
+    website: 'http://www.bforest.gov.bd',
+    country: 'Bangladesh',
+  },
+  {
+    name: 'World Wide Fund for Nature (WWF)',
+    type: 'INTERNATIONAL_ORG',
+    description:
+      'Global environmental non-profit working on wilderness preservation, climate mitigation, and reducing human impact on the environment.',
+    website: 'https://www.worldwildlife.org',
+    country: 'Switzerland',
+  },
+];
+
 @Injectable()
 export class SeedService implements OnModuleInit {
   private readonly logger = new Logger(SeedService.name);
@@ -45,6 +134,7 @@ export class SeedService implements OnModuleInit {
     }
     await this.seedUsers();
     await this.seedOrganization();
+    await this.seedRealOrganizations();
   }
 
   /**
@@ -141,5 +231,17 @@ export class SeedService implements OnModuleInit {
       });
     }
     this.logger.log(`Seed organization ready: ${SEED_ORGANIZATION.name}`);
+  }
+
+  private async seedRealOrganizations() {
+    for (const org of SEED_ORGANIZATIONS) {
+      const existing = await this.prisma.organization.findFirst({ where: { name: org.name } });
+      if (existing) {
+        await this.prisma.organization.update({ where: { id: existing.id }, data: org });
+      } else {
+        await this.prisma.organization.create({ data: org });
+      }
+    }
+    this.logger.log(`Real organizations seeded: ${SEED_ORGANIZATIONS.length} records`);
   }
 }
