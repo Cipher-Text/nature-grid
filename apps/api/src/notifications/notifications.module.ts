@@ -6,7 +6,7 @@ import { NotificationsService } from './notifications.service';
 @Module({
   controllers: [NotificationsController],
   providers: [NotificationsService, EmailService],
-  // Export NotificationsService so AlertsModule can inject it for fire-and-forget dispatch.
-  exports: [NotificationsService],
+  // NotificationsService consumed by AlertsModule; EmailService consumed by AuthModule.
+  exports: [NotificationsService, EmailService],
 })
 export class NotificationsModule {}

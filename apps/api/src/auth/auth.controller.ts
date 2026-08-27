@@ -8,6 +8,10 @@ import { CurrentUser, JwtPayload } from '../common/decorators/current-user.decor
 import { Public } from '../common/decorators/roles.decorator';
 import { Throttle } from '@nestjs/throttler';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { VerifyEmailDto } from './dto/verify-email.dto';
 
 function deviceMetaFrom(req: Request): DeviceMeta {
   return {
@@ -59,5 +63,41 @@ export class AuthController {
   @Patch('profile')
   updateProfile(@CurrentUser() user: JwtPayload, @Body() dto: UpdateProfileDto) {
     return this.authService.updateProfile(user.sub, dto);
+  }
+
+  @Patch('password')
+  changePassword(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: ChangePasswordDto,
+    @Req() req: Request,
+  ) {
+    return this.authService.changePassword(user.sub, dto, deviceMetaFrom(req));
+  }
+
+  // Throttled tightly — this triggers email delivery and is a prime abuse vector.
+  @Throttle({ default: { ttl: 60_000, limit: 3 } })
+  @Public()
+  @Post('forgot-password')
+  forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(dto);
+  }
+
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
+  @Public()
+  @Post('reset-password')
+  resetPassword(@Body() dto: ResetPasswordDto, @Req() req: Request) {
+    return this.authService.resetPassword(dto, deviceMetaFrom(req));
+  }
+
+  @Post('send-verification')
+  sendVerification(@CurrentUser() user: JwtPayload) {
+    return this.authService.sendVerificationEmail(user.sub);
+  }
+
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
+  @Public()
+  @Post('verify-email')
+  verifyEmail(@Body() dto: VerifyEmailDto, @Req() req: Request) {
+    return this.authService.verifyEmail(dto, deviceMetaFrom(req));
   }
 }

@@ -1,8 +1,10 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { AuditAction } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
@@ -14,9 +16,16 @@ import { generateRefreshToken, hashRefreshToken } from './refresh-token.util';
 import { PermissionsService } from '../permissions/permissions.service';
 import { GamificationService } from '../gamification/gamification.service';
 import type { UpdateProfileDto } from './dto/update-profile.dto';
+import type { ChangePasswordDto } from './dto/change-password.dto';
+import type { ForgotPasswordDto } from './dto/forgot-password.dto';
+import type { ResetPasswordDto } from './dto/reset-password.dto';
+import type { VerifyEmailDto } from './dto/verify-email.dto';
+import { EmailService } from '../notifications/email.service';
 
 const SALT_ROUNDS = 12;
 const REFRESH_TOKEN_TTL_DAYS = 7;
+const PASSWORD_RESET_TTL_MINUTES = 60;
+const EMAIL_VERIFICATION_TTL_HOURS = 24;
 
 export interface DeviceMeta {
   deviceId?: string;
@@ -31,6 +40,8 @@ export class AuthService {
     private readonly jwt: JwtService,
     private readonly permissionsService: PermissionsService,
     private readonly gamification: GamificationService,
+    private readonly email: EmailService,
+    private readonly config: ConfigService,
   ) {}
 
   async register(dto: RegisterDto, deviceMeta: DeviceMeta = {}) {
@@ -148,6 +159,135 @@ export class AuthService {
     this.gamification.evaluateBadges(userId).catch(() => {});
 
     return this.getProfile(userId);
+  }
+
+  /** Changes password for an authenticated user after verifying their current password. */
+  async changePassword(userId: string, dto: ChangePasswordDto, deviceMeta: DeviceMeta = {}) {
+    const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
+    const valid = await bcrypt.compare(dto.currentPassword, user.passwordHash);
+    if (!valid) throw new BadRequestException('Current password is incorrect');
+
+    const passwordHash = await bcrypt.hash(dto.newPassword, SALT_ROUNDS);
+    await this.prisma.$transaction([
+      this.prisma.user.update({ where: { id: userId }, data: { passwordHash } }),
+      // Revoke all other active refresh tokens so sessions on other devices are invalidated.
+      this.prisma.refreshToken.updateMany({
+        where: { userId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      }),
+    ]);
+
+    await this.recordAuthEvent('PASSWORD_CHANGE', userId, deviceMeta);
+    return { success: true };
+  }
+
+  /**
+   * Initiates a password reset. Always returns the same response to prevent
+   * email enumeration — callers cannot tell whether the address exists.
+   */
+  async forgotPassword(dto: ForgotPasswordDto) {
+    const email = dto.email.toLowerCase().trim();
+    const user = await this.prisma.user.findUnique({ where: { email } });
+
+    if (user && user.isActive) {
+      const token = generateRefreshToken();
+      const tokenHash = hashRefreshToken(token);
+      const expiresAt = new Date(Date.now() + PASSWORD_RESET_TTL_MINUTES * 60 * 1000);
+
+      // Invalidate any outstanding reset tokens before issuing a new one.
+      await this.prisma.passwordResetToken.updateMany({
+        where: { userId: user.id, usedAt: null },
+        data: { usedAt: new Date() },
+      });
+
+      await this.prisma.passwordResetToken.create({
+        data: { userId: user.id, tokenHash, expiresAt },
+      });
+
+      await this.recordAuthEvent('PASSWORD_RESET_REQUEST', user.id, {});
+
+      const appUrl = this.config.get<string>('APP_URL') ?? 'http://localhost:3000';
+      const resetUrl = `${appUrl}/reset-password?token=${token}`;
+      this.email.sendPasswordResetEmail(user.email, user.displayName, resetUrl).catch(() => {});
+    }
+
+    return { message: 'If that email is registered you will receive a reset link shortly.' };
+  }
+
+  /** Resets the password using a valid reset token. Invalidates all existing sessions. */
+  async resetPassword(dto: ResetPasswordDto, deviceMeta: DeviceMeta = {}) {
+    const tokenHash = hashRefreshToken(dto.token);
+    const record = await this.prisma.passwordResetToken.findUnique({ where: { tokenHash } });
+
+    if (!record || record.usedAt || record.expiresAt < new Date()) {
+      throw new BadRequestException('Reset token is invalid or has expired');
+    }
+
+    const passwordHash = await bcrypt.hash(dto.newPassword, SALT_ROUNDS);
+    await this.prisma.$transaction([
+      this.prisma.user.update({ where: { id: record.userId }, data: { passwordHash } }),
+      this.prisma.passwordResetToken.update({ where: { id: record.id }, data: { usedAt: new Date() } }),
+      // Revoke all active refresh tokens — forces re-login on every device.
+      this.prisma.refreshToken.updateMany({
+        where: { userId: record.userId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      }),
+    ]);
+
+    await this.recordAuthEvent('PASSWORD_RESET', record.userId, deviceMeta);
+    return { success: true };
+  }
+
+  /** Sends (or re-sends) an email verification link to the authenticated user. */
+  async sendVerificationEmail(userId: string) {
+    const user = await this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: { id: true, email: true, displayName: true, isEmailVerified: true },
+    });
+
+    if (user.isEmailVerified) {
+      throw new BadRequestException('Email is already verified');
+    }
+
+    const token = generateRefreshToken();
+    const tokenHash = hashRefreshToken(token);
+    const expiresAt = new Date(Date.now() + EMAIL_VERIFICATION_TTL_HOURS * 60 * 60 * 1000);
+
+    // Invalidate any outstanding verification tokens before issuing a new one.
+    await this.prisma.emailVerificationToken.updateMany({
+      where: { userId, usedAt: null },
+      data: { usedAt: new Date() },
+    });
+
+    await this.prisma.emailVerificationToken.create({
+      data: { userId, tokenHash, expiresAt },
+    });
+
+    await this.recordAuthEvent('EMAIL_VERIFICATION_SENT', userId, {});
+
+    const appUrl = this.config.get<string>('APP_URL') ?? 'http://localhost:3000';
+    const verificationUrl = `${appUrl}/verify-email?token=${token}`;
+    this.email.sendVerificationEmail(user.email, user.displayName, verificationUrl).catch(() => {});
+
+    return { message: 'Verification email sent.' };
+  }
+
+  /** Marks the user's email as verified using a valid verification token. */
+  async verifyEmail(dto: VerifyEmailDto, deviceMeta: DeviceMeta = {}) {
+    const tokenHash = hashRefreshToken(dto.token);
+    const record = await this.prisma.emailVerificationToken.findUnique({ where: { tokenHash } });
+
+    if (!record || record.usedAt || record.expiresAt < new Date()) {
+      throw new BadRequestException('Verification token is invalid or has expired');
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.user.update({ where: { id: record.userId }, data: { isEmailVerified: true } }),
+      this.prisma.emailVerificationToken.update({ where: { id: record.id }, data: { usedAt: new Date() } }),
+    ]);
+
+    await this.recordAuthEvent('EMAIL_VERIFIED', record.userId, deviceMeta);
+    return { success: true };
   }
 
   /** Validates a refresh token, revokes it, and issues a brand new access+refresh pair. */

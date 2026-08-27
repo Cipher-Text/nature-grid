@@ -1,4 +1,5 @@
 import { ConflictException, UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { AuthService } from './auth.service';
@@ -6,6 +7,7 @@ import { hashRefreshToken } from './refresh-token.util';
 import type { PrismaService } from '../database/prisma.service';
 import type { PermissionsService } from '../permissions/permissions.service';
 import type { GamificationService } from '../gamification/gamification.service';
+import type { EmailService } from '../notifications/email.service';
 
 /** In-memory Prisma double — only the calls AuthService makes. */
 function mockPrisma() {
@@ -47,11 +49,18 @@ function build() {
   const gamification = {
     evaluateBadges: jest.fn().mockResolvedValue(undefined),
   } as unknown as GamificationService;
+  const email = {
+    sendPasswordResetEmail: jest.fn().mockResolvedValue(undefined),
+    sendVerificationEmail: jest.fn().mockResolvedValue(undefined),
+  } as unknown as EmailService;
+  const config = { get: jest.fn().mockReturnValue(undefined) } as unknown as ConfigService;
   const service = new AuthService(
     prisma as unknown as PrismaService,
     jwt as unknown as JwtService,
     permissions,
     gamification,
+    email,
+    config,
   );
   return { service, prisma, jwt };
 }

@@ -41,6 +41,52 @@ export class EmailService {
     });
   }
 
+  async sendPasswordResetEmail(to: string, displayName: string, resetUrl: string): Promise<void> {
+    if (!this.transporter) {
+      this.logger.debug(`Skipping password-reset email to ${to} — SMTP not configured`);
+      return;
+    }
+    const subject = 'Nature Grid — Reset your password';
+    const body = [
+      `Hello ${displayName},`,
+      '',
+      'We received a request to reset the password for your Nature Grid account.',
+      '',
+      'Click the link below to choose a new password (expires in 1 hour):',
+      resetUrl,
+      '',
+      'If you did not request a password reset, you can safely ignore this email.',
+      'Your password will not change unless you click the link above.',
+      '',
+      '---',
+      'Nature Grid — Environmental Monitoring Platform',
+    ].join('\n');
+
+    await this.transporter.sendMail({ from: this.smtpFrom, to, subject, text: body });
+  }
+
+  async sendVerificationEmail(to: string, displayName: string, verificationUrl: string): Promise<void> {
+    if (!this.transporter) {
+      this.logger.debug(`Skipping verification email to ${to} — SMTP not configured`);
+      return;
+    }
+    const subject = 'Nature Grid — Verify your email address';
+    const body = [
+      `Hello ${displayName},`,
+      '',
+      'Thank you for registering with Nature Grid.',
+      'Please verify your email address by clicking the link below (expires in 24 hours):',
+      verificationUrl,
+      '',
+      'If you did not create a Nature Grid account, you can safely ignore this email.',
+      '',
+      '---',
+      'Nature Grid — Environmental Monitoring Platform',
+    ].join('\n');
+
+    await this.transporter.sendMail({ from: this.smtpFrom, to, subject, text: body });
+  }
+
   async sendAlertEmail(to: string, displayName: string, alert: AlertForEmail): Promise<void> {
     if (!this.transporter) {
       this.logger.debug(`Skipping email to ${to} — SMTP not configured`);

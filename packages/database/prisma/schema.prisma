@@ -166,6 +166,11 @@ enum AuditAction {
   PERMISSION_REVOKE
   EMISSION_SOURCE_CREATE
   EMISSION_ENTRY_CREATE
+  PASSWORD_CHANGE
+  PASSWORD_RESET_REQUEST
+  PASSWORD_RESET
+  EMAIL_VERIFICATION_SENT
+  EMAIL_VERIFIED
 }
 
 enum DatasetAccessRequestStatus {
@@ -218,15 +223,16 @@ enum DeliveryStatus {
 // ─── Users & Auth ─────────────────────────────────────────────────────────────
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  displayName  String
-  passwordHash String
-  role         UserRole @default(CITIZEN)
-  isActive     Boolean  @default(true)
-  lastLoginAt  DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id               String   @id @default(cuid())
+  email            String   @unique
+  displayName      String
+  passwordHash     String
+  role             UserRole @default(CITIZEN)
+  isActive         Boolean  @default(true)
+  isEmailVerified  Boolean  @default(false)
+  lastLoginAt      DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   reports    CitizenReport[]
   observations Observation[]
@@ -245,6 +251,8 @@ model User {
   socialLinks UserSocialLink[]
   pollutionSourcesCreated PollutionSource[]
   emissionEntriesReported EmissionEntry[]
+  passwordResetTokens     PasswordResetToken[]
+  emailVerificationTokens EmailVerificationToken[]
 
   @@index([email])
   @@index([role])
@@ -303,6 +311,31 @@ model RefreshToken {
 
   @@index([userId])
   @@index([expiresAt])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model EmailVerificationToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
 }
 
 // ─── Organizations ────────────────────────────────────────────────────────────
