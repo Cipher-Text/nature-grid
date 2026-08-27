@@ -18,6 +18,7 @@ const NAV_SECTIONS = [
   {
     label: 'Explore',
     links: [
+      { href: '/locations', label: 'Locations' },
       { href: '/data', label: 'Data Hub' },
       { href: '/observations', label: 'Observations' },
       { href: '/reports', label: 'Citizen Reports' },
