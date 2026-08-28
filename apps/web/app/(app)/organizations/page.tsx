@@ -83,11 +83,19 @@ export default async function OrganizationsPage({
           <p>No organizations match this filter.</p>
         </section>
       ) : (
-        <div className="content-grid">
+        <div className="content-grid organizations-grid">
           {result.data.map((org) => (
-            <Link href={`/organizations/${org.id}`} key={org.id} style={{ textDecoration: 'none', color: 'inherit' }}>
-              <article className="content-card">
-                <div className="card-kicker">{titleCase(org.type)}</div>
+            <Link
+              href={`/organizations/${org.id}`}
+              key={org.id}
+              className="organization-card-link"
+              aria-label={`View ${org.name}`}
+            >
+              <article className="content-card organization-card">
+                <div className="organization-card-topline">
+                  <div className="card-kicker">{titleCase(org.type)}</div>
+                  <span className="organization-card-arrow" aria-hidden="true">→</span>
+                </div>
                 <h2>{org.name}</h2>
                 {org.description && <p>{org.description}</p>}
                 <div className="card-meta">
