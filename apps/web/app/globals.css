@@ -443,11 +443,19 @@ a {
 }
 
 .organizations-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   align-items: stretch;
 }
 
 .organization-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 220px;
   height: 100%;
+}
+
+.organization-card .card-meta {
+  margin-top: auto;
 }
 
 .organization-card-link:focus-visible {
@@ -810,6 +818,10 @@ a {
     grid-template-columns: 1fr;
   }
 
+  .organizations-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .metric-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -851,6 +863,10 @@ a {
     max-width: 34ch;
     min-width: 0;
     font-size: 1rem;
+  }
+
+  .organizations-grid {
+    grid-template-columns: 1fr;
   }
 
   .metric-grid {

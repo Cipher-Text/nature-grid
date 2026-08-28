@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
+import { BadRequestException, Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import { OrganizationType } from '@prisma/client';
 import { OrganizationsService } from './organizations.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
@@ -10,18 +10,26 @@ import { Public } from '../common/decorators/roles.decorator';
 export class OrganizationsController {
   constructor(private readonly organizationsService: OrganizationsService) {}
 
+  private parseType(type?: string): OrganizationType | undefined {
+    if (!type) return undefined;
+    if (!Object.values(OrganizationType).includes(type as OrganizationType)) {
+      throw new BadRequestException('Invalid organization type');
+    }
+    return type as OrganizationType;
+  }
+
   /** Public: only the total count, optionally filtered by type. */
   @Public()
   @Get('count')
   count(@Query('type') type?: string) {
-    return this.organizationsService.count(type as OrganizationType | undefined);
+    return this.organizationsService.count(this.parseType(type));
   }
 
   /** Authenticated: full paginated list. */
   @Get()
   list(@Query('type') type?: string, @Query('page') page?: string, @Query('pageSize') pageSize?: string) {
     return this.organizationsService.list(
-      type as OrganizationType | undefined,
+      this.parseType(type),
       Number(page ?? 1),
       Number(pageSize ?? 20),
     );

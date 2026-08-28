@@ -35,7 +35,7 @@ const ORG_TYPES = [
   { label: 'Research', value: 'RESEARCH_INSTITUTION' },
   { label: 'International', value: 'INTERNATIONAL_ORG' },
   { label: 'Community', value: 'COMMUNITY_GROUP' },
-  { label: 'Corporate', value: 'CORPORATE' },
+  { label: 'Corporate', value: 'PRIVATE_COMPANY' },
 ];
 
 export default async function OrganizationsPage({
