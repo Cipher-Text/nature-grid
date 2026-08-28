@@ -28,6 +28,16 @@ function titleCase(value: string) {
   return value.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+const ORG_TYPES = [
+  { label: 'All', value: '' },
+  { label: 'NGO', value: 'NGO' },
+  { label: 'Government', value: 'GOVERNMENT_AGENCY' },
+  { label: 'Research', value: 'RESEARCH_INSTITUTION' },
+  { label: 'International', value: 'INTERNATIONAL_ORG' },
+  { label: 'Community', value: 'COMMUNITY_GROUP' },
+  { label: 'Corporate', value: 'CORPORATE' },
+];
+
 export default async function OrganizationsPage({
   searchParams,
 }: {
@@ -37,7 +47,8 @@ export default async function OrganizationsPage({
   if (!user) redirect('/login');
 
   const accessToken = cookies().get(ACCESS_TOKEN_COOKIE)?.value ?? '';
-  const typeFilter = searchParams.type ? `&type=${searchParams.type}` : '';
+  const activeType = searchParams.type ?? '';
+  const typeFilter = activeType ? `&type=${activeType}` : '';
   const page = searchParams.page ?? '1';
   const result = await apiGetAuthed<OrgListResponse>(
     `/api/v1/organizations?page=${page}&pageSize=20${typeFilter}`,
@@ -54,10 +65,22 @@ export default async function OrganizationsPage({
         <p>{result.total} organization{result.total !== 1 ? 's' : ''} registered on the platform.</p>
       </header>
 
+      <nav className="tab-nav">
+        {ORG_TYPES.map((t) => (
+          <Link
+            key={t.value}
+            href={t.value ? `/organizations?type=${t.value}` : '/organizations'}
+            className={activeType === t.value ? 'active' : ''}
+          >
+            {t.label}
+          </Link>
+        ))}
+      </nav>
+
       {result.data.length === 0 ? (
         <section className="empty-state">
           <h2>No organizations found</h2>
-          <p>No organizations have been registered yet.</p>
+          <p>No organizations match this filter.</p>
         </section>
       ) : (
         <div className="content-grid">
@@ -69,8 +92,8 @@ export default async function OrganizationsPage({
                 {org.description && <p>{org.description}</p>}
                 <div className="card-meta">
                   <span>{org.country}</span>
-                  {org.isVerified && <span style={{ color: '#16a34a' }}>Verified</span>}
-                  {myOrgIds.has(org.id) && <span style={{ fontWeight: 600 }}>Member</span>}
+                  {org.isVerified && <span className="card-badge">✓ Verified</span>}
+                  {myOrgIds.has(org.id) && <span className="card-badge card-badge-member">Member</span>}
                 </div>
               </article>
             </Link>
@@ -78,7 +101,6 @@ export default async function OrganizationsPage({
         </div>
       )}
 
-      {/* Pagination */}
       {result.total > result.pageSize && (
         <nav className="pagination" style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
           {result.page > 1 && (

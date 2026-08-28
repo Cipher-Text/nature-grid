@@ -407,7 +407,7 @@ a {
 /* ── Content grids ── */
 .content-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.8fr) minmax(300px, 0.8fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
 }
 
@@ -431,12 +431,20 @@ a {
   border-radius: 8px;
   background: var(--surface);
   padding: 20px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+a:has(.content-card):hover .content-card {
+  border-color: var(--accent);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
 
 .content-card h2 { margin: 8px 0; font-size: 1.15rem; }
-.content-card p { color: var(--muted); font-size: 0.88rem; }
+.content-card p { color: var(--muted); font-size: 0.88rem; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .card-kicker { color: var(--accent); font-size: 0.74rem; font-weight: 800; text-transform: uppercase; }
-.card-meta { margin-top: 18px; font-size: 0.82rem; font-weight: 700; }
+.card-meta { margin-top: 18px; font-size: 0.82rem; font-weight: 700; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.card-badge { display: inline-flex; align-items: center; gap: 3px; background: #dcfce7; color: #15803d; border-radius: 4px; padding: 1px 6px; font-size: 0.75rem; font-weight: 700; }
+.card-badge-member { background: #dbeafe; color: #1d4ed8; }
 
 .profile-form { display: grid; gap: 16px; }
 .profile-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }

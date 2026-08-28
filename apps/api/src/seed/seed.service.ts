@@ -130,6 +130,7 @@ export class SeedService implements OnModuleInit {
   async onModuleInit() {
     if (process.env.NODE_ENV === 'production') {
       await this.bootstrapProductionAdmin();
+      await this.seedRealOrganizations();
       return;
     }
     await this.seedUsers();
