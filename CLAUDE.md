@@ -86,7 +86,7 @@ Schema: `packages/database/prisma/schema.prisma` — 39 models, 23 enums. Single
 **All enum values are UPPERCASE** and defined in `packages/shared`. A previous bug had them lowercase, causing `RolesGuard` to reject every request including admins. The shared package is the canonical source — Prisma, guards, and DTOs must all agree.
 
 Seeding happens in service `onModuleInit()` hooks (idempotent upserts):
-- `LocationsService` — seeds 8 divisions, 64 districts (56 with GeoJSON boundary), 494 upazilas, 4,540 unions — all with lat/lng. Hardcoded in `apps/api/src/locations/seed/bangladesh.ts` (no runtime file reads). Regenerate with `scripts/gen-bangladesh-seed.py` from `administrative.json` + `districts.geojson`.
+- `LocationsService` — seeds 8 divisions, 64 districts (all with GeoJSON boundary), 494 upazilas, 4,540 unions — all with lat/lng. Hardcoded in `apps/api/src/locations/seed/bangladesh.ts` (no runtime file reads). This file is the source of truth — edit it directly if location data needs updating.
 - `ProvidersService` — seeds OpenMeteo + GBIF provider records
 - `DatasetsService` — seeds 9 dataset catalog records (OpenMeteo Weather, OpenMeteo Flood, District Air Quality Index, Water Body Registry, Biodiversity Occurrences, Sundarbans Monitoring, Emissions Inventory, OpenMeteo Marine Weather, OpenMeteo Satellite Radiation)
 - `PermissionsService` — seeds 13 named permissions (`reports.create`, `reports.moderate`, `alerts.manage`, `restoration.create`, `restoration.join`, `observations.create`, `observations.verify`, `observations.delete`, `organizations.access`, `organizations.manage`, `users.manage`, `emissions.manage`, `emissions.report`) and default role grants
