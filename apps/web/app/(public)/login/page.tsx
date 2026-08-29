@@ -1,7 +1,10 @@
 import Link from 'next/link';
 import { loginAction } from '../../../lib/auth-actions';
 
-const SEED_PASSWORD = 'NatureGrid123!';
+// Never hardcode the seed password — it must come from the build-time env var
+// so that production builds (which don't set NEXT_PUBLIC_SEED_PASSWORD) cannot
+// accidentally embed it in the JS bundle even if the seed panel is shown.
+const SEED_PASSWORD = process.env.NEXT_PUBLIC_SEED_PASSWORD ?? '';
 const SEED_USERS = [
   { email: 'citizen@naturegrid.bd', label: 'Citizen' },
   { email: 'researcher@naturegrid.bd', label: 'Researcher' },

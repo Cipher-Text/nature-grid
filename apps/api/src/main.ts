@@ -19,8 +19,12 @@ async function bootstrap() {
   app.use(helmet());
 
   app.setGlobalPrefix('api/v1');
+  // Split and filter empty strings that would result from a trailing comma or
+  // an empty CORS_ORIGIN value. Never fall back to `true` (allow-all) because
+  // that, combined with credentials:true, lets any origin read auth cookies.
+  const corsOrigins = process.env.CORS_ORIGIN?.split(',').filter(Boolean) ?? false;
   app.enableCors({
-    origin: process.env.CORS_ORIGIN?.split(',') ?? true,
+    origin: corsOrigins,
     credentials: true,
   });
 
