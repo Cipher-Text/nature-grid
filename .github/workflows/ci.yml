@@ -35,6 +35,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Fail the build on any high or critical CVE in production dependencies.
+      # devDependencies are excluded (--prod) because they never reach production.
+      - name: Audit production dependencies
+        run: pnpm audit --prod --audit-level=high
+
       # Must run before any typecheck: apps/api imports types from the
       # generated Prisma client, which does not exist in a fresh install.
       - name: Generate Prisma client
@@ -68,3 +73,16 @@ jobs:
       # needs to be running.
       - name: Build all apps
         run: pnpm build
+
+  docker-build:
+    name: Docker build (API)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Smoke-test the full multi-stage Dockerfile. Catches missing COPY paths,
+      # entrypoint issues, and production-install failures that the JS build
+      # step above cannot see. Runs in parallel with verify — no dependency.
+      - name: Build API Docker image
+        run: docker build -f apps/api/Dockerfile -t nature-grid/api:ci .
