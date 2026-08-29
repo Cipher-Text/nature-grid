@@ -50,8 +50,8 @@ function build() {
     evaluateBadges: jest.fn().mockResolvedValue(undefined),
   } as unknown as GamificationService;
   const email = {
-    sendPasswordResetEmail: jest.fn().mockResolvedValue(undefined),
-    sendVerificationEmail: jest.fn().mockResolvedValue(undefined),
+    queuePasswordReset: jest.fn().mockResolvedValue(undefined),
+    queueVerification: jest.fn().mockResolvedValue(undefined),
   } as unknown as EmailService;
   const config = { get: jest.fn().mockReturnValue(undefined) } as unknown as ConfigService;
   const service = new AuthService(

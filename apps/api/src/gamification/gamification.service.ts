@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import { ObservationCategory, ObservationTrustLevel, ReportStatus, ReportCategory } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
+import { GAMIFICATION_QUEUE, type EvaluateBadgesJobData } from './gamification.processor';
 import {
   BADGE_DEFS,
   BadgeCategory,
@@ -52,7 +55,10 @@ interface BadgeCounts {
 
 @Injectable()
 export class GamificationService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @InjectQueue(GAMIFICATION_QUEUE) private readonly gamificationQueue: Queue,
+  ) {}
 
   // ── Public: full data for the profile page ──────────────────────────────────
 
@@ -94,11 +100,29 @@ export class GamificationService {
     return { completeness, missingFields, badges, points, level, levelLabel, nextLevelPoints };
   }
 
-  // ── Public: fire-and-forget badge + points refresh ──────────────────────────
-  // Call after any action that may unlock a badge. Do NOT await in callers —
-  // this must never delay an HTTP response.
+  // ── Public: enqueue badge + points refresh ──────────────────────────────────
+  // Call after any action that may unlock a badge. Callers may await or
+  // fire-and-forget — adding to the queue is fast and does not do DB work.
+  // BullMQ deduplication (jobId) ensures at most one pending job per user,
+  // preventing duplicate evaluations when multiple contributions arrive quickly.
 
   async evaluateBadges(userId: string): Promise<void> {
+    await this.gamificationQueue.add(
+      'evaluate-badges',
+      { userId } satisfies EvaluateBadgesJobData,
+      {
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 2_000 },
+        removeOnComplete: true,
+        // One pending evaluation per user is sufficient — deduplicate by userId.
+        jobId: `badge-eval:${userId}`,
+      },
+    );
+  }
+
+  // ── Called by GamificationProcessor — not for direct use in request handlers ─
+
+  async performEvaluation(userId: string): Promise<void> {
     const [profile, badgeCounts] = await Promise.all([
       this.prisma.userProfile.findUnique({
         where:  { userId },

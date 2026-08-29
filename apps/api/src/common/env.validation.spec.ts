@@ -71,9 +71,14 @@ describe('validateEnv', () => {
     it('accepts valid values', () => {
       expect(() => validateEnv({ ...VALID, NODE_ENV: 'development' })).not.toThrow();
       expect(() => validateEnv({ ...VALID, NODE_ENV: 'test' })).not.toThrow();
-      // production also requires CORS_ORIGIN
+      // production also requires CORS_ORIGIN and APP_URL
       expect(() =>
-        validateEnv({ ...VALID, NODE_ENV: 'production', CORS_ORIGIN: 'https://naturegrid.bd' }),
+        validateEnv({
+          ...VALID,
+          NODE_ENV: 'production',
+          CORS_ORIGIN: 'https://naturegrid.bd',
+          APP_URL: 'https://naturegrid.bd',
+        }),
       ).not.toThrow();
     });
 
@@ -91,13 +96,18 @@ describe('validateEnv', () => {
   describe('CORS_ORIGIN in production', () => {
     it('requires CORS_ORIGIN when NODE_ENV is production', () => {
       expect(() =>
-        validateEnv({ ...VALID, NODE_ENV: 'production' }),
+        validateEnv({ ...VALID, NODE_ENV: 'production', APP_URL: 'https://naturegrid.bd' }),
       ).toThrow(/CORS_ORIGIN is not set/);
     });
 
-    it('accepts production config when CORS_ORIGIN is set', () => {
+    it('accepts production config when CORS_ORIGIN and APP_URL are set', () => {
       expect(() =>
-        validateEnv({ ...VALID, NODE_ENV: 'production', CORS_ORIGIN: 'https://naturegrid.bd' }),
+        validateEnv({
+          ...VALID,
+          NODE_ENV: 'production',
+          CORS_ORIGIN: 'https://naturegrid.bd',
+          APP_URL: 'https://naturegrid.bd',
+        }),
       ).not.toThrow();
     });
 

@@ -213,11 +213,7 @@ export class AuthService {
 
       const appUrl = this.config.get<string>('APP_URL') ?? 'http://localhost:3000';
       const resetUrl = `${appUrl}/reset-password?token=${token}`;
-      this.email
-        .sendPasswordResetEmail(user.email, user.displayName, resetUrl)
-        .catch((err: unknown) =>
-          this.logger.warn(`Password reset email failed for ${user.email}: ${String(err)}`),
-        );
+      await this.email.queuePasswordReset(user.email, user.displayName, resetUrl);
     }
 
     return { message: 'If that email is registered you will receive a reset link shortly.' };
@@ -276,11 +272,7 @@ export class AuthService {
 
     const appUrl = this.config.get<string>('APP_URL') ?? 'http://localhost:3000';
     const verificationUrl = `${appUrl}/verify-email?token=${token}`;
-    this.email
-      .sendVerificationEmail(user.email, user.displayName, verificationUrl)
-      .catch((err: unknown) =>
-        this.logger.warn(`Verification email failed for ${user.email}: ${String(err)}`),
-      );
+    await this.email.queueVerification(user.email, user.displayName, verificationUrl);
 
     return { message: 'Verification email sent.' };
   }

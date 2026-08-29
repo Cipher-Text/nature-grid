@@ -1,9 +1,11 @@
 import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bullmq';
 import { AlertSeverity, AlertStatus, DeliveryStatus, NotificationChannel } from '@prisma/client';
+import { Queue } from 'bullmq';
 import { PrismaService } from '../database/prisma.service';
-import { EmailService, type AlertForEmail } from './email.service';
 import { CreateSubscriptionDto } from './dto/create-subscription.dto';
 import { assertDistrictExists } from '../common/validate-district';
+import { EMAIL_QUEUE, type AlertNotificationJobData } from './email.processor';
 
 /**
  * Which subscription minSeverity values qualify for a given alert severity.
@@ -37,7 +39,7 @@ export class NotificationsService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly email: EmailService,
+    @InjectQueue(EMAIL_QUEUE) private readonly emailQueue: Queue,
   ) {}
 
   async subscribe(userId: string, dto: CreateSubscriptionDto) {
@@ -124,8 +126,8 @@ export class NotificationsService {
       where: {
         minSeverity: { in: qualifyingMinSeverities },
         OR: [
-          { districtId: null },                                                   // global
-          ...(alert.districtId ? [{ districtId: alert.districtId }] : []),        // district-specific
+          { districtId: null },                                                  // global
+          ...(alert.districtId ? [{ districtId: alert.districtId }] : []),       // district-specific
         ],
         user: { isActive: true },
       },
@@ -139,56 +141,55 @@ export class NotificationsService {
     });
 
     // Deduplicate: a user may have both a global and a district-specific subscription
-    // matching the same alert. Send only once per user.
+    // matching the same alert. Enqueue only one job per user.
     const seen = new Set<string>();
+    const alertSnapshot: AlertNotificationJobData['alert'] = {
+      id: alert.id,
+      title: alert.title,
+      severity: alert.severity,
+      description: alert.description,
+      instructions: alert.instructions,
+      issuedAt: alert.issuedAt.toISOString(),
+      district: alert.district,
+    };
+
     for (const sub of subscriptions) {
       if (seen.has(sub.userId)) continue;
       seen.add(sub.userId);
-      await this.sendToUser(sub, alert);
+
+      // Create the delivery record immediately so the dispatch is auditable
+      // regardless of queue backlog or worker availability.
+      const delivery = await this.prisma.notificationDelivery.create({
+        data: {
+          subscriptionId: sub.id,
+          alertId: alert.id,
+          userId: sub.user.id,
+          channel: sub.channel,
+          address: sub.user.email, // captured now in case the user changes email later
+          status: DeliveryStatus.PENDING,
+        },
+        select: { id: true },
+      });
+
+      await this.emailQueue.add(
+        'alert-notification',
+        {
+          deliveryId: delivery.id,
+          to: sub.user.email,
+          displayName: sub.user.displayName,
+          alert: alertSnapshot,
+        } satisfies AlertNotificationJobData,
+        {
+          attempts: 4,
+          backoff: { type: 'exponential', delay: 3_000 },
+          removeOnComplete: true,
+          removeOnFail: 50,
+        },
+      );
     }
 
     this.logger.log(
-      `Alert ${alertId} dispatched to ${seen.size} subscriber(s) (${subscriptions.length} matching subscriptions)`,
+      `Alert ${alertId} enqueued for ${seen.size} subscriber(s) (${subscriptions.length} matching subscriptions)`,
     );
-  }
-
-  private async sendToUser(
-    subscription: {
-      id: string;
-      channel: NotificationChannel;
-      user: { id: string; email: string; displayName: string };
-    },
-    alert: AlertForEmail & { id: string; status: AlertStatus; districtId: string | null },
-  ): Promise<void> {
-    const delivery = await this.prisma.notificationDelivery.create({
-      data: {
-        subscriptionId: subscription.id,
-        alertId: alert.id,
-        userId: subscription.user.id,
-        channel: subscription.channel,
-        // Capture the address at send time — preserved if the user changes email later.
-        address: subscription.user.email,
-        status: DeliveryStatus.PENDING,
-      },
-    });
-
-    try {
-      await this.email.sendAlertEmail(
-        subscription.user.email,
-        subscription.user.displayName,
-        alert,
-      );
-      await this.prisma.notificationDelivery.update({
-        where: { id: delivery.id },
-        data: { status: DeliveryStatus.SENT, sentAt: new Date() },
-      });
-    } catch (err) {
-      const error = String(err instanceof Error ? err.message : err);
-      this.logger.error(`Email to ${subscription.user.email} failed: ${error}`);
-      await this.prisma.notificationDelivery.update({
-        where: { id: delivery.id },
-        data: { status: DeliveryStatus.FAILED, failedAt: new Date(), error },
-      });
-    }
   }
 }

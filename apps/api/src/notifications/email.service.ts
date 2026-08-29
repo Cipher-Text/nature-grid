@@ -1,8 +1,23 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bullmq';
 import { ConfigService } from '@nestjs/config';
+import { Queue } from 'bullmq';
 import * as nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
 import type { AlertSeverity } from '@prisma/client';
+import {
+  EMAIL_QUEUE,
+  type PasswordResetJobData,
+  type EmailVerificationJobData,
+} from './email.processor';
+
+/** Retry configuration for transactional emails (not alert fan-out). */
+const EMAIL_JOB_OPTS = {
+  attempts: 4,
+  backoff: { type: 'exponential' as const, delay: 3_000 },
+  removeOnComplete: true,
+  removeOnFail: 50, // keep last 50 failed jobs for inspection
+} as const;
 
 export interface AlertForEmail {
   id: string;
@@ -20,7 +35,10 @@ export class EmailService {
   private readonly transporter: Transporter | null;
   private readonly smtpFrom: string;
 
-  constructor(config: ConfigService) {
+  constructor(
+    config: ConfigService,
+    @InjectQueue(EMAIL_QUEUE) private readonly emailQueue: Queue,
+  ) {
     const host = config.get<string>('SMTP_HOST');
     const port = Number(config.get<string>('SMTP_PORT') ?? 587);
     const user = config.get<string>('SMTP_USER');
@@ -86,6 +104,28 @@ export class EmailService {
 
     await this.transporter.sendMail({ from: this.smtpFrom, to, subject, text: body });
   }
+
+  // ── Queued variants (add to BullMQ — caller does not wait for delivery) ──────
+
+  /** Enqueue a password-reset email with automatic retry on transient SMTP failure. */
+  async queuePasswordReset(to: string, displayName: string, resetUrl: string): Promise<void> {
+    await this.emailQueue.add(
+      'password-reset',
+      { to, displayName, resetUrl } satisfies PasswordResetJobData,
+      EMAIL_JOB_OPTS,
+    );
+  }
+
+  /** Enqueue an email-verification link with automatic retry on transient SMTP failure. */
+  async queueVerification(to: string, displayName: string, verificationUrl: string): Promise<void> {
+    await this.emailQueue.add(
+      'email-verification',
+      { to, displayName, verificationUrl } satisfies EmailVerificationJobData,
+      EMAIL_JOB_OPTS,
+    );
+  }
+
+  // ── Direct send (used by EmailProcessor and NotificationsService internally) ──
 
   async sendAlertEmail(to: string, displayName: string, alert: AlertForEmail): Promise<void> {
     if (!this.transporter) {

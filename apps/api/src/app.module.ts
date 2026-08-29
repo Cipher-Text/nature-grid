@@ -1,7 +1,8 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { validateEnv } from './common/env.validation';
 import { ScheduleModule } from '@nestjs/schedule';
+import { BullModule } from '@nestjs/bullmq';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { DatabaseModule } from './database/database.module';
@@ -39,6 +40,24 @@ import { SeedService } from './seed/seed.service';
     // their own @Throttle decorators — see auth.controller.ts.
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
     ScheduleModule.forRoot(),
+    // Global BullMQ Redis connection — feature modules register their own queues
+    // via BullModule.registerQueue and run processors as WorkerHost providers.
+    BullModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => {
+        const url = config.get<string>('REDIS_URL') ?? 'redis://localhost:6379';
+        const parsed = new URL(url);
+        return {
+          connection: {
+            host: parsed.hostname,
+            port: +(parsed.port || '6379'),
+            ...(parsed.password ? { password: decodeURIComponent(parsed.password) } : {}),
+            // Required by BullMQ workers — prevents them from blocking the event loop.
+            maxRetriesPerRequest: null,
+          },
+        };
+      },
+    }),
     DatabaseModule,
     AuthModule,
     UsersModule,
