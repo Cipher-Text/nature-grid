@@ -55,7 +55,7 @@ Legend: **Done** | **Partial** | *Planned* | ~~Deferred~~
 | Environmental observations with trust levels | `observations` | **Done** |
 | Restoration project creation, tracking, and joining | `restoration` | **Done** |
 | Structured survey campaigns | — | *Planned* (Phase 7) |
-| Community content and campaigns | — | *Planned* — no API module yet |
+| Community posts, comments, and polls | `community` | *Planned* — `CommunityPost`, `PostComment`, `Poll`, `PollOption`, `PollVote` models; `/community/posts` CRUD + `/poll/vote`; updates `/community` page |
 
 ---
 

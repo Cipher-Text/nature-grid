@@ -134,7 +134,7 @@ Deliverables:
 
 - ~~Biodiversity taxonomy and occurrence model~~ Done (2026-08-19) — GBIF daily sync, species/occurrence endpoints, data hub preview.
 - ~~Restoration/project domain~~ Done (2026-08-19) — CRUD, ownership-gated updates, idempotent join workflow.
-- Community campaigns and education resources — *Planned*; no API module yet.
+- Community posts, comments, and polls — *Planned*. Schema: `CommunityPost` (title, body, author, optional districtId), `PostComment` (flat, no nesting), `Poll` (1:1 with post, optional endsAt), `PollOption`, `PollVote` (unique per user per poll). API: `GET/POST /community/posts`, `GET /community/posts/:id`, `DELETE /community/posts/:id`, `POST /community/posts/:id/comments`, `DELETE /community/posts/:id/comments/:commentId`, `POST /community/posts/:id/poll/vote`. Frontend: replaces the `/community` honest-empty-state with a real post list, create form (title + body + optional poll block), and post detail with inline comments and poll voting.
 - ~~Notification subscriptions~~ Done (2026-08-22) — `AlertSubscription` + email delivery via Nodemailer.
 - Environmental event/hazard history — *Planned*.
 - ~~Researcher and government role-scoped workflows~~ Done — analytics endpoints for government/researcher/orgadmin.

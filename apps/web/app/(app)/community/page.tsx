@@ -16,9 +16,9 @@ export default function CommunityPage() {
           </div>
         </div>
         <div className="empty-state">
-          Community content isn&apos;t a built module yet — there&apos;s no
-          campaign, challenge, or feed backend behind this page. It&apos;ll
-          be built once a real content workflow exists.
+          Community posts, comments, and polls are coming. This page will be
+          replaced with a real feed once the <code>community</code> module
+          ships.
         </div>
       </article>
     </>
