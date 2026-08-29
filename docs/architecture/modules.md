@@ -76,7 +76,7 @@ Owns administrative geography for Bangladesh.
 
 Entities: `Division → District → Upazila → Union`
 
-Seeded on first boot via `OnModuleInit`: 8 divisions, 64 districts (56 with GeoJSON boundary), 494 upazilas, 4,540 unions — all with lat/lng. All coordinates are hardcoded in `apps/api/src/locations/seed/bangladesh.ts`; no runtime file reads are required.
+Seeded on first boot via `OnModuleInit`: 8 divisions, 64 districts (all with GeoJSON boundary), 494 upazilas, 4,540 unions — all with lat/lng. All coordinates are hardcoded in `apps/api/src/locations/seed/bangladesh.ts`; no runtime file reads are required. This file is the source of truth — edit it directly if location data needs updating.
 
 | Method | Path | Access |
 | --- | --- | --- |
@@ -113,7 +113,7 @@ Owns dataset catalog, metadata, access policy, and source references.
 
 Access policies: `PUBLIC | LOGIN_REQUIRED | RESEARCHER | APPROVED | GOVERNMENT`
 
-Seeded on first boot: 6 catalog records, including OpenMeteo flood forecasts. Existing installations add the flood catalog entry idempotently on the next API boot.
+Seeded on first boot: 9 catalog records (OpenMeteo Weather, OpenMeteo Flood, District Air Quality Index, Water Body Registry, Biodiversity Occurrences, Sundarbans Monitoring, Emissions Inventory, OpenMeteo Marine Weather, OpenMeteo Satellite Radiation) — all idempotent upserts.
 
 | Method | Path | Access |
 | --- | --- | --- |
@@ -297,11 +297,20 @@ Owns live platform counters for the public homepage. Built as M13 task 7 (2026-0
 
 Returns `activeAlerts`, `emergencyAlerts`, `verifiedReports`, `publicDatasets`, `researchGradeObservations`, and `districtsWithResearchGradeObservations` — six real counts computed in a single `Promise.all`, no cached or precomputed values.
 
-## media ~
+## media ✓
 
-Intended to own uploaded evidence and attachments for reports, observations, datasets, and organizations.
+Owns file upload and presigned URL generation for evidence attachments and media assets.
 
-Status: **empty `@Module({})`** — no controller, service, or schema model. `MediaAsset` is a planned model (`architecture/data-model.md`, Phase 3).
+- `StorageService` — wraps AWS S3Client with `forcePathStyle: true` for MinIO; graceful degradation when storage env vars are absent
+- `MediaService` — validates MIME type against `ALLOWED_MIME_TYPES`, enforces 100 MB size limit (`MAX_UPLOAD_SIZE_BYTES`), generates keys as `{folder}/{userId}/{uuid}{ext}`
+- `media.constants.ts` — exports `MAX_UPLOAD_SIZE_BYTES`, `ALLOWED_MIME_TYPES`, `UPLOAD_FOLDERS`
+
+| Method | Path | Access |
+| --- | --- | --- |
+| POST | `/media/upload` | Authenticated — multipart file upload |
+| POST | `/media/presign` | Authenticated — returns presigned URL for direct client upload |
+
+Env vars required for storage: `STORAGE_ENDPOINT`, `STORAGE_ACCESS_KEY`, `STORAGE_SECRET_KEY`, `STORAGE_BUCKET`, `STORAGE_PUBLIC_URL`.
 
 ## ingestion ✓
 
@@ -371,4 +380,4 @@ These accounts exist only for local development and should not be created in pro
 
 ## Coverage note
 
-`app.module.ts` registers 22 modules: `database` plus 21 feature modules (including `locations/climate`, `flood`, `notifications`, `permissions`, and `analytics`). All are implemented except the `media` stub. `ingestion` owns provider job tracking; `permissions` owns the DB-backed permission model; `analytics` serves role-scoped dashboard data. Advanced domains not yet represented by a module — satellite ingestion, long-range climate projections, emissions, carbon accounting, research publications, structured surveys — are planned for Phase 7. See `docs/roadmap.md` and `docs/architecture/feature-map.md`.
+`app.module.ts` registers 22 modules: `database` plus 21 feature modules (including `locations/climate`, `flood`, `notifications`, `permissions`, and `analytics`). All are fully implemented — the `media` stub has been replaced with `StorageService` + `MediaService` + `MediaController`. `ingestion` owns provider job tracking; `permissions` owns the DB-backed permission model; `analytics` serves role-scoped dashboard data. BullMQ queues (`email`, `gamification`) are wired via `BullModule.forRootAsync` in `AppModule`. Advanced domains not yet represented by a module — satellite ingestion, long-range climate projections, carbon accounting, research publications, structured surveys — are planned for Phase 7. See `docs/roadmap.md` and `docs/architecture/feature-map.md`.

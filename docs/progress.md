@@ -1,6 +1,6 @@
 # Progress
 
-Last updated: 2026-08-28 (OpenMeteo integration audit — HTTP timeout on all fetch clients, flood loop upserts replaced with batch $transaction, UTC date fix, aggregation transaction fix, ingestion tracking for climate sync; Satellite Radiation module; Marine Weather module; Emissions Tracking domain (PollutionSource + EmissionEntry + 3 enums + 2 permissions); schema now 39 models, 23 enums, 13 permissions, 9 dataset catalog records. Previously: 2026-08-27 Permissions module, Analytics module, SeedService, Users reactivate.)
+Last updated: 2026-08-29 (BullMQ wired — email queue in NotificationsModule, gamification queue in GamificationModule; Media module fully implemented (StorageService, MediaService, MediaController, presign + upload endpoints); all 64 districts now have GeoJSON boundaries; test suite expanded to 153 tests in 11 spec files; CI updated with pnpm audit and docker-build job. Previously: 2026-08-28 OpenMeteo integration audit, Satellite Radiation, Marine Weather, Emissions Tracking.)
 
 ## Status Legend
 
@@ -27,12 +27,12 @@ Last updated: 2026-08-28 (OpenMeteo integration audit — HTTP timeout on all fe
 | Prisma schema | Done | 23 enums, 39 models — includes Permission/RolePermission, SatelliteRadiationReading, MarineForecast, PollutionSource, EmissionEntry; client regenerated |
 | Database migration | Done | 1 migration applied (`20260826150548_init`) — full schema in a single fresh migration; 39 tables live; Postgres on port 5432 |
 | District coordinates | Done | Migration `add_district_coordinates`; all 64 districts backfilled with real lat/lng sourced from `open-nature`'s district registry (`LocationsService.onModuleInit` backfills on boot if missing) |
-| Seed data | Done | LocationsService auto-seeds 8 divisions + 64 districts (with coordinates) on boot; DatasetsService auto-seeds 5 catalog records; ProvidersService auto-seeds `OpenMeteo` and `GBIF` providers (2026-08-24 — GBIF added) on boot idempotently; no separate seed script needed |
+| Seed data | Done | LocationsService auto-seeds 8 divisions + 64 districts (all with GeoJSON boundary) on boot; DatasetsService auto-seeds 9 catalog records; ProvidersService auto-seeds `OpenMeteo` and `GBIF` providers on boot idempotently; no separate seed script needed |
 | Auth — refresh / logout | Done | Postgres-backed `RefreshToken` model (not Redis — see "Auth Refresh/Logout" below), opaque tokens with rotation, daily cleanup cron |
-| Automated tests | Done (first suite) | 52 tests in 5 spec files in `apps/api` covering auth (incl. failed-login audit), RBAC, env validation — 2026-08-21/22. No e2e tests, no web/admin tests. See "First Test Suite + CI" below. |
-| CI | Done | `.github/workflows/ci.yml` — 2026-08-21. Needs a git remote to execute. |
+| Automated tests | Done | 153 tests in 11 spec files in `apps/api` — auth (incl. failed-login audit), RBAC, env validation (original 5 files, 52 tests), plus reports, observations, restoration, notifications, gamification, media service specs. No e2e tests, no web/admin tests. See "First Test Suite + CI" below. |
+| CI | Done | `.github/workflows/ci.yml` — 2026-08-21; updated to add `pnpm audit --prod --audit-level=high` in `verify` job and a parallel `docker-build` job. Needs a git remote to execute. |
 | API contract enforcement | Done | 2026-08-22 — `contract-types.typecheck.ts` + `select` discipline in 4 services. Checked by `tsc --noEmit` in CI. See "Phase 6b: API Contract Enforcement" below. |
-| Notification delivery — Phase 6c | Done | 2026-08-22 — `AlertSubscription` + `NotificationDelivery` schema, Nodemailer email service, fire-and-forget dispatch on alert activation. See "Phase 6c: Notification Delivery" below. |
+| Notification delivery — Phase 6c | Done | 2026-08-22 — `AlertSubscription` + `NotificationDelivery` schema, Nodemailer email service. `NotificationsService.dispatchForAlert` now creates PENDING `NotificationDelivery` records and enqueues per-user jobs via the BullMQ `email` queue (4-attempt exponential backoff). See "Phase 6c: Notification Delivery" below. |
 | JWT secret handling | Done | Fixed 2026-08-21 — boot-time validation, no fallback. See "JWT Secret Fail-Fast" below. |
 | Security headers (`helmet`) | Done | 2026-08-21 — see "Phase 6a Complete" below. |
 | Rate limiting (`@nestjs/throttler`) | Done | 2026-08-21 — global 120 req/60 s; auth endpoints 5/20 req/60 s. See "Phase 6a Complete" below. |
@@ -42,7 +42,10 @@ Last updated: 2026-08-28 (OpenMeteo integration audit — HTTP timeout on all fe
 | PostGIS / geospatial fields | Planned | `lat/lng` Float on `District` (populated) and `CitizenReport`; replace with PostGIS `geography` type when ready |
 | Observations module — M9 | Done | Full CRUD + trust-level workflow live (2026-08-17) — see "Observations Module" below. `/observations` now shows real data with a working submission form. |
 | Biodiversity module — M10 | Done | Daily GBIF sync + public species/occurrence endpoints live (2026-08-19) — see "Biodiversity + GBIF Module" below. `/biodiversity` now shows real species and occurrence data with a working search. |
-| Report media (M5) | Done | `ReportMedia` schema + `POST/GET /reports/:id/media` endpoints done (2026-08-22). File upload still deferred — clients register an external URL; no MinIO/S3 wired yet. The `media` module stub is separate and unrelated. |
+| Report media (M5) | Done | `ReportMedia` schema + `POST/GET /reports/:id/media` endpoints done (2026-08-22). Clients register an external URL. File upload via MinIO/S3 is handled by the separate `media` module (see below). |
+| Media module | Done | `StorageService` (S3/MinIO, `forcePathStyle`), `MediaService` (MIME validation, 100 MB limit, key generation), `MediaController` (`POST /media/upload`, `POST /media/presign`), `media.constants.ts`. Env vars: `STORAGE_ENDPOINT`, `STORAGE_ACCESS_KEY`, `STORAGE_SECRET_KEY`, `STORAGE_BUCKET`, `STORAGE_PUBLIC_URL`. |
+| BullMQ queues | Done | `email` queue in NotificationsModule (`EmailProcessor` — password-reset, email-verification, alert-notification, 4-attempt exponential backoff); `gamification` queue in GamificationModule (`GamificationProcessor` — badge evaluation, deduped by `jobId: badge-eval:{userId}`). `BullModule.forRootAsync` in AppModule parses `REDIS_URL`. |
+| District GeoJSON boundaries | Done | All 64 districts now have GeoJSON boundaries. The 8 previously missing (Brahmanbaria, Chattogram, Bogura, Chapainawabganj, Jashore, Jhalakathi, Moulvibazar, Netrokona) are now included in `bangladesh.ts`. `administrative.json`, `districts.geojson`, and `scripts/gen-bangladesh-seed.py` deleted — `bangladesh.ts` is the sole source of truth. |
 | Weather ingestion (OpenMeteo) | Done | Live `weather` module — see "Weather ingestion" below |
 | Flood ingestion (OpenMeteo/GloFAS) | Done | Initial sync on an empty table, daily river-discharge forecasts persisted per district; public `/flood/forecast` routes and six-hour scheduler live — see "OpenMeteo Flood" below |
 | Satellite radiation ingestion (OpenMeteo) | Done | 2026-08-28 — `radiation/` module; daily at 1am; 3 daily variables per district; `SatelliteRadiationReading` model. See "2026-08-28 Integrations" below. |
@@ -414,10 +417,9 @@ An alerting platform with `EMERGENCY` severity but no delivery mechanism is not 
 - `subscribe()` — application-level uniqueness check (`findFirst`) then creates subscription. Throws `ConflictException` on duplicate.
 - `listSubscriptions(userId)` — returns subscriptions with district name, ordered by `createdAt desc`.
 - `unsubscribe(id, userId)` — `findFirst` to verify ownership, then `deleteMany` to avoid Prisma's own P2025 not-found on race conditions.
-- `dispatchForAlert(alertId): void` — public, synchronous, fire-and-forget. Calls `runDispatch` without await; errors caught in `.catch()` and logged. Called from `AlertsService` — never blocks the HTTP response.
-- `runDispatch` — fetches the alert, guards on `status === ACTIVE`, finds matching subscriptions filtered by district (null OR alertDistrictId) and `minSeverity IN QUALIFYING_MIN_SEVERITIES[alertSeverity]` and `user.isActive`. Deduplicates by userId (Set, earliest subscription wins). Calls `sendToUser` sequentially.
+- `dispatchForAlert(alertId): void` — public, non-blocking. Fetches the alert, guards on `status === ACTIVE`, finds matching subscriptions (filtered by district and `minSeverity`), deduplicates by userId, creates `PENDING` `NotificationDelivery` records, then enqueues one `alert-notification` job per user into the BullMQ `email` queue. Called from `AlertsService` — never blocks the HTTP response.
 - `QUALIFYING_MIN_SEVERITIES` — maps alert severity to the set of minSeverity values that qualify: `EMERGENCY → [INFO,WATCH,WARNING,EMERGENCY]`, `WARNING → [INFO,WATCH,WARNING]`, etc.
-- `sendToUser` — creates `PENDING` delivery, calls email service, updates to `SENT`/`FAILED`. The `address` column stores the email at send time so delivery history is preserved if the user later changes account.
+- `EmailProcessor` — handles `alert-notification`, `password-reset`, and `email-verification` job types with 4-attempt exponential backoff; updates `NotificationDelivery` to `SENT` or `FAILED` on completion.
 
 **Controller (`notifications/notifications.controller.ts`):**
 - `POST /notifications/subscriptions` — subscribe (any authenticated user)
@@ -432,10 +434,10 @@ An alerting platform with `EMERGENCY` severity but no delivery mechanism is not 
 
 **Design decisions noted:**
 - Nationwide alerts (districtId null) only reach global subscribers (districtId null), not district-specific subscribers. District-specific subscribers opted in to events in their area, not all national events.
-- Send is sequential per subscriber (not parallel) — avoids SMTP thundering herd on large subscriber lists. Queue-based parallel dispatch is the right v2 solution when subscriber counts grow.
+- Dispatch enqueues one BullMQ job per subscriber — parallel processing is handled by the `email` queue's worker concurrency; SMTP thundering herd is avoided by queue rate controls.
 - `onDelete: Cascade` on `NotificationDelivery.subscription` — delivery history is operational audit data, not compliance records; acceptable to lose with the subscription for v1.
 
-`tsc --noEmit` clean. 52 tests pass (5 spec files).
+`tsc --noEmit` clean. 52 tests pass (5 spec files) at the time of 6c completion; test suite subsequently expanded to 153 tests in 11 spec files.
 
 ## Phase 6b: API Contract Enforcement (2026-08-22)
 

@@ -383,7 +383,7 @@ Both phases landed back-to-back; see `docs/progress.md` "Phase 6a Complete" and 
 - ESLint — `.eslintrc.json` added for `apps/api`, `apps/web`, `apps/admin`; `pnpm lint` runs cleanly.
 
 **Phase 6b (regression safety net)** — partially done:
-- First test suite (52 tests across 5 spec files) and CI workflow — Done (2026-08-21).
+- First test suite (52 tests across 5 spec files) and CI workflow — Done (2026-08-21). Test suite expanded to 153 tests in 11 spec files (2026-08-29) — reports, observations, restoration, notifications, gamification, media service specs added.
 - ESLint — Done (2026-08-21, see 6a).
 - API contract enforcement — Done (2026-08-22). `@nature-grid/contracts` added as devDep to `apps/api`. `src/common/contract-types.typecheck.ts` uses `Jsonified<T>` utility + TypeScript structural assignment to verify service return types match contract types; caught by `tsc --noEmit` in CI. Also fixed `include`→`select` discipline in `datasets.service.ts`, `reports.service.ts` (`getById`), `alerts.service.ts` (`getById`), and four weather read methods.
 - E2e tests — Not started.
@@ -401,7 +401,7 @@ Cross-check this table against `docs/roadmap.md` Phase 6 and Phase 7 before rely
 | --- | --- |
 | PostGIS `geography` fields | lat/lng Float is sufficient for M1–M9; PostGIS replaces when polygon queries needed |
 | BMD / FFWC integration | Requires gov approval or scraping; start after OpenMeteo/WAQI proven |
-| MinIO media storage | Use external URL reference for now; add MinIO when media upload is a real workflow |
+| MinIO media storage | **No longer deferred** — `media` module fully implemented with `StorageService` (S3/MinIO), `POST /media/upload`, `POST /media/presign`. Requires `STORAGE_*` env vars. |
 | Extended user profiles (CitizenProfile, ResearcherProfile, OrganizationProfile) | Add when profile UI is built — schema straightforward, not blocking. Nature Grid uses a flat `User` + `UserRole` for now; per-role profile extensions are the natural next step once the profile page grows. |
 | Agricultural stress monitoring | Soil moisture, crop stress indicators, farmer alerts. Depends on Phase 7 satellite ingestion — cannot start before it. |
 | Tree-level restoration tracking | GPS-tagged individual trees, growth photos, survival-rate analytics. `RestorationProject`/`RestorationParticipant` track projects and people, not individual plantings. |

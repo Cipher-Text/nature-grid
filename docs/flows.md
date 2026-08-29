@@ -98,7 +98,7 @@ Moderator opens admin queue
 
 ```text
 API creates ingestion/processing job
-  -> queue dispatches work (planned; no queue exists yet — see docs/tech-stack.md)
+  -> queue dispatches work (BullMQ is now wired for email and gamification; Python data-worker jobs remain unqueued)
   -> Python worker receives job or polls job table
   -> worker reads source data
   -> worker performs GIS/scientific processing

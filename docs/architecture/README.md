@@ -17,8 +17,8 @@ Nature Grid is a modular environmental platform. It starts as a monorepo with in
 | --- | --- |
 | PostgreSQL | Primary relational database |
 | PostGIS | Docker image provides it, but **not yet enabled** — no migration enables the extension; all geography fields use plain `Float` lat/lng for now |
-| Redis | **Not in use.** `docker-compose.yml` starts a Redis 7 container and `.env` sets `REDIS_URL`, but no Redis client exists in any manifest or source file. Refresh tokens went to Postgres instead. |
-| BullMQ | **Not in use.** No queue library is installed; `@nestjs/schedule` cron handles all background work today. |
+| Redis | In use — `REDIS_URL` is consumed by BullMQ (`BullModule.forRootAsync` in `AppModule`). Refresh tokens remain in Postgres; Redis is used only for job queues. |
+| BullMQ (`bullmq`, `@nestjs/bullmq`) | In use — `email` queue (password-reset, email-verification, alert-notification; `EmailProcessor` with 4-attempt exponential backoff) and `gamification` queue (badge evaluation; `GamificationProcessor` with dedup by `jobId: badge-eval:{userId}`). |
 
 ## API Module Layout
 
@@ -45,15 +45,15 @@ apps/api/src/
 ├── metrics/               # ✓ live platform counters
 ├── permissions/           # ✓ DB-backed permission model, admin grant/revoke endpoints
 ├── analytics/             # ✓ role-scoped dashboard queries (admin/moderator/government/researcher/orgadmin)
-├── media/                 # ~ stub
+├── media/                 # ✓ StorageService (S3/MinIO), MediaService, presign + upload endpoints
 ├── weather/               # ✓ OpenMeteo client, service, scheduler, current/hourly/daily/AQ
 ├── flood/                 # ✓ OpenMeteo Flood/GloFAS client, daily discharge, scheduler
 ├── locations/climate/     # ✓ union-level climate pipeline, daily cron, 30d rolling averages
 ├── ingestion/             # ✓ provider job tracking for scheduled weather + GBIF + flood syncs
-└── notifications/         # ✓ AlertSubscription, email delivery via Nodemailer
+└── notifications/         # ✓ AlertSubscription, email delivery via BullMQ email queue
 ```
 
-Legend: ✓ Implemented | ~ Stub only
+Legend: ✓ Implemented
 
 `weather` and `biodiversity` keep their provider clients and schedulers in their own modules. The shared `ingestion` module tracks scheduled provider runs as `IngestionJob` records and updates dataset `lastSyncedAt` values on success. `permissions` owns the `Permission` and `RolePermission` models and is used by `PermissionsGuard` for fine-grained access control. Provider-specific details live in `docs/integrations/`.
 
@@ -65,7 +65,7 @@ Legend: ✓ Implemented | ~ Stub only
 | Users and roles | `users` | 6 roles (CITIZEN → ADMIN), role updates, deactivation, reactivation, audit event listing |
 | Organizations | `organizations` | Org records + memberships (ADMIN/MEMBER) linked to providers and restoration projects |
 | Geography | `locations`, `locations/climate` | 8 divisions, 64 districts, 494 upazilas, 4,540 unions — auto-seeded; nightly union-level climate pipeline + 30d rolling averages |
-| Environmental data | `datasets`, `weather`, `flood` | Dataset catalog, access policy, download enforcement, OpenMeteo weather/AQ and Flood/GloFAS ingestion |
+| Environmental data | `datasets`, `weather`, `flood`, `radiation`, `marine`, `emissions` | Dataset catalog, access policy, download enforcement, OpenMeteo weather/AQ, Flood/GloFAS, satellite radiation, marine forecasts, and emissions source tracking |
 | Biodiversity | `biodiversity` | GBIF species and occurrence records, daily sync |
 | Citizen engagement | `reports`, `observations`, `restoration` | Reports (status workflow + comments + media), observations (trust levels), restoration projects |
 | Alerts and notifications | `alerts`, `notifications` | Severity-tiered alerts, email delivery, subscription by district/nationwide |
@@ -74,7 +74,7 @@ Legend: ✓ Implemented | ~ Stub only
 | Analytics dashboards | `analytics` | Role-scoped aggregated stats for admin, moderator, government, researcher, org admin |
 | Admin console | `apps/admin` | Moderation, user management, alert creation, dataset publishing, organization membership management, ingestion monitoring |
 
-Advanced domains (emissions tracking, climate forecasting, carbon accounting, research publications, structured surveys, satellite remote sensing) are planned for Phase 7 — see `docs/roadmap.md` and `docs/architecture/feature-map.md`.
+Advanced domains (climate forecasting, carbon accounting, research publications, structured surveys, satellite remote sensing) are planned for Phase 7 — see `docs/roadmap.md` and `docs/architecture/feature-map.md`.
 
 ## Boundary Rules
 

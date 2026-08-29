@@ -164,11 +164,11 @@ Two further sources are unscheduled:
 
 ### NestJS scheduler setup
 
-Use `@nestjs/schedule` (cron-based, zero external dependency) for lightweight fetch jobs. BullMQ is the intended choice for jobs that need retry, concurrency control, or worker isolation — but note it is **not installed**; adding it is part of this plan, not a pre-existing capability.
+Use `@nestjs/schedule` (cron-based, zero external dependency) for lightweight fetch jobs. BullMQ is now installed (`bullmq`, `@nestjs/bullmq`) and used for `email` and `gamification` queues — but **not yet for ingestion jobs**; ingestion schedulers remain cron-based. Admin-triggered retryable ingestion jobs are a future addition.
 
 ```
-@nestjs/schedule   → hourly/daily fetch crons (OpenMeteo, GBIF)
-BullMQ (planned)   → ingestion jobs created via API (admin-triggered, retryable)
+@nestjs/schedule   → hourly/daily fetch crons (OpenMeteo, GBIF) — actual implementation
+BullMQ (partial)   → email + gamification queues live; ingestion queues not yet wired
 ```
 
 ### HTTP client pattern

@@ -18,7 +18,7 @@ Legend: **Done** | **Partial** | *Planned* | ~~Deferred~~
 | Database schema and migrations | `packages/database` | **Done** |
 | Audit trail (`AuditEvent` on all mutations) | `common` | **Done** |
 | Security headers, rate limiting, JWT secret validation | `common` | **Done** |
-| Automated tests (auth, RBAC, env validation) | `apps/api` | **Done** |
+| Automated tests (auth, RBAC, env validation, reports, observations, restoration, notifications, gamification, media) | `apps/api` | **Done** — 153 tests in 11 spec files |
 | CI pipeline | `.github/workflows/ci.yml` | **Done** — awaits git remote |
 | Production Dockerfiles | `infrastructure/docker` | **Done** |
 
@@ -51,7 +51,7 @@ Legend: **Done** | **Partial** | *Planned* | ~~Deferred~~
 | Report status workflow (moderation → verified → resolved) | `reports` | **Done** |
 | Report comments (public + internal moderator notes) | `reports` | **Done** |
 | Report media attachments (URL registration) | `reports` | **Done** |
-| Report media upload (file storage) | `reports`, `media` | *Planned* — needs MinIO/S3 |
+| Report media upload (file storage) | `reports`, `media` | **Done** — `POST /media/upload` (multipart) and `POST /media/presign` (presigned URL); requires `STORAGE_*` env vars |
 | Environmental observations with trust levels | `observations` | **Done** |
 | Restoration project creation, tracking, and joining | `restoration` | **Done** |
 | Structured survey campaigns | — | *Planned* (Phase 7) |
@@ -65,7 +65,7 @@ Legend: **Done** | **Partial** | *Planned* | ~~Deferred~~
 | --- | --- | --- |
 | Environmental alerts (create, severity, lifecycle) | `alerts` | **Done** |
 | Alert subscription (district or nationwide, min severity) | `notifications` | **Done** |
-| Email delivery on alert activation | `notifications` | **Done** |
+| Email delivery on alert activation | `notifications` | **Done** — dispatched via BullMQ `email` queue (PENDING `NotificationDelivery` records enqueued per user) |
 | SMS / multi-channel delivery | `notifications` | *Planned* (Phase 7) |
 | Government / emergency broadcast integration | `notifications` | *Planned* (Phase 7) |
 

@@ -89,7 +89,7 @@ Deliverables:
 - ~~Observations module (schema in place; service/controller needed)~~ Done (2026-08-17) — full CRUD + trust-level workflow (`RESEARCHER`/`ADMIN` promote `UNVERIFIED` → `RESEARCH_GRADE`/etc.), wired to a real `/observations` page with a working submission form. See `docs/progress.md` "Observations Module".
 - ~~Restoration projects module~~ Done (2026-08-19) — full CRUD, `ORGANIZATION_ADMIN`/`ADMIN`-gated creation, ownership-gated updates, idempotent citizen "join," wired to a real `/restoration` page. See `docs/progress.md` "Restoration Projects Module". (Not separately tracked as a Phase 3 deliverable before this — added here now that it's done.)
 - ~~Biodiversity records~~ Done (2026-08-19) — daily GBIF sync (self-contained in `apps/api/src/biodiversity/`, not the generic `ingestion` module, same design deviation as weather), public species/occurrence endpoints, wired to a real `/biodiversity` page with name search. IUCN conservation-status enrichment deliberately skipped for v1 (no per-species API call built yet). See `docs/progress.md` "Biodiversity + GBIF Module". Community sidebar nav link removed (2026-08-24) — `/community` page remains but is no longer reachable via navigation.
-- ~~Media/evidence records~~ Partially done (2026-08-22) — `ReportComment` and `ReportMedia` schema + `POST/GET /reports/:id/comments` and `POST/GET /reports/:id/media` endpoints live. File upload transport (MinIO/S3) and nested comment replies deliberately deferred. See M8 in `implementation-plan.md`.
+- ~~Media/evidence records~~ Done — `ReportComment` and `ReportMedia` schema + `POST/GET /reports/:id/comments` and `POST/GET /reports/:id/media` endpoints live (2026-08-22). File upload transport now handled by the `media` module (`POST /media/upload`, `POST /media/presign`) using S3/MinIO (2026-08-29). Nested comment replies deliberately deferred. See M8 in `implementation-plan.md`.
 - ~~Moderation queue~~ Done (2026-08-22) — admin console report moderation queue (`apps/admin`) with full 5-status workflow. See M12 in `implementation-plan.md`.
 - Dataset download and access-request endpoints
 - ~~Connect public web page to live API (replace static seed data)~~ Done (2026-08-19) — every homepage section now fetches live data with a fallback to static content if the API is unreachable: weather sidebar (2026-08-16), metrics cards (2026-08-19), dataset preview/reports/alerts previews/biodiversity+restoration highlights (2026-08-19); the community feed has no backend to wire to, so it shows an honest empty state instead (same treatment as the `/community` page). Nav is session-aware (real login state, 2026-08-16). See `docs/progress.md` "Homepage Preview Sections Wired" — a real honesty bug (treating an empty-but-successful response the same as an API failure) was caught and fixed during this pass.
@@ -161,8 +161,8 @@ Ordered roughly by risk: the security items are cheap and block any real deploym
 
 ### 6b. Regression safety net
 
-- ~~First test suite covering `auth` and RBAC.~~ Done (2026-08-21). 52 tests across `RolesGuard`, `JwtAuthGuard`, `AuthService`, the refresh-token utilities and env validation. Fully mocked — no database needed. Each historical bug has a named regression test, and all six were mutation-checked: reintroducing the bug makes the suite fail.
-- ~~CI on pull requests.~~ Done (2026-08-21). `.github/workflows/ci.yml` runs `prisma generate`/`validate`, `tsc --noEmit` on all three apps, the api test suite, and `pnpm build`. Note the repo has no git remote yet, so nothing runs until one is added.
+- ~~First test suite covering `auth` and RBAC.~~ Done (2026-08-21). 52 tests across `RolesGuard`, `JwtAuthGuard`, `AuthService`, the refresh-token utilities and env validation. Fully mocked — no database needed. Each historical bug has a named regression test, and all six were mutation-checked: reintroducing the bug makes the suite fail. Expanded to 153 tests in 11 spec files (2026-08-29) — reports, observations, restoration, notifications, gamification, media service coverage added.
+- ~~CI on pull requests.~~ Done (2026-08-21); updated (2026-08-29) to add `pnpm audit --prod --audit-level=high` in the `verify` job and a parallel `docker-build` job (`docker build -f apps/api/Dockerfile`). Note the repo has no git remote yet, so nothing runs until one is added.
 - ~~Install a working lint setup.~~ Done (2026-08-21). `.eslintrc.json` added for `apps/api`, `apps/web`, and `apps/admin`. `pnpm lint` now runs cleanly across all three apps; added to local verification workflow but deliberately kept out of CI until the rule set is stable.
 - ~~API contract tests.~~ Done (2026-08-22). `@nature-grid/contracts` added as a devDependency to `apps/api`. `src/common/contract-types.typecheck.ts` uses TypeScript's structural type system to assert that every service's return type (after JSON serialisation — `Date`→`string` via a `Jsonified<T>` utility) is assignable to its contract type. Checked by the existing `tsc --noEmit` step in CI. Also fixed `include`→`select` discipline in `datasets.service.ts`, `reports.service.ts` (`getById`), `alerts.service.ts` (`getById`), and four weather read methods — eliminating unintended field leakage (e.g. `createdAt` from weather readings not in the contract).
 - End-to-end tests for the public and authenticated flows.
@@ -172,8 +172,8 @@ Ordered roughly by risk: the security items are cheap and block any real deploym
 
 - ~~Per-user contact details plus verification.~~ Done — reused the existing `User.email` (already verified via login). No separate `notifyEmail` field needed for v1.
 - ~~Transport for at least one channel.~~ Done — Nodemailer SMTP email. Optional: API starts without SMTP configured (one-time warn, sends silently skipped).
-- ~~Delivery on `ACTIVE` alert transitions.~~ Done — `AlertsService.create()` (always ACTIVE) and `AlertsService.update()` (DRAFT → ACTIVE) both fire `notificationsService.dispatchForAlert()` as fire-and-forget.
-- ~~Delivery status recorded so a failed send is visible rather than silent.~~ Done — `NotificationDelivery` records written as `PENDING` before each send attempt, updated to `SENT` or `FAILED` with timestamp and error message.
+- ~~Delivery on `ACTIVE` alert transitions.~~ Done — `AlertsService.create()` (always ACTIVE) and `AlertsService.update()` (DRAFT → ACTIVE) both fire `notificationsService.dispatchForAlert()`, which creates PENDING `NotificationDelivery` records and enqueues per-user jobs via the BullMQ `email` queue (4-attempt exponential backoff).
+- ~~Delivery status recorded so a failed send is visible rather than silent.~~ Done — `NotificationDelivery` records written as `PENDING` before enqueue, updated to `SENT` or `FAILED` by the `EmailProcessor`.
 - ~~The `Notification` subscription model.~~ Done — `AlertSubscription` with districtId (nullable = nationwide), minSeverity threshold, and channel.
 
 See `docs/progress.md` "Phase 6c: Notification Delivery" for design decisions and implementation detail.
@@ -186,7 +186,7 @@ Remaining gap: no SMS channel (EMAIL only). Government agency and emergency broa
 - ~~Deployment documentation and a repeatable path.~~ Done (`infrastructure/docker/README.md`). Single-host compose only; multi-host deferred.
 - Backup/restore plan. — Not done.
 - Observability. Audit *writes* are complete; a dashboard over `AuditEvent` is still missing.
-- Secure file/media handling — blocked on the `media` module, still an empty stub.
+- ~~Secure file/media handling~~ Done (2026-08-29) — `media` module fully implemented with `StorageService`, `MediaService`, `POST /media/upload`, `POST /media/presign`.
 
 Exit criteria:
 
@@ -194,7 +194,7 @@ Exit criteria:
 - ~~Auth and RBAC have automated test coverage, and CI runs on every PR.~~ **Met** (2026-08-21) — pending a git remote for CI to actually execute.
 - ~~Brute-force attempts leave a visible audit trail.~~ **Met** (2026-08-21) — `USER_LOGIN_FAILED` written on every rejected login; see 6a.
 - An `EMERGENCY` alert reaches a subscribed user, and a failed delivery is visible. — **Not met.** See 6c.
-- Public and authenticated flows are tested. — **Partially met.** Auth, RBAC and env validation have unit coverage (56 + 5 new login-failure tests = 61 total). No end-to-end or contract tests yet, and `apps/web`/`apps/admin` still have no tests.
+- Public and authenticated flows are tested. — **Partially met.** 153 unit tests across 11 spec files cover auth, RBAC, env validation, reports, observations, restoration, notifications, gamification, and media services. No end-to-end tests yet, and `apps/web`/`apps/admin` still have no tests.
 - Sensitive actions are auditable. — **Met** (complete as of 2026-08-27). All 25 `AuditAction` values are written. Every implemented mutating endpoint audits.
 - Deployment and operations are repeatable. — **Not met.** No container image or deployment path exists.
 

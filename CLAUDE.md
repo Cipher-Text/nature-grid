@@ -60,7 +60,7 @@ Global setup in `apps/api/src/main.ts`:
 - `JwtAuthGuard` + `RolesGuard` + `PermissionsGuard` registered via `useGlobalGuards`; `ThrottlerGuard` registered via `APP_GUARD` in `AppModule` (needs DI)
 - Rate limits: global 120 req / 60 s; auth endpoints tightened — login/register 5 req / 60 s, refresh 20 req / 60 s
 
-**Feature modules** (`apps/api/src/`): `auth`, `users`, `organizations`, `locations`, `locations/climate`, `providers`, `datasets`, `reports`, `alerts`, `observations`, `restoration`, `biodiversity`, `weather`, `flood`, `radiation`, `marine`, `emissions`, `gamification`, `metrics`, `notifications`, `permissions`, `analytics`, `database`, `common`. Also registered in `AppModule`: a `SeedService` (seeds dev users + organization on boot). Stub with no implementation: `media`. Implemented: `ingestion`.
+**Feature modules** (`apps/api/src/`): `auth`, `users`, `organizations`, `locations`, `locations/climate`, `providers`, `datasets`, `reports`, `alerts`, `observations`, `restoration`, `biodiversity`, `weather`, `flood`, `radiation`, `marine`, `emissions`, `gamification`, `metrics`, `notifications`, `permissions`, `analytics`, `database`, `common`. Also registered in `AppModule`: a `SeedService` (seeds dev users + organization on boot). Implemented: `ingestion`, `media`.
 
 Each feature module follows: `*.module.ts` → `*.controller.ts` → `*.service.ts` → `dto/` folder.
 
@@ -162,6 +162,23 @@ These modules handle external data ingestion. All use `IngestionService` (import
   - `POST /emissions/sources/:sourceId/entries` — requires `emissions.report` permission
 - Audit actions: `EMISSION_SOURCE_CREATE`, `EMISSION_ENTRY_CREATE`
 
+### Media module
+
+`apps/api/src/media/` — file upload and presigned URL generation for evidence attachments.
+
+- `StorageService` — wraps AWS S3Client with `forcePathStyle: true` for MinIO compatibility; graceful degradation when storage env vars are unconfigured
+- `MediaService` — MIME validation against `ALLOWED_MIME_TYPES`, 100 MB size limit (`MAX_UPLOAD_SIZE_BYTES`), key generation pattern `{folder}/{userId}/{uuid}{ext}`
+- `MediaController` — `POST /media/upload` (multipart file upload), `POST /media/presign` (returns presigned URL for direct client upload)
+- `media.constants.ts` — exports `MAX_UPLOAD_SIZE_BYTES`, `ALLOWED_MIME_TYPES`, `UPLOAD_FOLDERS`
+- Env vars: `STORAGE_ENDPOINT`, `STORAGE_ACCESS_KEY`, `STORAGE_SECRET_KEY`, `STORAGE_BUCKET`, `STORAGE_PUBLIC_URL`
+
+### BullMQ queues
+
+BullMQ is wired via `BullModule.forRootAsync` in `AppModule`, parsing `REDIS_URL` for host/port/password. Two queues:
+
+- **`email` queue** (in `NotificationsModule`) — `EmailProcessor` handles `password-reset`, `email-verification`, and `alert-notification` job types with 4-attempt exponential backoff. `AuthService.forgotPassword` and `sendVerificationEmail` enqueue jobs here instead of calling SMTP directly.
+- **`gamification` queue** (in `GamificationModule`) — `GamificationProcessor` handles `evaluate-badges` jobs; deduplication via `jobId: badge-eval:{userId}` prevents parallel evaluation for the same user. `GamificationService.evaluateBadges()` enqueues a job; actual badge logic runs in `performEvaluation()` called by the processor.
+
 ### Gamification module
 
 `apps/api/src/gamification/` — profile completeness scoring and badge system.
@@ -170,7 +187,7 @@ These modules handle external data ingestion. All use `IngestionService` (import
 - **Profile completeness:** 10 weighted checks across `UserProfile`, `UserSocialLink`, `OrganizationMembership`, `CitizenReport`, `Observation`. No DB model — computed in `COMPLETENESS_CHECKS` array in `GamificationService`.
 - **Levels:** Newcomer (0) → Contributor (100) → Advocate (300) → Champion (600) → Environmental Leader (1200+)
 - **Badges:** 5 categories × 4 tiers (Bronze 25 pts / Silver 75 pts / Gold 150 pts / Emerald 300 pts): Civic Guardian (verified reports), Water Sentinel (water quality observations), Clean Air Defender (air quality contributions), Biodiversity Explorer (research-grade species), Restoration Pioneer (ecological restoration projects)
-- Badge counts computed via 6 parallel Prisma queries. `evaluateBadges()` fires asynchronously (not awaited) after any contribution event. Earned badge IDs stored in `UserProfile.earnedBadges` (String[]).
+- Badge counts computed via 6 parallel Prisma queries. `evaluateBadges()` enqueues a BullMQ job (deduped by userId); actual evaluation runs in `GamificationProcessor.performEvaluation()`. Earned badge IDs stored in `UserProfile.earnedBadges` (String[]).
 
 ### Analytics module
 
@@ -186,16 +203,22 @@ Complex queries use raw SQL via `prisma.$queryRaw`.
 
 ### Testing
 
-52 unit tests in 5 spec files under `apps/api/src/` (all fully mocked — no DB, no running server):
+153 unit tests in 11 spec files under `apps/api/src/` (all fully mocked — no DB, no running server):
 - `roles.guard.spec.ts` — all 6 roles, case-sensitivity regression (9 tests)
 - `jwt-auth.guard.spec.ts` — `@Public()` bypass, error handling (5 tests)
 - `auth.service.spec.ts` — register/login/refresh/logout, token rotation, audit events, `USER_LOGIN_FAILED` in all three failure branches (24 tests)
 - `refresh-token.util.spec.ts` — opaque format, hash isolation (7 tests)
 - `env.validation.spec.ts` — placeholder rejection, 31/32-char boundary (7 tests)
+- `reports.service.spec.ts` — status transitions, badge trigger, comment visibility, list filtering
+- `observations.service.spec.ts` — future date rejection, owner/trust guards, FLAGGED exclusion, badge trigger
+- `restoration.service.spec.ts` — permission checks, P2002 idempotency, org validation, badge trigger
+- `notifications.service.spec.ts` — deduplication, severity filtering, PENDING delivery record, ConflictException
+- `gamification.service.spec.ts` — earnedKeysForCategory, computeLevel, enqueue dedup, performEvaluation early-exit
+- `media.service.spec.ts` — MIME allowlist, size limit, key generation, presign TTL
 
 `apps/web` and `apps/admin` have no tests (`echo "No web tests configured yet"`).
 
-CI (`.github/workflows/ci.yml`): `pnpm install --frozen-lockfile` → `prisma generate` → `prisma validate` → `tsc --noEmit` × 3 → `jest` → `pnpm build`. The repo has no git remote yet, so no workflow has executed in CI.
+CI (`.github/workflows/ci.yml`): `pnpm install --frozen-lockfile` → `pnpm audit --prod --audit-level=high` → `prisma generate` → `prisma validate` → `tsc --noEmit` × 3 → `jest` → `pnpm build`. A parallel `docker-build` job runs `docker build -f apps/api/Dockerfile -t nature-grid/api:ci .`. The repo has no git remote yet, so no workflow has executed in CI.
 
 ## Key environment variables
 
@@ -206,6 +229,7 @@ CI (`.github/workflows/ci.yml`): `pnpm install --frozen-lockfile` → `prisma ge
 | `PORT` | Defaults to `3001` |
 | `CORS_ORIGIN` | Defaults to `*` in dev |
 | `API_URL` | Used by `apps/web` server-side fetches (no `NEXT_PUBLIC_` prefix) |
-| `REDIS_URL` | In `.env.example` but **not consumed** — no Redis/BullMQ client exists |
+| `REDIS_URL` | Required for BullMQ queues — parsed by `BullModule.forRootAsync` in `AppModule` for host/port/password |
 | `BOOTSTRAP_ADMIN_EMAIL` / `BOOTSTRAP_ADMIN_PASSWORD` | Optional one-time production admin seed — skipped if already exists |
-| `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` / `SMTP_FROM` | Optional email delivery — not wired to any service yet |
+| `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` / `SMTP_FROM` | Optional email delivery — wired to `EmailService` via nodemailer; used by the `email` BullMQ queue processor for password-reset, email-verification, and alert-notification jobs |
+| `STORAGE_ENDPOINT` / `STORAGE_ACCESS_KEY` / `STORAGE_SECRET_KEY` / `STORAGE_BUCKET` / `STORAGE_PUBLIC_URL` | Optional object storage (S3 / MinIO) for the `media` module — graceful degradation when absent |

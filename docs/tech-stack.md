@@ -25,8 +25,8 @@
 | PostgreSQL | Primary transactional database |
 | PostGIS | Docker image provides it, but **not yet enabled** — no migration enables the extension; all geography fields use plain `Float` lat/lng for now |
 | Prisma | Database schema, migrations, typed client |
-| `@nestjs/schedule` | Cron scheduling for weather, GBIF, Flood, location-climate, and token cleanup jobs — the only background-job mechanism actually in use |
-| Redis / BullMQ | **Planned, not installed.** A Redis container runs in `docker-compose.yml` and `REDIS_URL` is set, but no client or queue library is in any manifest. Revisit when a job needs retry, concurrency control, or worker isolation. |
+| `@nestjs/schedule` | Cron scheduling for weather, GBIF, Flood, location-climate, and token cleanup jobs |
+| BullMQ (`bullmq`, `@nestjs/bullmq`) | Job queues for async processing: `email` queue (password-reset, email-verification, alert-notification jobs with 4-attempt exponential backoff) and `gamification` queue (badge evaluation, deduped by userId). `BullModule.forRootAsync` in AppModule parses `REDIS_URL` for connection. |
 | JWT | API authentication |
 | OpenAPI / Swagger | API documentation — available at `/api/docs` when the API is running |
 
@@ -58,6 +58,6 @@
 | `api` | Docker |
 | `data-worker` | Docker |
 | PostgreSQL/PostGIS | Managed DB or Docker for local |
-| Redis | Container runs locally but is unused — see the Backend table above |
+| Redis | Container runs locally; consumed by BullMQ queues (`email` and `gamification`) via `REDIS_URL` |
 
 Kafka and Kubernetes are explicitly later-stage choices, not part of the initial architecture.
