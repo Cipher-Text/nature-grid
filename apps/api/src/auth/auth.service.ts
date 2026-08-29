@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -35,6 +36,8 @@ export interface DeviceMeta {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
@@ -208,7 +211,11 @@ export class AuthService {
 
       const appUrl = this.config.get<string>('APP_URL') ?? 'http://localhost:3000';
       const resetUrl = `${appUrl}/reset-password?token=${token}`;
-      this.email.sendPasswordResetEmail(user.email, user.displayName, resetUrl).catch(() => {});
+      this.email
+        .sendPasswordResetEmail(user.email, user.displayName, resetUrl)
+        .catch((err: unknown) =>
+          this.logger.warn(`Password reset email failed for ${user.email}: ${String(err)}`),
+        );
     }
 
     return { message: 'If that email is registered you will receive a reset link shortly.' };
@@ -267,7 +274,11 @@ export class AuthService {
 
     const appUrl = this.config.get<string>('APP_URL') ?? 'http://localhost:3000';
     const verificationUrl = `${appUrl}/verify-email?token=${token}`;
-    this.email.sendVerificationEmail(user.email, user.displayName, verificationUrl).catch(() => {});
+    this.email
+      .sendVerificationEmail(user.email, user.displayName, verificationUrl)
+      .catch((err: unknown) =>
+        this.logger.warn(`Verification email failed for ${user.email}: ${String(err)}`),
+      );
 
     return { message: 'Verification email sent.' };
   }

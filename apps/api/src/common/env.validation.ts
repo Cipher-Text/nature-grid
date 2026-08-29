@@ -47,11 +47,22 @@ export function validateEnv(config: Record<string, unknown>): Record<string, unk
 
   // ── CORS_ORIGIN ─────────────────────────────────────────────────────────────
   // In production CORS_ORIGIN must be explicit. Omitting it causes the API to
-  // allow all origins (origin: true), which is a CSRF/XSS risk.
+  // reject all cross-origin requests (origin: false), which breaks the frontend.
   if (nodeEnv === 'production' && !config.CORS_ORIGIN) {
     errors.push(
-      'CORS_ORIGIN is not set — in production this would allow all origins. ' +
+      'CORS_ORIGIN is not set — in production this would block all browser requests. ' +
         'Set it to a comma-separated list of allowed origins, e.g. "https://naturegrid.bd"',
+    );
+  }
+
+  // ── APP_URL ──────────────────────────────────────────────────────────────────
+  // Required in production. Used to build password-reset and email-verification
+  // links in outbound emails. Without it the links point to http://localhost:3000
+  // which is unreachable from users' email clients.
+  if (nodeEnv === 'production' && !config.APP_URL) {
+    errors.push(
+      'APP_URL is not set — password-reset and email-verification links will point to ' +
+        'http://localhost:3000. Set it to your production frontend URL, e.g. "https://naturegrid.bd"',
     );
   }
 

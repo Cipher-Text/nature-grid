@@ -4,6 +4,8 @@ import { DatasetCategory } from '@prisma/client';
 import { RadiationService } from './radiation.service';
 import { IngestionService } from '../ingestion/ingestion.service';
 import { OPENMETEO_PROVIDER_NAME } from '../providers/providers.service';
+import { PrismaService } from '../database/prisma.service';
+import { withCronLock, CRON_LOCK_KEYS } from '../common/pg-cron-lock';
 
 @Injectable()
 export class RadiationScheduler implements OnModuleInit {
@@ -12,6 +14,7 @@ export class RadiationScheduler implements OnModuleInit {
   constructor(
     private readonly radiationService: RadiationService,
     private readonly ingestionService: IngestionService,
+    private readonly prisma: PrismaService,
   ) {}
 
   async onModuleInit() {
@@ -22,25 +25,27 @@ export class RadiationScheduler implements OnModuleInit {
 
   /** Run once a day at 1am — offset from midnight climate sync. */
   @Cron('0 0 1 * * *')
-  async syncRadiation() {
-    const providerId = await this.ingestionService.findProviderIdByName(OPENMETEO_PROVIDER_NAME);
-    const jobId = providerId ? await this.ingestionService.startJob(providerId) : null;
-    try {
-      const districts = await this.radiationService.getFetchableDistricts();
-      this.logger.log(`Syncing satellite radiation for ${districts.length} districts`);
-      for (const district of districts) {
-        try {
-          await this.radiationService.syncDistrict(district);
-        } catch (err) {
-          this.logger.error(
-            `Satellite radiation fetch failed for ${district.name}: ${String(err)}`,
-          );
+  syncRadiation() {
+    return withCronLock(this.prisma, this.logger, CRON_LOCK_KEYS.RADIATION, async () => {
+      const providerId = await this.ingestionService.findProviderIdByName(OPENMETEO_PROVIDER_NAME);
+      const jobId = providerId ? await this.ingestionService.startJob(providerId) : null;
+      try {
+        const districts = await this.radiationService.getFetchableDistricts();
+        this.logger.log(`Syncing satellite radiation for ${districts.length} districts`);
+        for (const district of districts) {
+          try {
+            await this.radiationService.syncDistrict(district);
+          } catch (err) {
+            this.logger.error(
+              `Satellite radiation fetch failed for ${district.name}: ${String(err)}`,
+            );
+          }
         }
+        if (jobId) await this.ingestionService.completeJob(jobId, [DatasetCategory.MONITORING]);
+      } catch (err) {
+        if (jobId) await this.ingestionService.failJob(jobId, String(err));
+        this.logger.error(`Satellite radiation sync failed: ${String(err)}`);
       }
-      if (jobId) await this.ingestionService.completeJob(jobId, [DatasetCategory.MONITORING]);
-    } catch (err) {
-      if (jobId) await this.ingestionService.failJob(jobId, String(err));
-      this.logger.error(`Satellite radiation sync failed: ${String(err)}`);
-    }
+    });
   }
 }

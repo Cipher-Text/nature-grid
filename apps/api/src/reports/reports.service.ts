@@ -45,32 +45,34 @@ export class ReportsService {
   async create(dto: CreateReportDto, user: JwtPayload) {
     if (dto.districtId) await assertDistrictExists(this.prisma, dto.districtId);
 
-    const report = await this.prisma.citizenReport.create({
-      data: {
-        title: dto.title,
-        category: dto.category,
-        description: dto.description,
-        districtId: dto.districtId,
-        lat: dto.lat,
-        lng: dto.lng,
-        reporterId: user.sub,
-        statusHistory: {
-          create: { status: ReportStatus.SUBMITTED },
+    return this.prisma.$transaction(async (tx) => {
+      const report = await tx.citizenReport.create({
+        data: {
+          title: dto.title,
+          category: dto.category,
+          description: dto.description,
+          districtId: dto.districtId,
+          lat: dto.lat,
+          lng: dto.lng,
+          reporterId: user.sub,
+          statusHistory: {
+            create: { status: ReportStatus.SUBMITTED },
+          },
         },
-      },
-      select: REPORT_SELECT,
-    });
+        select: REPORT_SELECT,
+      });
 
-    await this.prisma.auditEvent.create({
-      data: {
-        action: 'REPORT_SUBMIT',
-        userId: user.sub,
-        entityType: 'CitizenReport',
-        entityId: report.id,
-      },
-    });
+      await tx.auditEvent.create({
+        data: {
+          action: 'REPORT_SUBMIT',
+          userId: user.sub,
+          entityType: 'CitizenReport',
+          entityId: report.id,
+        },
+      });
 
-    return report;
+      return report;
+    });
   }
 
   listMine(userId: string, rawPage = 1, rawPageSize = 10) {
@@ -149,33 +151,35 @@ export class ReportsService {
     const canMarkInternal = actor.role === 'MODERATOR' || actor.role === 'ADMIN';
     const isInternal = canMarkInternal ? (dto.isInternal ?? false) : false;
 
-    const comment = await this.prisma.reportComment.create({
-      data: {
-        reportId: id,
-        authorId: actor.sub,
-        body: dto.body,
-        isInternal,
-      },
-      select: {
-        id: true,
-        body: true,
-        isInternal: true,
-        createdAt: true,
-        author: { select: { id: true, displayName: true } },
-      },
-    });
+    return this.prisma.$transaction(async (tx) => {
+      const comment = await tx.reportComment.create({
+        data: {
+          reportId: id,
+          authorId: actor.sub,
+          body: dto.body,
+          isInternal,
+        },
+        select: {
+          id: true,
+          body: true,
+          isInternal: true,
+          createdAt: true,
+          author: { select: { id: true, displayName: true } },
+        },
+      });
 
-    await this.prisma.auditEvent.create({
-      data: {
-        action: 'REPORT_COMMENT_ADD',
-        userId: actor.sub,
-        entityType: 'CitizenReport',
-        entityId: id,
-        meta: { commentId: comment.id, isInternal },
-      },
-    });
+      await tx.auditEvent.create({
+        data: {
+          action: 'REPORT_COMMENT_ADD',
+          userId: actor.sub,
+          entityType: 'CitizenReport',
+          entityId: id,
+          meta: { commentId: comment.id, isInternal },
+        },
+      });
 
-    return comment;
+      return comment;
+    });
   }
 
   async listMedia(id: string) {
@@ -198,37 +202,39 @@ export class ReportsService {
   async addMedia(id: string, dto: AddMediaDto, actor: JwtPayload) {
     await this.getById(id);
 
-    const media = await this.prisma.reportMedia.create({
-      data: {
-        reportId: id,
-        uploadedById: actor.sub,
-        url: dto.url,
-        mimeType: dto.mimeType,
-        fileSize: dto.fileSize,
-        caption: dto.caption,
-      },
-      select: {
-        id: true,
-        url: true,
-        mimeType: true,
-        fileSize: true,
-        caption: true,
-        createdAt: true,
-        uploadedBy: { select: { id: true, displayName: true } },
-      },
-    });
+    return this.prisma.$transaction(async (tx) => {
+      const media = await tx.reportMedia.create({
+        data: {
+          reportId: id,
+          uploadedById: actor.sub,
+          url: dto.url,
+          mimeType: dto.mimeType,
+          fileSize: dto.fileSize,
+          caption: dto.caption,
+        },
+        select: {
+          id: true,
+          url: true,
+          mimeType: true,
+          fileSize: true,
+          caption: true,
+          createdAt: true,
+          uploadedBy: { select: { id: true, displayName: true } },
+        },
+      });
 
-    await this.prisma.auditEvent.create({
-      data: {
-        action: 'REPORT_MEDIA_ADD',
-        userId: actor.sub,
-        entityType: 'CitizenReport',
-        entityId: id,
-        meta: { mediaId: media.id, mimeType: dto.mimeType ?? null },
-      },
-    });
+      await tx.auditEvent.create({
+        data: {
+          action: 'REPORT_MEDIA_ADD',
+          userId: actor.sub,
+          entityType: 'CitizenReport',
+          entityId: id,
+          meta: { mediaId: media.id, mimeType: dto.mimeType ?? null },
+        },
+      });
 
-    return media;
+      return media;
+    });
   }
 
   async updateStatus(id: string, dto: UpdateReportStatusDto, actor: JwtPayload) {

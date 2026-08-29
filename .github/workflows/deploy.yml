@@ -1,0 +1,129 @@
+name: Deploy
+
+# Trigger manually or on push to main after CI passes.
+# Adjust the trigger to match your release process.
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: production
+        type: choice
+        options: [production, staging]
+  workflow_run:
+    workflows: [CI]
+    branches: [main]
+    types: [completed]
+
+# Only one deploy runs at a time; a newer one cancels an in-flight run.
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Build & deploy
+    runs-on: ubuntu-latest
+    # On workflow_run trigger, only proceed when CI actually passed.
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+
+    # Set the target environment for secrets resolution.
+    environment: ${{ inputs.environment || 'production' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # ── Security audit ─────────────────────────────────────────────────────
+      # Fails the deploy on high/critical CVEs in production dependencies.
+      - name: Audit dependencies
+        run: pnpm audit --prod --audit-level=high
+
+      # ── Build Docker images ────────────────────────────────────────────────
+      - name: Log in to container registry
+        uses: docker/login-action@v3
+        with:
+          # TODO: replace with your registry (ghcr.io, ECR, GCR, Docker Hub …)
+          # For GitHub Container Registry use:
+          #   registry: ghcr.io
+          #   username: ${{ github.actor }}
+          #   password: ${{ secrets.GITHUB_TOKEN }}
+          registry: ${{ secrets.REGISTRY_URL }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Set image tag
+        id: tag
+        run: echo "tag=${{ secrets.REGISTRY_URL }}/nature-grid:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+
+      - name: Build & push API image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.tag.outputs.tag }}-api
+            ${{ secrets.REGISTRY_URL }}/nature-grid-api:latest
+
+      - name: Build & push web image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.tag.outputs.tag }}-web
+            ${{ secrets.REGISTRY_URL }}/nature-grid-web:latest
+
+      - name: Build & push admin image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: apps/admin/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.tag.outputs.tag }}-admin
+            ${{ secrets.REGISTRY_URL }}/nature-grid-admin:latest
+
+      # ── Deploy ─────────────────────────────────────────────────────────────
+      # TODO: replace this step with your actual deployment mechanism.
+      #
+      # Option A — SSH + docker-compose (simple VPS):
+      #
+      #   - name: Deploy via SSH
+      #     uses: appleboy/ssh-action@v1
+      #     with:
+      #       host: ${{ secrets.DEPLOY_HOST }}
+      #       username: ${{ secrets.DEPLOY_USER }}
+      #       key: ${{ secrets.DEPLOY_SSH_KEY }}
+      #       script: |
+      #         cd /opt/nature-grid
+      #         echo "IMAGE_TAG=${{ github.sha }}" > .env.deploy
+      #         docker compose -f docker-compose.prod.yml pull
+      #         docker compose -f docker-compose.prod.yml up -d --remove-orphans
+      #         docker image prune -f
+      #
+      # Option B — AWS ECS:
+      #   Use aws-actions/amazon-ecs-deploy-task-definition
+      #
+      # Option C — Kubernetes:
+      #   Use azure/k8s-deploy or helm/chart-releaser-action
+      #
+      - name: Deploy (TODO — configure for your platform)
+        run: |
+          echo "Deploy step not yet configured."
+          echo "See the comments in this file for common deployment patterns."
+          echo "Image tag: ${{ steps.tag.outputs.tag }}"

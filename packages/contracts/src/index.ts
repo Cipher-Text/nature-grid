@@ -152,6 +152,25 @@ export const routes = {
     forecastByDistrict: (districtId: string) => `${apiPrefix}/flood/forecast/${districtId}`,
   },
 
+  radiation: {
+    daily: `${apiPrefix}/radiation/daily`,
+    dailyByDistrict: (districtId: string) => `${apiPrefix}/radiation/daily/${districtId}`,
+  },
+
+  marine: {
+    forecast: `${apiPrefix}/marine/forecast`,
+    forecastByDistrict: (districtId: string) => `${apiPrefix}/marine/forecast/${districtId}`,
+  },
+
+  emissions: {
+    sources: `${apiPrefix}/emissions/sources`,
+    source: (id: string) => `${apiPrefix}/emissions/sources/${id}`,
+    createSource: `${apiPrefix}/emissions/sources`,
+    updateSource: (id: string) => `${apiPrefix}/emissions/sources/${id}`,
+    entries: (sourceId: string) => `${apiPrefix}/emissions/sources/${sourceId}/entries`,
+    createEntry: (sourceId: string) => `${apiPrefix}/emissions/sources/${sourceId}/entries`,
+  },
+
   users: {
     list: `${apiPrefix}/users`,
     detail: (id: string) => `${apiPrefix}/users/${id}`,

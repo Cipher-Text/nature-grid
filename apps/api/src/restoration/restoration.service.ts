@@ -41,31 +41,33 @@ export class RestorationService {
       if (!org) throw new BadRequestException('Organization not found');
     }
 
-    const project = await this.prisma.restorationProject.create({
-      data: {
-        title: dto.title,
-        description: dto.description,
-        category: dto.category,
-        organizationId: dto.organizationId,
-        districtId: dto.districtId,
-        startDate: dto.startDate ? new Date(dto.startDate) : undefined,
-        endDate: dto.endDate ? new Date(dto.endDate) : undefined,
-        impactSummary: dto.impactSummary,
-        createdById: user.sub,
-      },
-      select: PROJECT_SELECT,
-    });
+    return this.prisma.$transaction(async (tx) => {
+      const project = await tx.restorationProject.create({
+        data: {
+          title: dto.title,
+          description: dto.description,
+          category: dto.category,
+          organizationId: dto.organizationId,
+          districtId: dto.districtId,
+          startDate: dto.startDate ? new Date(dto.startDate) : undefined,
+          endDate: dto.endDate ? new Date(dto.endDate) : undefined,
+          impactSummary: dto.impactSummary,
+          createdById: user.sub,
+        },
+        select: PROJECT_SELECT,
+      });
 
-    await this.prisma.auditEvent.create({
-      data: {
-        action: 'RESTORATION_PROJECT_CREATE',
-        userId: user.sub,
-        entityType: 'RestorationProject',
-        entityId: project.id,
-      },
-    });
+      await tx.auditEvent.create({
+        data: {
+          action: 'RESTORATION_PROJECT_CREATE',
+          userId: user.sub,
+          entityType: 'RestorationProject',
+          entityId: project.id,
+        },
+      });
 
-    return project;
+      return project;
+    });
   }
 
   list(category?: RestorationCategory, status?: ProjectStatus, districtId?: string, rawPage = 1, rawPageSize = 20) {
@@ -131,16 +133,18 @@ export class RestorationService {
     await this.getById(id);
 
     try {
-      await this.prisma.restorationParticipant.create({
-        data: { projectId: id, userId: user.sub },
-      });
-      await this.prisma.auditEvent.create({
-        data: {
-          action: 'RESTORATION_PROJECT_JOIN',
-          userId: user.sub,
-          entityType: 'RestorationProject',
-          entityId: id,
-        },
+      await this.prisma.$transaction(async (tx) => {
+        await tx.restorationParticipant.create({
+          data: { projectId: id, userId: user.sub },
+        });
+        await tx.auditEvent.create({
+          data: {
+            action: 'RESTORATION_PROJECT_JOIN',
+            userId: user.sub,
+            entityType: 'RestorationProject',
+            entityId: id,
+          },
+        });
       });
     } catch (err) {
       if (!(err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002')) {

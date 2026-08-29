@@ -44,31 +44,33 @@ export class ObservationsService {
       throw new BadRequestException('observedAt cannot be in the future');
     }
 
-    const observation = await this.prisma.observation.create({
-      data: {
-        category: dto.category,
-        description: dto.description,
-        districtId: dto.districtId,
-        lat: dto.lat,
-        lng: dto.lng,
-        species: dto.species,
-        observedAt: dto.observedAt ? new Date(dto.observedAt) : undefined,
-        observerId: user.sub,
-        trustLevel: ObservationTrustLevel.UNVERIFIED,
-      },
-      select: OBSERVATION_SELECT,
-    });
+    return this.prisma.$transaction(async (tx) => {
+      const observation = await tx.observation.create({
+        data: {
+          category: dto.category,
+          description: dto.description,
+          districtId: dto.districtId,
+          lat: dto.lat,
+          lng: dto.lng,
+          species: dto.species,
+          observedAt: dto.observedAt ? new Date(dto.observedAt) : undefined,
+          observerId: user.sub,
+          trustLevel: ObservationTrustLevel.UNVERIFIED,
+        },
+        select: OBSERVATION_SELECT,
+      });
 
-    await this.prisma.auditEvent.create({
-      data: {
-        action: 'OBSERVATION_SUBMIT',
-        userId: user.sub,
-        entityType: 'Observation',
-        entityId: observation.id,
-      },
-    });
+      await tx.auditEvent.create({
+        data: {
+          action: 'OBSERVATION_SUBMIT',
+          userId: user.sub,
+          entityType: 'Observation',
+          entityId: observation.id,
+        },
+      });
 
-    return observation;
+      return observation;
+    });
   }
 
   listMine(userId: string, rawPage = 1, rawPageSize = 10) {
