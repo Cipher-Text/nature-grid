@@ -83,10 +83,6 @@ export class BiodiversityService {
         if (fetched >= MAX_RECORDS_PER_SYNC) break;
         fetched++;
 
-        const speciesId = await this.upsertSpecies(record);
-        if (!speciesId) continue;
-        speciesUpserted++;
-
         if (record.decimalLatitude == null || record.decimalLongitude == null) continue;
 
         const districtId = this.nearestDistrictId(
@@ -95,25 +91,38 @@ export class BiodiversityService {
           districtCentroids,
         );
 
-        await this.prisma.occurrence.upsert({
-          where: { gbifOccurrenceKey: BigInt(record.key) },
-          create: {
-            gbifOccurrenceKey: BigInt(record.key),
-            speciesId,
-            districtId,
-            lat: record.decimalLatitude,
-            lng: record.decimalLongitude,
-            observedAt: record.eventDate ? new Date(record.eventDate) : undefined,
-            recordedBy: record.recordedBy,
-            basisOfRecord: record.basisOfRecord,
-          },
-          update: {
-            districtId,
-            lat: record.decimalLatitude,
-            lng: record.decimalLongitude,
-          },
+        // Wrap the species upsert and occurrence upsert in a single transaction so
+        // a mid-loop failure can never leave a species row without its occurrence.
+        const upserted = await this.prisma.$transaction(async (tx) => {
+          const speciesId = await this.upsertSpecies(tx, record);
+          if (!speciesId) return null;
+
+          await tx.occurrence.upsert({
+            where: { gbifOccurrenceKey: BigInt(record.key) },
+            create: {
+              gbifOccurrenceKey: BigInt(record.key),
+              speciesId,
+              districtId,
+              lat: record.decimalLatitude!,
+              lng: record.decimalLongitude!,
+              observedAt: record.eventDate ? new Date(record.eventDate) : undefined,
+              recordedBy: record.recordedBy,
+              basisOfRecord: record.basisOfRecord,
+            },
+            update: {
+              districtId,
+              lat: record.decimalLatitude!,
+              lng: record.decimalLongitude!,
+            },
+          });
+
+          return speciesId;
         });
-        occurrencesUpserted++;
+
+        if (upserted) {
+          speciesUpserted++;
+          occurrencesUpserted++;
+        }
       }
 
       if (page.results.length === 0) break;
@@ -123,12 +132,15 @@ export class BiodiversityService {
     return { speciesUpserted, occurrencesUpserted };
   }
 
-  private async upsertSpecies(record: GbifOccurrenceRecord): Promise<string | undefined> {
+  private async upsertSpecies(
+    tx: Parameters<Parameters<PrismaService['$transaction']>[0]>[0],
+    record: GbifOccurrenceRecord,
+  ): Promise<string | undefined> {
     if (!record.taxonKey) return undefined;
     const canonicalName = record.species ?? record.scientificName;
     if (!canonicalName) return undefined;
 
-    const species = await this.prisma.species.upsert({
+    const species = await tx.species.upsert({
       where: { gbifKey: record.taxonKey },
       create: {
         gbifKey: record.taxonKey,

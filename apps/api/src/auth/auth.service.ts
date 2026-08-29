@@ -159,7 +159,9 @@ export class AuthService {
       }
     });
     // Re-evaluate badges and completeness without blocking the response.
-    this.gamification.evaluateBadges(userId).catch(() => {});
+    this.gamification
+      .evaluateBadges(userId)
+      .catch((err: unknown) => this.logger.warn(`Badge evaluation failed: ${String(err)}`));
 
     return this.getProfile(userId);
   }

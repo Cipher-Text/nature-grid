@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { ObservationCategory, ObservationTrustLevel } from '@prisma/client';
@@ -32,6 +33,8 @@ const OBSERVATION_SELECT = {
 
 @Injectable()
 export class ObservationsService {
+  private readonly logger = new Logger(ObservationsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly gamification: GamificationService,
@@ -187,7 +190,9 @@ export class ObservationsService {
     // Award water_sentinel / biodiversity_explorer / clean_air_defender badges
     // when an observation reaches RESEARCH_GRADE trust.
     if (dto.trustLevel === ObservationTrustLevel.RESEARCH_GRADE && observation.observer?.id) {
-      this.gamification.evaluateBadges(observation.observer.id).catch(() => {});
+      this.gamification
+        .evaluateBadges(observation.observer.id)
+        .catch((err: unknown) => this.logger.warn(`Badge evaluation failed: ${String(err)}`));
     }
 
     return updated;

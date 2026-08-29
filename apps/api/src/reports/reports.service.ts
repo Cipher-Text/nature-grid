@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ReportStatus, ReportCategory } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { CreateReportDto } from './dto/create-report.dto';
@@ -37,6 +37,8 @@ const REPORT_SELECT = {
 
 @Injectable()
 export class ReportsService {
+  private readonly logger = new Logger(ReportsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly gamification: GamificationService,
@@ -273,7 +275,9 @@ export class ReportsService {
       (dto.status === ReportStatus.VERIFIED || dto.status === ReportStatus.RESOLVED) &&
       report.reporter?.id
     ) {
-      this.gamification.evaluateBadges(report.reporter.id).catch(() => {});
+      this.gamification
+        .evaluateBadges(report.reporter.id)
+        .catch((err: unknown) => this.logger.warn(`Badge evaluation failed: ${String(err)}`));
     }
 
     return updated;

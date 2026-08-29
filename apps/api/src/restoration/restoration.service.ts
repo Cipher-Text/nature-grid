@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma, ProjectStatus, RestorationCategory } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { CreateRestorationProjectDto } from './dto/create-restoration-project.dto';
@@ -29,6 +29,8 @@ const PROJECT_SELECT = {
 
 @Injectable()
 export class RestorationService {
+  private readonly logger = new Logger(RestorationService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly gamification: GamificationService,
@@ -154,7 +156,9 @@ export class RestorationService {
     }
 
     // Award restoration_pioneer badges without blocking the response.
-    this.gamification.evaluateBadges(user.sub).catch(() => {});
+    this.gamification
+      .evaluateBadges(user.sub)
+      .catch((err: unknown) => this.logger.warn(`Badge evaluation failed: ${String(err)}`));
 
     return this.getById(id);
   }
