@@ -432,6 +432,7 @@ model District {
   areaSqKm   Float?
   url        String?
   boundary   Json?
+  isCoastal  Boolean  @default(false)
   divisionId String
   division   Division @relation(fields: [divisionId], references: [id])
 
@@ -510,6 +511,7 @@ model Union {
   lat       Float?
   lng       Float?
   url       String?
+  isCoastal Boolean @default(false)
   upazilaId String
   upazila   Upazila @relation(fields: [upazilaId], references: [id])
 

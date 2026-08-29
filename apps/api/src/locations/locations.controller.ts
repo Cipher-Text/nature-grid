@@ -33,8 +33,12 @@ export class LocationsController {
   }
 
   @Get('unions')
-  getUnions(@Query('upazilaId') upazilaId?: string) {
-    return this.locationsService.getUnions(upazilaId);
+  getUnions(
+    @Query('upazilaId') upazilaId?: string,
+    @Query('isCoastal') isCoastal?: string,
+  ) {
+    const coastal = isCoastal === 'true' ? true : isCoastal === 'false' ? false : undefined;
+    return this.locationsService.getUnions(upazilaId, coastal);
   }
 
   @Get('unions/:id')

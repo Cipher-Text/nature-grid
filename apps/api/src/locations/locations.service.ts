@@ -40,13 +40,13 @@ export class LocationsService implements OnModuleInit {
           update: {
             bnName: dist.bnName, slug: dist.slug, pcode: dist.pcode,
             lat: dist.lat, lng: dist.lng, centerLat: dist.centerLat, centerLng: dist.centerLng,
-            areaSqKm: dist.areaSqKm, url: dist.url,
+            areaSqKm: dist.areaSqKm, url: dist.url, isCoastal: dist.isCoastal ?? false,
             boundary: dist.boundary as Prisma.InputJsonValue ?? Prisma.JsonNull,
           },
           create: {
             name: dist.name, bnName: dist.bnName, slug: dist.slug, pcode: dist.pcode,
             lat: dist.lat, lng: dist.lng, centerLat: dist.centerLat, centerLng: dist.centerLng,
-            areaSqKm: dist.areaSqKm, url: dist.url,
+            areaSqKm: dist.areaSqKm, url: dist.url, isCoastal: dist.isCoastal ?? false,
             boundary: dist.boundary as Prisma.InputJsonValue ?? Prisma.JsonNull,
             divisionId: division.id,
           },
@@ -74,10 +74,12 @@ export class LocationsService implements OnModuleInit {
               update: {
                 bnName: un.bnName, slug: un.slug, pcode: un.pcode,
                 lat: un.lat, lng: un.lng, url: un.url,
+                isCoastal: un.isCoastal ?? dist.isCoastal ?? false,
               },
               create: {
                 name: un.name, bnName: un.bnName, slug: un.slug, pcode: un.pcode,
                 lat: un.lat, lng: un.lng, url: un.url,
+                isCoastal: un.isCoastal ?? dist.isCoastal ?? false,
                 upazilaId: upazila.id,
               },
             });
@@ -159,9 +161,12 @@ export class LocationsService implements OnModuleInit {
     return upazila;
   }
 
-  getUnions(upazilaId?: string) {
+  getUnions(upazilaId?: string, isCoastal?: boolean) {
     return this.prisma.union.findMany({
-      where: upazilaId ? { upazilaId } : undefined,
+      where: {
+        ...(upazilaId ? { upazilaId } : {}),
+        ...(isCoastal !== undefined ? { isCoastal } : {}),
+      },
       orderBy: { name: 'asc' },
       include: {
         upazila: {

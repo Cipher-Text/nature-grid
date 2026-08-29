@@ -16,7 +16,7 @@ export class MarineService {
 
   getFetchableDistricts(): Promise<DistrictWithCoords[]> {
     return this.prisma.district.findMany({
-      where: { lat: { not: null }, lng: { not: null } },
+      where: { lat: { not: null }, lng: { not: null }, isCoastal: true },
     }) as Promise<DistrictWithCoords[]>;
   }
 
