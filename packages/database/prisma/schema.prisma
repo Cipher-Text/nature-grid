@@ -179,6 +179,17 @@ enum DatasetAccessRequestStatus {
   REJECTED
 }
 
+enum HydrologicalClass {
+  LOTIC
+  LENTIC
+}
+
+enum WaterBodyType {
+  RIVER
+  WETLAND
+  LAKE
+}
+
 enum ProjectStatus {
   PLANNED
   ACTIVE
@@ -223,36 +234,36 @@ enum DeliveryStatus {
 // ─── Users & Auth ─────────────────────────────────────────────────────────────
 
 model User {
-  id               String   @id @default(cuid())
-  email            String   @unique
-  displayName      String
-  passwordHash     String
-  role             UserRole @default(CITIZEN)
-  isActive         Boolean  @default(true)
-  isEmailVerified  Boolean  @default(false)
-  lastLoginAt      DateTime?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id              String    @id @default(cuid())
+  email           String    @unique
+  displayName     String
+  passwordHash    String
+  role            UserRole  @default(CITIZEN)
+  isActive        Boolean   @default(true)
+  isEmailVerified Boolean   @default(false)
+  lastLoginAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
-  reports    CitizenReport[]
-  observations Observation[]
-  auditEvents AuditEvent[]
-  refreshTokens RefreshToken[]
+  reports                    CitizenReport[]
+  observations               Observation[]
+  auditEvents                AuditEvent[]
+  refreshTokens              RefreshToken[]
   restorationProjectsCreated RestorationProject[]
   restorationParticipations  RestorationParticipant[]
-  datasetAccessRequests DatasetAccessRequest[] @relation("DatasetAccessRequester")
-  datasetAccessDecisions DatasetAccessRequest[] @relation("DatasetAccessDecider")
-  alertSubscriptions    AlertSubscription[]
-  notificationDeliveries NotificationDelivery[]
-  reportComments ReportComment[]
-  reportMedia    ReportMedia[]
-  organizationMemberships OrganizationMembership[]
-  profile UserProfile?
-  socialLinks UserSocialLink[]
-  pollutionSourcesCreated PollutionSource[]
-  emissionEntriesReported EmissionEntry[]
-  passwordResetTokens     PasswordResetToken[]
-  emailVerificationTokens EmailVerificationToken[]
+  datasetAccessRequests      DatasetAccessRequest[]   @relation("DatasetAccessRequester")
+  datasetAccessDecisions     DatasetAccessRequest[]   @relation("DatasetAccessDecider")
+  alertSubscriptions         AlertSubscription[]
+  notificationDeliveries     NotificationDelivery[]
+  reportComments             ReportComment[]
+  reportMedia                ReportMedia[]
+  organizationMemberships    OrganizationMembership[]
+  profile                    UserProfile?
+  socialLinks                UserSocialLink[]
+  pollutionSourcesCreated    PollutionSource[]
+  emissionEntriesReported    EmissionEntry[]
+  passwordResetTokens        PasswordResetToken[]
+  emailVerificationTokens    EmailVerificationToken[]
 
   @@index([email])
   @@index([role])
@@ -298,16 +309,16 @@ model UserSocialLink {
 }
 
 model RefreshToken {
-  id         String    @id @default(cuid())
-  userId     String
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tokenHash  String    @unique
-  expiresAt  DateTime
-  revokedAt  DateTime?
-  deviceId   String?
-  ipAddress  String?
-  userAgent  String?
-  createdAt  DateTime  @default(now())
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  deviceId  String?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime  @default(now())
 
   @@index([userId])
   @@index([expiresAt])
@@ -341,29 +352,29 @@ model EmailVerificationToken {
 // ─── Organizations ────────────────────────────────────────────────────────────
 
 model Organization {
-  id          String       @id @default(cuid())
+  id          String           @id @default(cuid())
   name        String
   type        OrganizationType
   description String?
   website     String?
-  country     String       @default("Bangladesh")
-  isVerified  Boolean      @default(false)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  country     String           @default("Bangladesh")
+  isVerified  Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
 
-  providers Provider[]
+  providers           Provider[]
   restorationProjects RestorationProject[]
-  memberships OrganizationMembership[]
-  pollutionSources PollutionSource[]
+  memberships         OrganizationMembership[]
+  pollutionSources    PollutionSource[]
 }
 
 model OrganizationMembership {
-  id             String                  @id @default(cuid())
+  id             String                 @id @default(cuid())
   organizationId String
   userId         String
   role           OrganizationMemberRole @default(MEMBER)
-  createdAt      DateTime                @default(now())
-  updatedAt      DateTime                @updatedAt
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -376,32 +387,32 @@ model OrganizationMembership {
 // ─── Providers ────────────────────────────────────────────────────────────────
 
 model Provider {
-  id             String       @id @default(cuid())
+  id             String        @id @default(cuid())
   name           String
   type           ProviderType
-  country        String       @default("Bangladesh")
+  country        String        @default("Bangladesh")
   organizationId String?
   organization   Organization? @relation(fields: [organizationId], references: [id])
-  isActive       Boolean      @default(true)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  isActive       Boolean       @default(true)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
-  datasets       Dataset[]
-  ingestionJobs  IngestionJob[]
+  datasets      Dataset[]
+  ingestionJobs IngestionJob[]
 }
 
 // ─── Geography ────────────────────────────────────────────────────────────────
 
 model Division {
-  id        String     @id @default(cuid())
-  name      String     @unique
-  bnName    String?
-  slug      String?
-  pcode     String?    @unique
-  lat       Float?
-  lng       Float?
-  areaSqKm  Float?
-  url       String?
+  id       String  @id @default(cuid())
+  name     String  @unique
+  bnName   String?
+  slug     String?
+  pcode    String? @unique
+  lat      Float?
+  lng      Float?
+  areaSqKm Float?
+  url      String?
 
   // 30-day rolling climate averages (aggregated bottom-up from unions)
   avgTemp30d       Float?
@@ -449,19 +460,20 @@ model District {
   avgUvIndex30d    Float?
   climateUpdatedAt DateTime?
 
-  upazilas Upazila[]
-  reports  CitizenReport[]
-  alerts   Alert[]
-  observations Observation[]
+  upazilas            Upazila[]
+  waterBodyUpazilas   WaterBodyUpazila[]
+  reports             CitizenReport[]
+  alerts              Alert[]
+  observations        Observation[]
   restorationProjects RestorationProject[]
-  occurrences Occurrence[]
-  alertSubscriptions AlertSubscription[]
+  occurrences         Occurrence[]
+  alertSubscriptions  AlertSubscription[]
 
-  currentWeatherReadings    CurrentWeatherReading[]
-  hourlyWeatherForecasts    HourlyWeatherForecast[]
-  dailyWeatherForecasts     DailyWeatherForecast[]
-  airQualityReadings        HourlyAirQuality[]
-  floodForecasts            FloodForecast[]
+  currentWeatherReadings     CurrentWeatherReading[]
+  hourlyWeatherForecasts     HourlyWeatherForecast[]
+  dailyWeatherForecasts      DailyWeatherForecast[]
+  airQualityReadings         HourlyAirQuality[]
+  floodForecasts             FloodForecast[]
   satelliteRadiationReadings SatelliteRadiationReading[]
   marineForecasts            MarineForecast[]
   pollutionSources           PollutionSource[]
@@ -496,10 +508,108 @@ model Upazila {
   avgUvIndex30d    Float?
   climateUpdatedAt DateTime?
 
-  unions Union[]
+  unions      Union[]
+  waterBodies WaterBodyUpazila[]
 
   @@unique([name, districtId])
   @@index([districtId])
+}
+
+// ─── Water bodies ────────────────────────────────────────────────────────────
+
+model WaterBody {
+  id                     String            @id @default(cuid())
+  code                   String            @unique
+  slug                   String            @unique
+  nameEn                 String
+  nameBn                 String?
+  hydrologicalClass      HydrologicalClass
+  waterBodyType          WaterBodyType
+  waterBodySubtype       String?
+  latitude               Float
+  longitude              Float
+  transboundaryFlag      Boolean           @default(false)
+  transboundaryCountries String?
+
+  upazilas      WaterBodyUpazila[]
+  loticDetails  LoticWaterBodyDetails?
+  lenticDetails LenticWaterBodyDetails?
+  stations      WaterBodyStation[]
+
+  @@index([hydrologicalClass])
+  @@index([waterBodyType])
+}
+
+model WaterBodyUpazila {
+  waterBodyId String
+  upazilaId   String
+
+  waterBody  WaterBody @relation(fields: [waterBodyId], references: [id], onDelete: Cascade)
+  upazila    Upazila   @relation(fields: [upazilaId], references: [id], onDelete: Cascade)
+  district   District? @relation(fields: [districtId], references: [id])
+  districtId String?
+
+  @@id([waterBodyId, upazilaId])
+  @@index([upazilaId])
+}
+
+model LoticWaterBodyDetails {
+  waterBodyId                        String  @id
+  lengthKmBd                         Float?
+  averageWidthM                      String?
+  maxDepthM                          Float?
+  meanDischargeM3s                   Float?
+  hydrologicalOrigin                 String?
+  outfallTo                          String?
+  flowRegime                         String?
+  divisionsTraversed                 String?
+  districtsTraversed                 String?
+  bwdbGaugingStations                String?
+  banglapediaMatchName               String?
+  banglapediaLengthKm                Float?
+  banglapediaAreaCoveredOldDistricts String?
+  banglapediaSource                  String?
+
+  waterBody WaterBody @relation(fields: [waterBodyId], references: [id], onDelete: Cascade)
+}
+
+model LenticWaterBodyDetails {
+  waterBodyId     String  @id
+  areaMonsoonSqKm Float?
+  areaDrySqKm     Float?
+  waterVolumeEst  String?
+  seasonality     String?
+
+  waterBody WaterBody @relation(fields: [waterBodyId], references: [id], onDelete: Cascade)
+}
+
+model WaterLevelStation {
+  id          String  @id @default(cuid())
+  serial      Int
+  stationCode String  @unique
+  name        String
+  riverName   String
+  tidalStatus String?
+  district    String?
+  upazila     String?
+  latitude    Float
+  longitude   Float
+
+  waterBodies WaterBodyStation[]
+
+  @@unique([serial])
+  @@index([riverName])
+}
+
+model WaterBodyStation {
+  waterBodyId String
+  stationId   String
+
+  waterBody WaterBody         @relation(fields: [waterBodyId], references: [id], onDelete: Cascade)
+  station   WaterLevelStation @relation(fields: [stationId], references: [id], onDelete: Cascade)
+
+  @@id([waterBodyId, stationId])
+  @@index([stationId])
 }
 
 model Union {
@@ -536,23 +646,23 @@ model Union {
 
 // Daily climate history per union — used to compute 30-day rolling averages
 model UnionDailyClimate {
-  id           String   @id @default(cuid())
-  unionId      String
-  union        Union    @relation(fields: [unionId], references: [id], onDelete: Cascade)
-  date         DateTime @db.Date
-  avgTemp      Float?
-  minTemp      Float?
-  maxTemp      Float?
-  avgHumidity  Float?
-  totalPrecip  Float?
-  avgWindSpeed Float?
-  maxWindSpeed Float?
+  id            String   @id @default(cuid())
+  unionId       String
+  union         Union    @relation(fields: [unionId], references: [id], onDelete: Cascade)
+  date          DateTime @db.Date
+  avgTemp       Float?
+  minTemp       Float?
+  maxTemp       Float?
+  avgHumidity   Float?
+  totalPrecip   Float?
+  avgWindSpeed  Float?
+  maxWindSpeed  Float?
   avgCloudCover Float?
-  avgPm25      Float?
-  avgPm10      Float?
-  avgUvIndex   Float?
-  avgOzone     Float?
-  fetchedAt    DateTime @default(now())
+  avgPm25       Float?
+  avgPm10       Float?
+  avgUvIndex    Float?
+  avgOzone      Float?
+  fetchedAt     DateTime @default(now())
 
   @@unique([unionId, date])
   @@index([unionId])
@@ -630,12 +740,12 @@ model CitizenReport {
 }
 
 model ReportStatusEvent {
-  id        String       @id @default(cuid())
+  id        String        @id @default(cuid())
   reportId  String
   report    CitizenReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
   status    ReportStatus
   note      String?
-  createdAt DateTime     @default(now())
+  createdAt DateTime      @default(now())
 
   @@index([reportId])
 }
@@ -672,20 +782,20 @@ model ReportMedia {
 // ─── Observations ─────────────────────────────────────────────────────────────
 
 model Observation {
-  id          String                 @id @default(cuid())
+  id          String                @id @default(cuid())
   category    ObservationCategory
-  trustLevel  ObservationTrustLevel  @default(UNVERIFIED)
+  trustLevel  ObservationTrustLevel @default(UNVERIFIED)
   description String
   observerId  String?
-  observer    User?                  @relation(fields: [observerId], references: [id], onDelete: SetNull)
+  observer    User?                 @relation(fields: [observerId], references: [id], onDelete: SetNull)
   districtId  String?
-  district    District?              @relation(fields: [districtId], references: [id])
+  district    District?             @relation(fields: [districtId], references: [id])
   lat         Float?
   lng         Float?
   species     String?
-  observedAt  DateTime               @default(now())
-  createdAt   DateTime               @default(now())
-  updatedAt   DateTime               @updatedAt
+  observedAt  DateTime              @default(now())
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
 
   @@index([observerId])
   @@index([category])
@@ -696,22 +806,22 @@ model Observation {
 // ─── Restoration Projects ──────────────────────────────────────────────────────
 
 model RestorationProject {
-  id             String               @id @default(cuid())
+  id             String              @id @default(cuid())
   title          String
   description    String
   category       RestorationCategory
-  status         ProjectStatus        @default(PLANNED)
+  status         ProjectStatus       @default(PLANNED)
   organizationId String?
-  organization   Organization?        @relation(fields: [organizationId], references: [id])
+  organization   Organization?       @relation(fields: [organizationId], references: [id])
   districtId     String?
-  district       District?            @relation(fields: [districtId], references: [id])
+  district       District?           @relation(fields: [districtId], references: [id])
   startDate      DateTime?
   endDate        DateTime?
   impactSummary  String?
   createdById    String
-  createdBy      User                 @relation(fields: [createdById], references: [id], onDelete: Cascade)
-  createdAt      DateTime             @default(now())
-  updatedAt      DateTime             @updatedAt
+  createdBy      User                @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
 
   participants RestorationParticipant[]
 
@@ -735,20 +845,20 @@ model RestorationParticipant {
 // ─── Biodiversity (GBIF) ───────────────────────────────────────────────────────
 
 model Species {
-  id              String   @id @default(cuid())
-  gbifKey         Int      @unique
-  canonicalName   String
-  vernacularName  String?
-  kingdom         String?
-  phylum          String?
-  class           String?
-  order           String?
-  family          String?
-  genus           String?
-  iucnStatus      String?
-  imageUrl        String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id             String   @id @default(cuid())
+  gbifKey        Int      @unique
+  canonicalName  String
+  vernacularName String?
+  kingdom        String?
+  phylum         String?
+  class          String?
+  order          String?
+  family         String?
+  genus          String?
+  iucnStatus     String?
+  imageUrl       String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   occurrences Occurrence[]
 
@@ -864,20 +974,20 @@ model IngestionJob {
 // Daily simulated river discharge for the nearest supported river/grid cell.
 
 model FloodForecast {
-  id                    String   @id @default(cuid())
-  districtId            String
-  district              District @relation(fields: [districtId], references: [id])
-  lat                   Float
-  lng                   Float
-  forecastDate          DateTime
-  riverDischarge        Float?
-  riverDischargeMean    Float?
-  riverDischargeMedian  Float?
-  riverDischargeMax     Float?
-  riverDischargeMin     Float?
-  riverDischargeP25     Float?
-  riverDischargeP75     Float?
-  createdAt             DateTime @default(now())
+  id                   String   @id @default(cuid())
+  districtId           String
+  district             District @relation(fields: [districtId], references: [id])
+  lat                  Float
+  lng                  Float
+  forecastDate         DateTime
+  riverDischarge       Float?
+  riverDischargeMean   Float?
+  riverDischargeMedian Float?
+  riverDischargeMax    Float?
+  riverDischargeMin    Float?
+  riverDischargeP25    Float?
+  riverDischargeP75    Float?
+  createdAt            DateTime @default(now())
 
   @@unique([districtId, forecastDate])
   @@index([districtId])
@@ -890,24 +1000,24 @@ model FloodForecast {
 // Inland districts will have no rows — the marine API only resolves sea grid cells.
 
 model MarineForecast {
-  id                        String   @id @default(cuid())
-  districtId                String
-  district                  District @relation(fields: [districtId], references: [id])
-  lat                       Float
-  lng                       Float
-  forecastDate              DateTime @db.Date
-  waveHeightMax             Float?
-  waveDirectionDominant     Float?
-  wavePeriodMax             Float?
-  windWaveHeightMax         Float?
-  windWaveDirectionDominant Float?
-  windWavePeriodMax         Float?
-  windWavePeakPeriodMax     Float?
-  swellWaveHeightMax        Float?
+  id                         String   @id @default(cuid())
+  districtId                 String
+  district                   District @relation(fields: [districtId], references: [id])
+  lat                        Float
+  lng                        Float
+  forecastDate               DateTime @db.Date
+  waveHeightMax              Float?
+  waveDirectionDominant      Float?
+  wavePeriodMax              Float?
+  windWaveHeightMax          Float?
+  windWaveDirectionDominant  Float?
+  windWavePeriodMax          Float?
+  windWavePeakPeriodMax      Float?
+  swellWaveHeightMax         Float?
   swellWaveDirectionDominant Float?
-  swellWavePeriodMax        Float?
-  swellWavePeakPeriodMax    Float?
-  createdAt                 DateTime @default(now())
+  swellWavePeriodMax         Float?
+  swellWavePeakPeriodMax     Float?
+  createdAt                  DateTime @default(now())
 
   @@unique([districtId, forecastDate])
   @@index([districtId])
@@ -984,12 +1094,12 @@ model HourlyWeatherForecast {
 }
 
 model DailyWeatherForecast {
-  id                          String   @id @default(cuid())
+  id                          String    @id @default(cuid())
   districtId                  String
-  district                    District @relation(fields: [districtId], references: [id])
+  district                    District  @relation(fields: [districtId], references: [id])
   lat                         Float
   lng                         Float
-  forecastDate                DateTime @db.Date
+  forecastDate                DateTime  @db.Date
   weatherCode                 Int?
   temperature2mMax            Float?
   temperature2mMin            Float?
@@ -1001,27 +1111,27 @@ model DailyWeatherForecast {
   uvIndexMax                  Float?
   sunrise                     DateTime?
   sunset                      DateTime?
-  createdAt                   DateTime @default(now())
+  createdAt                   DateTime  @default(now())
 
   @@unique([districtId, forecastDate])
   @@index([districtId])
 }
 
 model HourlyAirQuality {
-  id               String   @id @default(cuid())
-  districtId       String
-  district         District @relation(fields: [districtId], references: [id])
-  lat              Float
-  lng              Float
-  forecastTime     DateTime
-  pm10             Float?
-  pm25             Float?
-  carbonMonoxide   Float?
-  nitrogenDioxide  Float?
-  sulphurDioxide   Float?
-  ozone            Float?
-  uvIndex          Float?
-  createdAt        DateTime @default(now())
+  id              String   @id @default(cuid())
+  districtId      String
+  district        District @relation(fields: [districtId], references: [id])
+  lat             Float
+  lng             Float
+  forecastTime    DateTime
+  pm10            Float?
+  pm25            Float?
+  carbonMonoxide  Float?
+  nitrogenDioxide Float?
+  sulphurDioxide  Float?
+  ozone           Float?
+  uvIndex         Float?
+  createdAt       DateTime @default(now())
 
   @@unique([districtId, forecastTime])
   @@index([districtId])
@@ -1031,21 +1141,21 @@ model HourlyAirQuality {
 // Source-level pollution tracking — distinct from ambient HourlyAirQuality readings.
 
 model PollutionSource {
-  id             String            @id @default(cuid())
+  id             String              @id @default(cuid())
   name           String
   type           PollutionSourceType
   description    String?
   districtId     String?
-  district       District?         @relation(fields: [districtId], references: [id])
+  district       District?           @relation(fields: [districtId], references: [id])
   lat            Float?
   lng            Float?
   organizationId String?
-  organization   Organization?     @relation(fields: [organizationId], references: [id])
-  isActive       Boolean           @default(true)
+  organization   Organization?       @relation(fields: [organizationId], references: [id])
+  isActive       Boolean             @default(true)
   createdById    String
-  createdBy      User              @relation(fields: [createdById], references: [id], onDelete: Cascade)
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
+  createdBy      User                @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
 
   entries EmissionEntry[]
 
@@ -1055,7 +1165,7 @@ model PollutionSource {
 }
 
 model EmissionEntry {
-  id                String        @id @default(cuid())
+  id                String          @id @default(cuid())
   sourceId          String
   source            PollutionSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
   pollutant         PollutantType
@@ -1066,9 +1176,9 @@ model EmissionEntry {
   periodEnd         DateTime?
   notes             String?
   reportedById      String?
-  reportedBy        User?         @relation(fields: [reportedById], references: [id], onDelete: SetNull)
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
+  reportedBy        User?           @relation(fields: [reportedById], references: [id], onDelete: SetNull)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
 
   @@index([sourceId])
   @@index([pollutant])
