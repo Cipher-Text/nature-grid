@@ -1,46 +1,16 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
-import { DeliveryStatus, type AlertSeverity } from '@prisma/client';
+import { DeliveryStatus } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { EmailService, type AlertForEmail } from './email.service';
-
-export const EMAIL_QUEUE = 'email';
-
-/** Job sent when a user requests a password reset. */
-export interface PasswordResetJobData {
-  to: string;
-  displayName: string;
-  resetUrl: string;
-}
-
-/** Job sent when a new user registration needs email verification. */
-export interface EmailVerificationJobData {
-  to: string;
-  displayName: string;
-  verificationUrl: string;
-}
-
-/**
- * Job sent once per subscriber when an alert is dispatched.
- * The delivery record (status=PENDING) is created before the job is enqueued
- * so the dispatch is auditable even if the queue is backlogged.
- */
-export interface AlertNotificationJobData {
-  deliveryId: string;
-  to: string;
-  displayName: string;
-  /** Alert snapshot at dispatch time — avoids an extra DB round-trip in the processor. */
-  alert: {
-    id: string;
-    title: string;
-    severity: AlertSeverity;
-    description: string;
-    instructions: string | null;
-    issuedAt: string; // ISO-8601 string (Date is not JSON-serialisable)
-    district: { name: string } | null;
-  };
-}
+import {
+  EMAIL_QUEUE,
+  AlertNotificationJobData,
+  EmailVerificationJobData,
+  PasswordResetJobData,
+} from './notifications.constants';
+export { EMAIL_QUEUE, AlertNotificationJobData, EmailVerificationJobData, PasswordResetJobData } from './notifications.constants';
 
 @Processor(EMAIL_QUEUE)
 export class EmailProcessor extends WorkerHost {

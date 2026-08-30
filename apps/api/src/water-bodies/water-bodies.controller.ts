@@ -25,7 +25,10 @@ export class WaterBodiesController {
   }
 
   @Get('water-level-stations')
-  listStations() {
-    return this.service.listStations();
+  listStations(
+    @Query('district') districtName?: string,
+    @Query('tidalStatus') tidalStatus?: string,
+  ) {
+    return this.service.listStations({ districtName, tidalStatus });
   }
 }

@@ -461,7 +461,6 @@ model District {
   climateUpdatedAt DateTime?
 
   upazilas            Upazila[]
-  waterBodyUpazilas   WaterBodyUpazila[]
   reports             CitizenReport[]
   alerts              Alert[]
   observations        Observation[]
@@ -544,10 +543,8 @@ model WaterBodyUpazila {
   waterBodyId String
   upazilaId   String
 
-  waterBody  WaterBody @relation(fields: [waterBodyId], references: [id], onDelete: Cascade)
-  upazila    Upazila   @relation(fields: [upazilaId], references: [id], onDelete: Cascade)
-  district   District? @relation(fields: [districtId], references: [id])
-  districtId String?
+  waterBody WaterBody @relation(fields: [waterBodyId], references: [id], onDelete: Cascade)
+  upazila   Upazila   @relation(fields: [upazilaId], references: [id], onDelete: Cascade)
 
   @@id([waterBodyId, upazilaId])
   @@index([upazilaId])

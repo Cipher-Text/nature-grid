@@ -1,69 +1,18 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { HydrologicalClass, Prisma, WaterBodyType } from '@prisma/client';
-import { existsSync, readFileSync } from 'fs';
-import { resolve } from 'path';
 import { PrismaService } from '../database/prisma.service';
+import { WATER_BODIES, WATER_LEVEL_STATIONS } from './seed/water-bodies';
 
-type CsvRow = Record<string, string>;
-
-function parseCsv(text: string): CsvRow[] {
-  const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/).filter(Boolean);
-  if (!lines.length) return [];
-  const parseLine = (line: string) => {
-    const cells: string[] = [];
-    let cell = '';
-    let quoted = false;
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
-      if (char === '"' && line[i + 1] === '"' && quoted) {
-        cell += '"';
-        i++;
-      } else if (char === '"') {
-        quoted = !quoted;
-      } else if (char === ',' && !quoted) {
-        cells.push(cell);
-        cell = '';
-      } else {
-        cell += char;
-      }
-    }
-    cells.push(cell);
-    return cells;
-  };
-  const headers = parseLine(lines[0]);
-  return lines.slice(1).map((line) => {
-    const values = parseLine(line);
-    return Object.fromEntries(headers.map((header, index) => [header, values[index] ?? '']));
-  });
-}
-
-function value(row: CsvRow, key: string) {
-  const result = row[key]?.trim();
-  return result || undefined;
-}
-
-function numberValue(row: CsvRow, key: string) {
-  const result = value(row, key);
-  if (!result) return undefined;
-  const parsed = Number(result);
-  return Number.isFinite(parsed) ? parsed : undefined;
-}
-
-function normalized(valueToNormalize: string) {
-  return valueToNormalize
+/** Normalise a location name for fuzzy matching.
+ *  Handles spelling variants that appear across the CSV sources. */
+function normalised(name: string): string {
+  return name
     .toLowerCase()
     .replace(/jessore/g, 'jashore')
     .replace(/barisal/g, 'barishal')
     .replace(/chittagong/g, 'chattogram')
     .replace(/comilla/g, 'cumilla')
     .replace(/[^a-z0-9]/g, '');
-}
-
-function listValues(input?: string) {
-  return (input ?? '')
-    .split(/[/;]/)
-    .map((part) => part.trim())
-    .filter(Boolean);
 }
 
 @Injectable()
@@ -73,154 +22,204 @@ export class WaterBodiesService implements OnModuleInit {
   constructor(private readonly prisma: PrismaService) {}
 
   async onModuleInit() {
-    const files = ['water-bodies.csv', 'lotic-water-bodies.csv', 'lentic-water-bodies.csv', 'water-level-station.csv'];
-    const roots = [process.cwd(), resolve(process.cwd(), '../..'), resolve(__dirname, '../../../..')];
-    const root = roots.find((candidate) => files.every((file) => existsSync(resolve(candidate, file))));
-    if (!root) {
-      this.logger.warn('Water-body CSV files not found; skipping water-body seed');
+    // Skip if already seeded (same guard pattern as LocationsService)
+    const existing = await this.prisma.waterBody.count();
+    if (existing > 0) {
+      this.logger.log(`Water bodies already seeded (${existing} records) — skipping`);
       return;
     }
-    await this.seed(root);
+    try {
+      await this.seed();
+    } catch (err) {
+      this.logger.error('Water-body seed failed', err instanceof Error ? err.stack : String(err));
+    }
   }
 
-  private async seed(root: string) {
-    const read = (file: string) => parseCsv(readFileSync(resolve(root, file), 'utf8'));
-    const waterRows = read('water-bodies.csv');
-    const loticRows = new Map(read('lotic-water-bodies.csv').map((row) => [row.water_body_id, row]));
-    const lenticRows = new Map(read('lentic-water-bodies.csv').map((row) => [row.water_body_id, row]));
-    const stationRows = read('water-level-station.csv');
+  private async seed() {
+    this.logger.log('Seeding water bodies…');
 
+    // ── Load geographic lookup tables ────────────────────────────────────────
     const districts = await this.prisma.district.findMany({ select: { id: true, name: true } });
     const upazilas = await this.prisma.upazila.findMany({
-      select: { id: true, name: true, districtId: true, district: { select: { name: true } } },
+      select: { id: true, name: true, districtId: true },
     });
-    const districtNames = new Map(districts.map((district) => [normalized(district.name), district]));
-    const upazilaNames = new Map<string, typeof upazilas>();
-    const waterBodyNameIds = new Map<string, string>();
-    for (const upazila of upazilas) {
-      const key = normalized(upazila.name);
-      upazilaNames.set(key, [...(upazilaNames.get(key) ?? []), upazila]);
+
+    if (districts.length === 0) {
+      this.logger.warn('No districts found — location seeds have not run yet. Upazila links will be skipped.');
     }
 
-    let linkedLocations = 0;
-    for (const row of waterRows) {
-      const code = value(row, 'id');
-      if (!code) continue;
-      const type = value(row, 'water_body_type')?.toUpperCase();
-      const data = {
-        code,
-        slug: value(row, 'slug') ?? code.toLowerCase(),
-        nameEn: value(row, 'name_en') ?? code,
-        nameBn: value(row, 'name_bn'),
-        hydrologicalClass: value(row, 'hydrological_class') as HydrologicalClass,
-        waterBodyType: (type === 'RIVER' ? WaterBodyType.RIVER : type === 'LAKE' ? WaterBodyType.LAKE : WaterBodyType.WETLAND),
-        waterBodySubtype: value(row, 'water_body_subtype'),
-        latitude: numberValue(row, 'latitude') ?? 0,
-        longitude: numberValue(row, 'longitude') ?? 0,
-        transboundaryFlag: value(row, 'transboundary_flag') === 'true',
-        transboundaryCountries: value(row, 'transboundary_countries'),
-      } satisfies Prisma.WaterBodyCreateInput;
+    // name → district record
+    const districtByName = new Map(districts.map((d) => [normalised(d.name), d]));
 
-      const waterBody = await this.prisma.waterBody.upsert({ where: { code }, update: data, create: data });
-      waterBodyNameIds.set(normalized(data.nameEn), waterBody.id);
-      const districtKeys = listValues(value(row, 'district')).map(normalized);
+    // normalised-name → upazila[] (multiple upazilas can share a name across districts)
+    const upazilasByName = new Map<string, typeof upazilas>();
+    for (const u of upazilas) {
+      const key = normalised(u.name);
+      upazilasByName.set(key, [...(upazilasByName.get(key) ?? []), u]);
+    }
+
+    // waterBodyId keyed by code — needed for station linking in the second pass
+    const idByCode = new Map<string, string>();
+    let upazilaLinks = 0;
+    let ambiguous = 0;
+    let unmatched = 0;
+
+    // ── Phase 1: water bodies + lentic/lotic details + upazila links ─────────
+    for (const seed of WATER_BODIES) {
+      const rawType = seed.waterBodyType.toUpperCase();
+      const wbType: WaterBodyType =
+        rawType === 'RIVER' ? WaterBodyType.RIVER
+        : rawType === 'LAKE' ? WaterBodyType.LAKE
+        : WaterBodyType.WETLAND;
+
+      const data: Prisma.WaterBodyCreateInput = {
+        code: seed.code,
+        slug: seed.slug,
+        nameEn: seed.nameEn,
+        nameBn: seed.nameBn,
+        hydrologicalClass: seed.hydrologicalClass as HydrologicalClass,
+        waterBodyType: wbType,
+        waterBodySubtype: seed.waterBodySubtype,
+        latitude: seed.latitude,
+        longitude: seed.longitude,
+        transboundaryFlag: seed.transboundaryFlag,
+        transboundaryCountries: seed.transboundaryCountries,
+      };
+
+      const wb = await this.prisma.waterBody.upsert({
+        where: { code: seed.code },
+        create: data,
+        update: data,
+      });
+      idByCode.set(seed.code, wb.id);
+
+      // Upazila links — use district IDs to disambiguate same-named upazilas across districts
       const districtIds = new Set(
-        districtKeys.map((key) => districtNames.get(key)?.id).filter((id): id is string => Boolean(id)),
+        seed.districtNames
+          .map((n) => districtByName.get(normalised(n))?.id)
+          .filter((id): id is string => Boolean(id)),
       );
-      for (const upazilaName of listValues(value(row, 'upazila'))) {
-        const candidates = (upazilaNames.get(normalized(upazilaName)) ?? []).filter(
-          (upazila) => !districtIds.size || districtIds.has(upazila.districtId),
+
+      for (const upazilaName of seed.upazilaNames) {
+        const key = normalised(upazilaName);
+        const candidates = (upazilasByName.get(key) ?? []).filter(
+          (u) => !districtIds.size || districtIds.has(u.districtId),
         );
+
         if (candidates.length === 1) {
           await this.prisma.waterBodyUpazila.upsert({
-            where: { waterBodyId_upazilaId: { waterBodyId: waterBody.id, upazilaId: candidates[0].id } },
+            where: { waterBodyId_upazilaId: { waterBodyId: wb.id, upazilaId: candidates[0].id } },
+            create: { waterBodyId: wb.id, upazilaId: candidates[0].id },
             update: {},
-            create: { waterBodyId: waterBody.id, upazilaId: candidates[0].id },
           });
-          linkedLocations++;
-        } else if (candidates.length !== 0) {
-          this.logger.warn(`Ambiguous upazila mapping: ${code} -> ${upazilaName}`);
+          upazilaLinks++;
+        } else if (candidates.length > 1) {
+          this.logger.warn(`Ambiguous upazila "${upazilaName}" for ${seed.code} — skipped`);
+          ambiguous++;
         } else {
-          this.logger.warn(`Unmatched upazila mapping: ${code} -> ${upazilaName}`);
+          this.logger.warn(`No upazila match for "${upazilaName}" (${seed.code})`);
+          unmatched++;
         }
       }
 
-      const lotic = loticRows.get(code);
-      if (lotic) {
-        await this.prisma.loticWaterBodyDetails.upsert({
-          where: { waterBodyId: waterBody.id },
-          update: this.loticData(lotic, waterBody.id),
-          create: this.loticData(lotic, waterBody.id),
-        });
-      }
-      const lentic = lenticRows.get(code);
-      if (lentic) {
+      // Lentic details
+      if (seed.lentic) {
+        const lenticData: Prisma.LenticWaterBodyDetailsCreateInput = {
+          waterBody: { connect: { id: wb.id } },
+          areaMonsoonSqKm: seed.lentic.areaMonsoonSqKm,
+          areaDrySqKm: seed.lentic.areaDrySqKm,
+          waterVolumeEst: seed.lentic.waterVolumeEst,
+          seasonality: seed.lentic.seasonality,
+        };
         await this.prisma.lenticWaterBodyDetails.upsert({
-          where: { waterBodyId: waterBody.id },
-          update: this.lenticData(lentic, waterBody.id),
-          create: this.lenticData(lentic, waterBody.id),
+          where: { waterBodyId: wb.id },
+          create: lenticData,
+          update: lenticData,
+        });
+      }
+
+      // Lotic details
+      if (seed.lotic) {
+        const loticData: Prisma.LoticWaterBodyDetailsCreateInput = {
+          waterBody: { connect: { id: wb.id } },
+          lengthKmBd: seed.lotic.lengthKmBd,
+          averageWidthM: seed.lotic.averageWidthM,
+          maxDepthM: seed.lotic.maxDepthM,
+          meanDischargeM3s: seed.lotic.meanDischargeM3s,
+          hydrologicalOrigin: seed.lotic.hydrologicalOrigin,
+          outfallTo: seed.lotic.outfallTo,
+          flowRegime: seed.lotic.flowRegime,
+          divisionsTraversed: seed.lotic.divisionsTraversed,
+          districtsTraversed: seed.lotic.districtsTraversed,
+          bwdbGaugingStations: seed.lotic.stationCodes.join(', ') || undefined,
+          banglapediaMatchName: seed.lotic.banglapediaMatchName,
+          banglapediaLengthKm: seed.lotic.banglapediaLengthKm,
+          banglapediaAreaCoveredOldDistricts: seed.lotic.banglapediaAreaCoveredOldDistricts,
+          banglapediaSource: seed.lotic.banglapediaSource,
+        };
+        await this.prisma.loticWaterBodyDetails.upsert({
+          where: { waterBodyId: wb.id },
+          create: loticData,
+          update: loticData,
         });
       }
     }
 
-    for (const row of stationRows) {
-      const stationCode = value(row, 'Station ID');
-      if (!stationCode) continue;
-      const data = {
-        serial: Number(row.SL),
-        stationCode,
-        name: value(row, 'Station') ?? stationCode,
-        riverName: value(row, 'River') ?? 'Unknown',
-        tidalStatus: value(row, 'Tidal Status'),
-        district: value(row, 'District'),
-        upazila: value(row, 'Upazila'),
-        latitude: numberValue(row, 'Latitude') ?? 0,
-        longitude: numberValue(row, 'Longitude') ?? 0,
-      } satisfies Prisma.WaterLevelStationCreateInput;
-      await this.prisma.waterLevelStation.upsert({ where: { stationCode }, update: data, create: data });
-      const matchedWaterBodyId = waterBodyNameIds.get(normalized(data.riverName));
-      if (matchedWaterBodyId) {
-        const station = await this.prisma.waterLevelStation.findUniqueOrThrow({ where: { stationCode } });
+    // ── Phase 2: water-level stations ────────────────────────────────────────
+    const stationIdByCode = new Map<string, string>();
+
+    for (const seed of WATER_LEVEL_STATIONS) {
+      const data: Prisma.WaterLevelStationCreateInput = {
+        serial: seed.serial,
+        stationCode: seed.stationCode,
+        name: seed.name,
+        riverName: seed.riverName,
+        tidalStatus: seed.tidalStatus,
+        district: seed.district,
+        upazila: seed.upazila,
+        latitude: seed.latitude,
+        longitude: seed.longitude,
+      };
+      const station = await this.prisma.waterLevelStation.upsert({
+        where: { stationCode: seed.stationCode },
+        create: data,
+        update: data,
+      });
+      stationIdByCode.set(seed.stationCode, station.id);
+    }
+
+    // ── Phase 3: link stations to water bodies via explicit station codes ─────
+    // Lotic water bodies carry a stationCodes[] from the bwdb_gauging_stations
+    // column — far more reliable than fuzzy river-name matching.
+    let stationLinks = 0;
+    for (const seed of WATER_BODIES) {
+      if (!seed.lotic?.stationCodes.length) continue;
+      const wbId = idByCode.get(seed.code);
+      if (!wbId) continue;
+
+      for (const code of seed.lotic.stationCodes) {
+        const stationId = stationIdByCode.get(code);
+        if (!stationId) {
+          this.logger.debug(`Station ${code} referenced by ${seed.code} not found in station table — skipped`);
+          continue;
+        }
         await this.prisma.waterBodyStation.upsert({
-          where: { waterBodyId_stationId: { waterBodyId: matchedWaterBodyId, stationId: station.id } },
+          where: { waterBodyId_stationId: { waterBodyId: wbId, stationId } },
+          create: { waterBodyId: wbId, stationId },
           update: {},
-          create: { waterBodyId: matchedWaterBodyId, stationId: station.id },
         });
+        stationLinks++;
       }
     }
 
-    this.logger.log(`Water bodies seeded: ${waterRows.length} bodies, ${loticRows.size} lotic, ${lenticRows.size} lentic, ${stationRows.length} stations, ${linkedLocations} upazila links`);
+    this.logger.log(
+      `Water bodies seeded: ${WATER_BODIES.length} bodies, ` +
+        `${upazilaLinks} upazila links (${ambiguous} ambiguous, ${unmatched} unmatched), ` +
+        `${WATER_LEVEL_STATIONS.length} stations, ${stationLinks} station↔body links`,
+    );
   }
 
-  private loticData(row: CsvRow, waterBodyId: string): Prisma.LoticWaterBodyDetailsCreateInput {
-    return {
-      waterBody: { connect: { id: waterBodyId } },
-      lengthKmBd: numberValue(row, 'length_km_bd'),
-      averageWidthM: value(row, 'avg_width_m'),
-      maxDepthM: numberValue(row, 'max_depth_m'),
-      meanDischargeM3s: numberValue(row, 'mean_discharge_m3s'),
-      hydrologicalOrigin: value(row, 'hydrological_origin'),
-      outfallTo: value(row, 'outfall_to'),
-      flowRegime: value(row, 'flow_regime'),
-      divisionsTraversed: value(row, 'divisions_traversed'),
-      districtsTraversed: value(row, 'districts_traversed'),
-      bwdbGaugingStations: value(row, 'bwdb_gauging_stations'),
-      banglapediaMatchName: value(row, 'banglapedia_match_name'),
-      banglapediaLengthKm: numberValue(row, 'banglapedia_length_km'),
-      banglapediaAreaCoveredOldDistricts: value(row, 'banglapedia_area_covered_old_districts'),
-      banglapediaSource: value(row, 'banglapedia_source'),
-    };
-  }
-
-  private lenticData(row: CsvRow, waterBodyId: string): Prisma.LenticWaterBodyDetailsCreateInput {
-    return {
-      waterBody: { connect: { id: waterBodyId } },
-      areaMonsoonSqKm: numberValue(row, 'area_monsoon_sqkm'),
-      areaDrySqKm: numberValue(row, 'area_dry_sqkm'),
-      waterVolumeEst: value(row, 'water_volume_est'),
-      seasonality: value(row, 'seasonality'),
-    };
-  }
+  // ── Public read methods ────────────────────────────────────────────────────
 
   list(query: { hydrologicalClass?: HydrologicalClass; upazilaId?: string; districtId?: string }) {
     return this.prisma.waterBody.findMany({
@@ -233,18 +232,36 @@ export class WaterBodiesService implements OnModuleInit {
             : undefined,
       },
       orderBy: { nameEn: 'asc' },
-      include: { upazilas: { include: { upazila: { include: { district: true } } } }, loticDetails: true, lenticDetails: true },
+      include: {
+        upazilas: { include: { upazila: { include: { district: true } } } },
+        loticDetails: true,
+        lenticDetails: true,
+      },
     });
   }
 
   findOne(id: string) {
     return this.prisma.waterBody.findFirst({
       where: { OR: [{ id }, { code: id }, { slug: id }] },
-      include: { upazilas: { include: { upazila: { include: { district: true } } } }, loticDetails: true, lenticDetails: true, stations: { include: { station: true } } },
+      include: {
+        upazilas: { include: { upazila: { include: { district: true } } } },
+        loticDetails: true,
+        lenticDetails: true,
+        stations: { include: { station: true } },
+      },
     });
   }
 
-  listStations() {
-    return this.prisma.waterLevelStation.findMany({ orderBy: { serial: 'asc' }, include: { waterBodies: { include: { waterBody: true } } } });
+  listStations(query: { districtName?: string; tidalStatus?: string } = {}) {
+    return this.prisma.waterLevelStation.findMany({
+      where: {
+        district: query.districtName
+          ? { contains: query.districtName, mode: 'insensitive' }
+          : undefined,
+        tidalStatus: query.tidalStatus,
+      },
+      orderBy: { serial: 'asc' },
+      include: { waterBodies: { include: { waterBody: { select: { id: true, code: true, nameEn: true } } } } },
+    });
   }
 }

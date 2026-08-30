@@ -5,7 +5,7 @@ import { Queue } from 'bullmq';
 import { PrismaService } from '../database/prisma.service';
 import { CreateSubscriptionDto } from './dto/create-subscription.dto';
 import { assertDistrictExists } from '../common/validate-district';
-import { EMAIL_QUEUE, type AlertNotificationJobData } from './email.processor';
+import { EMAIL_QUEUE, type AlertNotificationJobData } from './notifications.constants';
 
 /**
  * Which subscription minSeverity values qualify for a given alert severity.

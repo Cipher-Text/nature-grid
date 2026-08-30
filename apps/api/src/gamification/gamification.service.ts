@@ -3,7 +3,7 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { ObservationCategory, ObservationTrustLevel, ReportStatus, ReportCategory } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
-import { GAMIFICATION_QUEUE, type EvaluateBadgesJobData } from './gamification.processor';
+import { GAMIFICATION_QUEUE, type EvaluateBadgesJobData } from './gamification.constants';
 import {
   BADGE_DEFS,
   BadgeCategory,

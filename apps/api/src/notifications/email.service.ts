@@ -9,7 +9,7 @@ import {
   EMAIL_QUEUE,
   type PasswordResetJobData,
   type EmailVerificationJobData,
-} from './email.processor';
+} from './notifications.constants';
 
 /** Retry configuration for transactional emails (not alert fan-out). */
 const EMAIL_JOB_OPTS = {

@@ -2,12 +2,8 @@ import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { GamificationService } from './gamification.service';
-
-export const GAMIFICATION_QUEUE = 'gamification';
-
-export interface EvaluateBadgesJobData {
-  userId: string;
-}
+import { GAMIFICATION_QUEUE, EvaluateBadgesJobData } from './gamification.constants';
+export { GAMIFICATION_QUEUE, EvaluateBadgesJobData } from './gamification.constants';
 
 /**
  * Processes badge-evaluation jobs that are enqueued after any contribution
