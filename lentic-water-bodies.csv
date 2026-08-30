@@ -1,0 +1,26 @@
+water_body_id,area_monsoon_sqkm,area_dry_sqkm,water_volume_est,seasonality
+BD-WB-0001,136.00,40.00,Medium seasonal,Medium seasonal
+BD-WB-0002,3.50,1.20,Low-medium seasonal,Low-medium seasonal
+BD-WB-0003,1.00,0.85,Perennial wetland sanctuary,Perennial wetland sanctuary
+BD-WB-0004,90.00,35.00,Polder waterlogged basin,Polder waterlogged basin
+BD-WB-0005,375.00,55.00,Dynamic seasonal,Dynamic seasonal
+BD-WB-0006,70.00,20.00,High seasonal storage,High seasonal storage
+BD-WB-0007,85.00,22.00,High seasonal storage,High seasonal storage
+BD-WB-0008,130.00,30.00,Medium seasonal storage,Medium seasonal storage
+BD-WB-0009,181.15,44.00,High seasonal storage,High seasonal storage
+BD-WB-0010,40.00,10.00,Medium seasonal storage,Medium seasonal storage
+BD-WB-0011,52.00,15.00,High seasonal storage,High seasonal storage
+BD-WB-0012,45.00,12.00,Seasonal flood storage,Seasonal flood storage
+BD-WB-0013,60.00,18.00,High seasonal storage,High seasonal storage
+BD-WB-0014,100.00,28.00,High seasonal storage,High seasonal storage
+BD-WB-0015,2.80,2.10,Perennial oxbow basin,Perennial oxbow basin
+BD-WB-0016,1.20,0.95,Perennial oxbow basin,Perennial oxbow basin
+BD-WB-0017,1.40,1.10,Perennial oxbow basin,Perennial oxbow basin
+BD-WB-0018,1.60,1.30,Perennial oxbow basin,Perennial oxbow basin
+BD-WB-0019,0.06,0.06,Constant deep basin,
+BD-WB-0020,0.20,0.18,Constant shallow basin,
+BD-WB-0021,0.18,0.18,Static artificial reservoir,
+BD-WB-0022,0.15,0.15,Static artificial reservoir,
+BD-WB-0023,736.00,650.00,8.25 Million Acre-Feet,
+BD-WB-0024,11.00,9.50,Irrigation storage,
+BD-WB-0025,1.20,1.10,Regulated urban retention,

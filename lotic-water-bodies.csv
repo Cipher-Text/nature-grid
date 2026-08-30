@@ -1,0 +1,117 @@
+water_body_id,length_km_bd,avg_width_m,max_depth_m,mean_discharge_m3s,hydrological_origin,outfall_to,flow_regime,divisions_traversed,districts_traversed,bwdb_gauging_stations,banglapedia_match_name,banglapedia_length_km,banglapedia_area_covered_old_districts,banglapedia_source
+BD-WB-0026,120,50-150,8,160,Lushai Hills foothills,Kaptai Lake / Karnaphuli River,,Chattogram,Rangamati,SW147 (Kasalong),,,,
+BD-WB-0027,238,80-200,9,210,Jamalpur hills,Dhaleshwari River,,Dhaka,Jamalpur / Tangail / Gazipur / Dhaka,SW14 (Nayarhat),Bangshi,238,Mymensingh (198) Dhaka (40),https://en.banglapedia.org/index.php/River
+BD-WB-0028,75,150-600,8,400,Himalayan foothills (Bhutan/India),Jamuna River,,Rangpur,Lalmonirhat / Kurigram,SW68 (Kurigram),,,,
+BD-WB-0029,50,150-400,7,350,Himalayan foothills (Bhutan/India),Jamuna River,,Rangpur,Kurigram,SW79 (Pateswari),,,,
+BD-WB-0030,225,80-200,8,340,Garo Hills foothills,Dhanu River / Meghna network,,Mymensingh,Sherpur / Netrokona,SW143 (Jariajanjail),,,,
+BD-WB-0031,82,40-100,5,90,Tripura Hills (India),Meghna River,,Sylhet,Habiganj,SW281 (Shaistaganj),,,,
+BD-WB-0032,81,50-150,9,120,Badnatali Hill Ranges (Ramgarh),Karnaphuli River,,Chattogram,Khagrachari / Chattogram,SW119.1 (Panchpukuria),,,,
+BD-WB-0033,98,100-300,10,310,Tripura Hills / Meghna network,Meghna River,,Chattogram,Brahmanbaria,SW296 (Akhaura),,,,
+BD-WB-0034,187,50-250,8,260,Himalayan foothills,Bangali River / Atrai,,Rangpur / Rajshahi,Panchagarh / Dinajpur / Gaibandha / Bogura / Sirajganj,"SW149 (Chak Rahimpur), SW151 (Bogura)",,,,
+BD-WB-0035,390,100-400,12,350,Siliguri (West Bengal),Jamuna River / Chalan Beel,,Rangpur / Rajshahi,Panchagarh / Dinajpur / Naogaon / Natore / Pabna,"SW7 (Naogaon), SW9 (Atrai)",,,,
+BD-WB-0036,35,100-350,8,310,Khasi Hills (Meghalaya),Surma River / Haor basin,,Sylhet,Sunamganj,SW129 (Tahjirpur),,,,
+BD-WB-0037,166,100-250,9,220,Tripura Hills (India),Kushiyara River,,Sylhet,Habiganj,SW158 (Habiganj),,,,
+BD-WB-0038,36,150-400,10,420,Mahaldiram Hills (Himalayas),Padma River,,Rajshahi / Rangpur,Panchagarh / Chapainawabganj,"SW184 (Tetulia), SW186 (Chapainawabganj)",,,,
+BD-WB-0039,167,80-200,8,200,Tripura Hills (India),Kushiyara River,,Sylhet,Moulvibazar,SW197 (Moulvibazar),,,,
+BD-WB-0040,145,100-300,7,210,Omgat River (Meghalaya),Surma River,,Sylhet,Sylhet,SW224 (Jaflong),,,,
+BD-WB-0041,160,80-200,9,190,West Bengal (India),Mahananda River,,Rajshahi / Rangpur,Dinajpur / Naogaon / Chapainawabganj,SW237 (Rohanpur),Punarbhaba,160,Dinajpur (80) Rajshahi (80),https://en.banglapedia.org/index.php/River
+BD-WB-0042,56,80-200,8,190,Jaintia Hills (Meghalaya),Surma River,,Sylhet,Sylhet,SW255 (Sarighat),,,,
+BD-WB-0043,50,100-300,7,280,Garo Hills (Meghalaya),Kangsha River,,Mymensingh,Netrokona,SW273 (Durgapur),,,,
+BD-WB-0044,160,300-1200,16,1800,Padma River Off-take,Tentulia River / Bay of Bengal,,Dhaka / Barishal,Rajbari / Faridpur / Madaripur / Barishal,SW3 (Madaripur),Arial Khan,160,Faridpur (102) Barisal (58),https://en.banglapedia.org/index.php/River
+BD-WB-0045,160,100-400,10,320,Padma Off-take,Rupsa River,,Khulna,Meherpur / Chuadanga / Jhenaidah / Jashore / Khulna,"SW26 (Jashore), SW28 (Khulna)",Bhairab,250,"Jessore, Khulna",https://en.banglapedia.org/index.php/River
+BD-WB-0046,170,60-180,7,160,Nabaganga Off-take,Nabaganga River,,Khulna,Chuadanga / Jhenaidah / Magura / Narail,SW64 (Narail),Chitra,170,Kushtia (19) Jessore (151),https://en.banglapedia.org/index.php/River
+BD-WB-0047,160,200-800,15,1200,Jamuna Off-take,Meghna River,,Dhaka,Tangail / Manikganj / Dhaka / Narayanganj,"SW87 (Rekabi Bazar), SW88 (Jagannathpur)",Dhaleshwari,160,"Mymensingh, Dhaka",https://en.banglapedia.org/index.php/River
+BD-WB-0048,210,250-800,15,1300,Padma River Off-take,Madhumati River / Rupsa-Pasur,,Khulna / Dhaka,Kushtia / Jhenaidah / Magura / Rajbari / Faridpur,"SW99 (Gorai Railway Bridge), SW101 (Kamarkhali)",Gorai-Madhumati-Baleshwar,371,"Kushtia (37), Faridpur (71), Jessore (92), Khulna (104), Barisal (67)",https://en.banglapedia.org/index.php/River
+BD-WB-0049,180,80-300,9,210,Bhairab Off-take,Arpangachhia River / Sundarbans,,Khulna,Jhenaidah / Jashore / Satkhira,"SW162 (Tala), SW164 (Paikgacha)",Kobadak,260,Jessore (80) Khulna (180),https://en.banglapedia.org/index.php/River
+BD-WB-0050,121,100-250,8,240,Padma Off-take,Bhairab / Kumar River,,Khulna,Kushtia / Chuadanga,SW199 (Munshiganj),Mathabhanga,156,"Rajshahi (16), Kushtia (140)",https://en.banglapedia.org/index.php/River
+BD-WB-0051,230,80-250,9,280,Mathabhanga Off-take,Chitra / Rupsa network,,Khulna,Jhenaidah / Magura / Narail,SW214 (Magura),Nabaganga,230,Kushtia (26) Jessore (204),https://en.banglapedia.org/index.php/River
+BD-WB-0052,240,100-500,12,600,Jamuna Off-take (Dewanganj),Meghna River (at Bhairab),,Mymensingh / Dhaka,Jamalpur / Mymensingh / Kishoreganj / Narsingdi,"SW228 (Mymensingh), SW231 (Bhairab Bazar)",Old Brahmaputra,276,Mymensingh (276),https://en.banglapedia.org/index.php/River
+BD-WB-0053,183,100-300,9,400,Teesta / Karatoa network,Jamuna River,,Rajshahi / Rangpur,Gaibandha / Bogura / Sirajganj,SW11A (Shariakandi),,,,
+BD-WB-0054,27,100-300,12,180,Dhaleshwari Off-take,Dhaleshwari River,,Dhaka,Dhaka / Narayanganj,SW42 (Dhaka - Mill Barrack),Buriganga,27,Dhaka (27),https://en.banglapedia.org/index.php/River
+BD-WB-0055,110,150-400,18,400,Old Brahmaputra Off-take,Dhaleshwari River,,Dhaka,Gazipur / Narsingdi / Narayanganj,"SW263 (Demra), SW265 (Narayanganj)",,,,
+BD-WB-0056,64,50-150,8,110,Bangshi River,Buriganga River,,Dhaka,Gazipur / Dhaka,SW299 (Mirpur),,,,
+BD-WB-0057,228,200-400,20,1500,Barak River Off-take (Amalshid),Meghna River (Confluence with Surma),,Sylhet,Sylhet / Moulvibazar / Habiganj / Sunamganj,"SW173 (Sherpur), SW175 (Markuli)",Kushiyara,228,Sylhet (228),https://en.banglapedia.org/index.php/River
+BD-WB-0058,249,150-300,18,1200,Barak River Off-take (Amalshid),Meghna River (Confluence with Kushiyara),,Sylhet,Sylhet / Sunamganj / Kishoreganj,"SW267 (Sylhet), SW269 (Sunamganj)",,,,
+BD-WB-0059,53,32,,,"Lowland in Jhenaidah Sadar, Jhenaidah",Fatki River,Seasonal,,Jhenaidah; Magura,SW21 (Arpara),Begabati River,39,Jhenaidah; Magura,
+BD-WB-0060,193,,,,"Kobadak (Kapotaksa) near Jhikargachha, Jashore",Pasur–Shibsa confluence,Seasonal,,Jashore; Khulna,SW27 (Keshabpur); SW29 (Sutarkhali_Forest Office); SW28 (Dumuria),Bhadra,193,Jessore (58) Khulna (135),https://en.banglapedia.org/index.php/River
+BD-WB-0061,13,158,,,"Eastern hills of Tripura, India",Piyain-Sylhet-Sunamganj River,Seasonal,,Sylhet,SW332 (Islampur),,,,
+BD-WB-0062,40,,,,"Right bank of the Atrai near Mohanpur, Dinajpur",Punarbhaba River,Seasonal,,Dinajpur,SW78 (Kantanagar),Dhepa River,40,Dinajpur,
+BD-WB-0063,,,,,India,,Seasonal,,Panchagarh; Nilphamari,SW305.5 (Ghoramaraghat),,,,
+BD-WB-0064,10,41,,,"Tripura, India",Titas River,Seasonal,,Brahmanbaria,SW123 (Gangasagar Rly.),Hawrah River,31,Brahmanbaria,SW258 (Mandi)
+BD-WB-0065,18,,,,"Old Brahmaputra River near Kalihati, Tangail",Brahmaputra-Jamuna River,Seasonal,,Tangail; Jamalpur,SW134B (Offtake of Jhenai); SW134A (Baushi Bridge); SW134 (Jukerchar),Jhenai River,100,Mymensingh; Tangail,Jamuna River
+BD-WB-0066,,,,,"Tripura Hills, India",Meghna River system,Seasonal,,Cumilla,SW334 (Miar Bazar),Kakri River,15,Comilla,
+BD-WB-0067,,,,,India,,Seasonal,,Mymensingh,SW314 (Ghosegaon),Nitai River,25,Mymensingh,
+BD-WB-0068,,,,,Offshoot of the Meghna River,Meghna River system,Seasonal,,Rajshahi,SW338 (Cansart); SW338.5 (Ramkrishnapur),Pagla River,35,Maldah (India); Rajshahi,
+BD-WB-0069,46,81,,,"India–Kushiyara system near Beani Bazar, Sylhet",Juri River,Seasonal,,Sylhet; Moulvibazar,SW265 (Jaldhup),Sonai-Bardal River,20,Sylhet,
+BD-WB-0070,,,,,"West Bengal, India",Punarbhaba River,Seasonal,,Panchagarh; Thakurgaon; Dinajpur,SW287 (Kodalkatigaon); SW285 (Thakurgaon); SW284 (Raniganj),Tangon River,70,Dinajpur; Thakurgaon,
+BD-WB-0071,,,,,Lowland around Dhaka,Balu River,Seasonal,,Dhaka,SW299 (Tongi),Tongi Khal,15,Dhaka,Turag River
+BD-WB-0072,276,,,,Himalaya/Tibet; enters Bangladesh as the Brahmaputra and becomes the Jamuna,Padma River at Goalanda Ghat,Perennial,,Sirajganj; Pabna; Tangail; Kurigram; Manikganj; Jamalpur; Bogura; Gaibandha,SW15J (Mathurpara-Milanpur); SW46.7R (Kristomonichar); SW46.9R (Fulchari_Transit); SW46 (Kamarjani); SW47.3R (Patilbarichar); SW46.5 (Saghata); SW47.3L (Jognaichar); SW47 (Bahadurabad); SW46.9L (Bahadurabad_Transit); SW48 (Jaganathganj); SW45.5 (Chilmari); SW45 (Noonkhawa); SW45A (Hatia (Ulipur)); SW50.6 (Aricha); SW50.3 (Mathura); SW49A (Kazipur); SW49 (Sirajganj); SW50 (Porabari),Brahmaputra-Jamuna (Jamuna 207),276,Rangpur (140) Pabna (136),https://en.banglapedia.org/index.php/River
+BD-WB-0073,207,,,,"Chauddagram Khal, connected to the Little Feni, Cumilla",Meghna River,Perennial,,Cumilla; Chandpur; Noakhali,SW58A (Laksam); SW58 (Hajiganj),Dakatia,207,Comilla (180) Noakhali (27),https://en.banglapedia.org/index.php/River
+BD-WB-0074,,,,,Offshoot of the Meghna River,Meghna River,Perennial,,Chandpur,SW79 (Matlab Bazar),Dhanagoda River,65,Comilla,
+BD-WB-0075,378,,,,"Gangotri Glacier, India",Meghna River at Chandpur,Perennial,,Rajshahi; Pabna; Kushtia; Rajbari; Manikganj; Dhaka; Munshiganj; Shariatpur; Chandpur,SW91 (Talbaria); SW92.3L (Kadamtola); SW91.9L (Baruria Transit); SW93.5L (Mawa); SW94 (Tarpasa); SW93.4L (Bhagyakul); SW88A (Panka); SW90 (Hardinge Bridge); SW91.9R (Goalundo Transi); SW91.1 (Sengram); SW91.7R (Urakanda); SW91.2 (Mohendrapur); SW88 (Rajshahi); SW89 (Sardah); SW95 (Sureswar),"Ganges-Padma (Ganges 258, Padma 120)",378,"Rajshahi (145), Pabna (98), Dhaka and Faridpur (135)",https://en.banglapedia.org/index.php/River
+BD-WB-0076,37,32,,,"Hilly region in Kawkhali, Rangamati",Karnafuli River,Perennial,,Rangamati; Chattogram,SW124 (Thandachari); SW125 (Outfall Karnafuli(Rangunia)),Ichamati River (Chittagong),37,Chittagong,
+BD-WB-0077,56,53,,,"Northeastern hills of Tripura, India",Kushiyara River,Perennial,,Moulvibazar; Sylhet,SW135A (JuriCont_Silghat); SW135 (Juri_Silghat),Juri River,56,Sylhet,
+BD-WB-0078,161,453,,,"Tuilianpui/Sazal Lui River, Barkal, Rangamati",Bay of Bengal,Perennial,,Rangamati; Chattogram,SW152.2 (Kalurghat); SW153 (Chittagong); SW152.5 (Baraharina),Karnafuli,180,"Chittagong HT, Chittagong",https://en.banglapedia.org/index.php/River
+BD-WB-0079,28,175,,,"Karatoya-Nilphamari River in Gobindaganj, Gaibandha",Bangali River,Perennial,,Gaibandha,SW155 (Mohimaganj Railway Crossi),Katakhali River,28,Bogra,
+BD-WB-0080,260,,,,"Bhairab River near Chaugachha, Jashore",Arpangachhia River / Sundarbans,Perennial,,Chuadanga; Jashore; Satkhira; Khulna,SW160 (Andulbaria); SW161 (Tahirpur); SW162 (Jhikargacha); SW165 (Kobadak Forest Office); SW164 (Chandkhali); SW163 (Tala Magura),Kobadak,260,Jessore (80) Khulna (180),https://en.banglapedia.org/index.php/River
+BD-WB-0081,58,35,,,"Hilly region in Chunarughat, Habiganj",Bijna-Guinggajuri River,Perennial,,Habiganj,SW138 (Sofiabad),Korangi River,23,Sylhet,
+BD-WB-0082,93,325,,,"Nehalganj-Rangmatia River in Bakerganj, Barisal",Bay of Bengal,Perennial,,Barisal; Patuakhali,SW183 (Kaitpara),Lohalia River,48,Barisal; Patuakhali,
+BD-WB-0083,,,,,India,,Perennial,,Panchagarh; Dinajpur,SW232 (Phulbari_Outfall),Pathraj River,45,Dinajpur,
+BD-WB-0084,23,37,,,"India near Kasba, Brahmanbaria",Buri River,Perennial,,Brahmanbaria; Cumilla,SW339 (Salda Rly Bridg),Salda River,31,Brahmanbaria,SW258 (Mandi)
+BD-WB-0085,56,190,8,190,"Jaintia Hills, Meghalaya, India",Surma River,Perennial,,Sylhet,SW252 (Gowainghat); SW251 (Sarighat); SW252.1 (Salutikar),,,,
+BD-WB-0086,61,62,,,"India near Parshuram, Feni",Feni River,Perennial,,Feni,SW257 (Malipur_C); SW257.5 (Suber Bazar),,,,
+BD-WB-0087,30,41,,,"India near Madhabpur, Habiganj",Titas River,Perennial,,Habiganj; Brahmanbaria,SW264A (Montala),,,,
+BD-WB-0088,28,60,,,"India near Panchagarh Sadar, Panchagarh",Karatoya River,Perennial,,Panchagarh,SW283 (Molani); SW282 (Bhitargar),,,,
+BD-WB-0089,67,80-250,7,140,Chittagong Hill Tracts,Moheshkhali Channel / Bay of Bengal,,Chattogram,Bandarban / Cox's Bazar,SW20 (Cox's Bazar),,,,
+BD-WB-0090,116,100-500,10,250,Tripura Hills (India),Bay of Bengal,,Chattogram,Feni / Chattogram,SW108 (Ramgarh),,,,
+BD-WB-0091,180,300-800,25,850,Lushai Hills (Mizoram),Bay of Bengal (Patenga),,Chattogram,Rangamati / Chattogram,"SW119 (Kalurghat), SW120 (Chittagong Sadar)",Karnafuli,180,"Chittagong HT, Chittagong",https://en.banglapedia.org/index.php/River
+BD-WB-0092,148,100-350,12,300,Mowdok Range (Bandarban),Bay of Bengal,,Chattogram,Bandarban / Cox's Bazar,"SW203 (Lama), SW204 (Chiringa)",Matamuhuri,287,Chittagong HT and Chittagong,https://en.banglapedia.org/index.php/River
+BD-WB-0093,62,80-300,8,180,Tripura Hills (India),Feni River / Bay of Bengal,,Chattogram,Feni,SW213 (Parshuram),,,,
+BD-WB-0094,173,150-400,15,450,North Arakan Hills (Myanmar),Bay of Bengal,,Chattogram,Bandarban / Chattogram,"SW247 (Bandarban), SW248 (Dohazari)",Sangu,173,"Chittagong (80), Chittagong Hill Tracts (93)",https://en.banglapedia.org/index.php/River
+BD-WB-0095,146,600-2500,22,3100,Madhumati River continuation,Pasur River / Bay of Bengal,,Barishal / Khulna,Pirojpur / Barguna / Bagerhat,SW13 (Pirojpur),,,,
+BD-WB-0096,96,500-2000,20,2400,Lower Meghna network,Bay of Bengal,,Barishal,Jhalokathi / Barguna,SW38.1 (Barguna),,,,
+BD-WB-0097,16,300-800,18,1100,Arial Khan Off-take,Gajalia / Sugandha / Bay of Bengal,,Barishal,Barishal,SW18 (Barisal Sadar),,,,
+BD-WB-0098,90,800-3000,25,3800,Barishal network,Bay of Bengal,,Barishal,Patuakhali / Barguna,SW221 (Amatali),,,,
+BD-WB-0099,140,500-3000,30,4500,Gorai-Madhumati Network,Bay of Bengal (Sundarbans),,Khulna,Khulna / Bagerhat,"SW241 (Khulna), SW244 (Mongla Port)",Rupsa-Pasur,141,Khulna (141),https://en.banglapedia.org/index.php/River
+BD-WB-0100,62,800-1600,12,800,Arakan Mountains (Myanmar),Bay of Bengal,,Chattogram,Cox's Bazar,SW215 (Teknaf),,,,
+BD-WB-0101,44,40-100,6,85,Greater Gazipur wetlands,Shitalakshya River,,Dhaka,Gazipur / Dhaka / Narayanganj,SW16 (Demra),,,,
+BD-WB-0102,115,300-2000,10,800,Pahunri Glacier (Sikkim),Jamuna River (at Chilmari),,Rangpur,Nilphamari / Lalmonirhat / Rangpur / Kurigram,"SW291 (Dalia Barrage), SW293 (Kaunia)",Tista,115,Rangpur (115),https://en.banglapedia.org/index.php/River
+BD-WB-0103,205,3000-12000,40,20000,Yarlung Tsangpo (Tibet),Padma River (at Goalando),,Rangpur / Rajshahi / Dhaka,Kurigram / Gaibandha / Bogura / Sirajganj / Tangail / Manikganj,"SW46.5 (Bahadurabad), SW49 (Sirajganj)",Brahmaputra-Jamuna (Jamuna 207),276,Rangpur (140) Pabna (136),https://en.banglapedia.org/index.php/River
+BD-WB-0104,264,1000-11000,45,35000,Barak River (Assam/Manipur),Bay of Bengal,,Sylhet / Dhaka / Chattogram / Barishal,Kishoreganj / Brahmanbaria / Narsingdi / Narayanganj / Munshiganj / Chandpur / Lakshmipur / Bhola,"SW275.5 (Meghna Bridge), SW277 (Chandpur), SW278 (Daulatkhan)",,,,
+BD-WB-0105,120,4000-10000,35,30000,Gangotri Glacier (Himalayas),Meghna River (at Chandpur),,Rajshahi / Dhaka / Khulna,Chapainawabganj / Rajshahi / Pabna / Kushtia / Rajbari / Dhaka / Munshiganj / Shariatpur,"SW91.5 (Hardinge Bridge), SW93.5 (Goalundo)","Ganges-Padma (Ganges 258, Padma 120)",378,"Rajshahi (145), Pabna (98), Dhaka and Faridpur (135)",https://en.banglapedia.org/index.php/River
+BD-WB-0106,,,,,Gorai River; river is known as Madhumati from the Mohammadpur area of Magura,Baleshwar River / coastal delta system,Perennial,Khulna / Dhaka,Magura / Narail / Gopalganj / Bagerhat,,Gorai-Madhumati-Baleshwar,371,"Kushtia (37), Faridpur (71), Jessore (92), Khulna (104), Barisal (67)",https://en.banglapedia.org/index.php/Gorai-Madhumati_River
+BD-WB-0107,147,125,,,"Ganges/Padma off-take at Charghat, Rajshahi",Hurasagar River after joining the Karatoya,Seasonal,Rajshahi,Rajshahi / Natore / Pabna,,Baral,147,,https://en.banglapedia.org/index.php/Baral_River
+BD-WB-0108,135,,,,"Dumur, northeastern hills of Tripura, India","Meghna River at Shapta, Daudkandi",Seasonal,Chattogram,Cumilla,,Gumti,135,,https://en.banglapedia.org/index.php/Gumti_River
+BD-WB-0109,,,,,Baulai river system,Ghorautra / Meghna river network,Perennial,Sylhet / Mymensingh / Dhaka,Sunamganj / Netrokona / Kishoreganj,,Dhanu-Baulai-Ghorautra,235,,https://en.banglapedia.org/index.php/River
+BD-WB-0110,,,,,,,Perennial,Sylhet / Dhaka,Sunamganj / Kishoreganj,,,,,
+BD-WB-0111,84,6000,,,Lower Meghna north of Bhola,Bay of Bengal; lower course continues as Buragouranga,Perennial,Barishal,Bhola / Patuakhali,,Tentulia,84,,https://en.banglapedia.org/index.php/Tentulia_River
+BD-WB-0112,144,,,,"Mathabhanga River at Hatboalia, Chuadanga",Nabaganga River near Magura,Seasonal,Khulna / Dhaka,Chuadanga / Jhenaidah / Magura / Faridpur,,Kumar,162,Jessore / Faridpur,https://en.banglapedia.org/index.php/Kumar_River
+BD-WB-0113,,,,,Mathabhanga-Ganges deltaic network,Raymangal River / Bay of Bengal,Perennial,Khulna,Chuadanga / Jhenaidah / Jashore / Satkhira,,Ichamati / Kalindi-Jamuna,,,https://en.banglapedia.org/index.php/Ichamati_River
+BD-WB-0114,,,,,Ichamati-Kalindi system in the Sundarbans,Bay of Bengal,Perennial,Khulna,Satkhira,,Raymangal,,,https://en.banglapedia.org/index.php/Raymangal_River
+BD-WB-0115,,,,,,Bay of Bengal through the Sundarbans,Perennial,Khulna,Khulna / Bagerhat,,Rupsa-Pasur,141,Khulna (141),https://en.banglapedia.org/index.php/River
+BD-WB-0116,,,,,,,Perennial,Barishal,Patuakhali,,,,,
+BD-WB-0117,192,125,,,Northeastern Jashore region,Kobadak / Marichap-Kholpetua network,Seasonal,Khulna,Jashore / Satkhira / Khulna,,Betna-Kholpotua,191,Jessore (103) Khulna (88),https://en.banglapedia.org/index.php/Betna_River
+BD-WB-0118,236,,,,"Former Teesta distributary at Jaldhaka, Nilphamari",Brahmaputra north of Fulchhari Ghat,Perennial,Rangpur,Nilphamari / Rangpur / Gaibandha,,Ghaghat,236,Rangpur (236),https://en.banglapedia.org/index.php/Ghaghat_River
+BD-WB-0119,100,,,,"Padma off-take at Dahuka, Pangsha, Rajbari",Gorai-Madhumati north of Bhatia Bazar,,Dhaka / Khulna,Rajbari / Faridpur / Gopalganj,,Chandana,,,https://en.banglapedia.org/index.php/Chandana_River
+BD-WB-0120,,,,,"Tripura Hills, India",Bamni River near the northeastern Sandwip Channel,,Chattogram,Cumilla / Noakhali,,Little Feni-Dakatia,195,Noakhali (95) Comilla (100),https://en.banglapedia.org/index.php/Little_Feni_River
+BD-WB-0121,,,,,,,Perennial,Barishal,Pirojpur,,,,,
+BD-WB-0122,,,,,,,Perennial,Barishal,Barishal / Pirojpur,,,,,
+BD-WB-0123,,,,,,,Seasonal,Khulna,Bagerhat,,,,,
+BD-WB-0124,,,,,,,Perennial,Barishal,Patuakhali,,,,,
+BD-WB-0125,,,,,"Garo Hills / Meghalaya, India",Dhanu / Meghna river network,Perennial,Mymensingh,Sherpur / Netrokona,,Bhogai-Kangsa,225,Mymensingh (225),https://en.banglapedia.org/index.php/River
+BD-WB-0126,,,,,Atrai-Baral and Bangali-Karatoya river systems,Jamuna River,Seasonal,Rajshahi,Pabna / Sirajganj,,,,,
+BD-WB-0127,,,,,,,Seasonal,Dhaka,Manikganj,,,,,
+BD-WB-0128,,,,,,Sundarbans estuarine network / Bay of Bengal,Perennial,Khulna,Khulna / Satkhira,,,,,
+BD-WB-0129,,,,,Betna-Marichap tidal network,Sundarbans estuarine network / Bay of Bengal,Perennial,Khulna,Satkhira / Khulna,,,,,
+BD-WB-0130,,,,,,Bishkhali river system,Perennial,Barishal,Barishal / Jhalokathi,,,,,
+BD-WB-0131,,,,,,,Seasonal,Dhaka,Kishoreganj,,,,,
+BD-WB-0132,,,,,,,Perennial,Mymensingh,Jamalpur,,,,,
+BD-WB-0133,,,,,,,Seasonal,Chattogram,Khagrachari / Rangamati,,,,,
+BD-WB-0134,,,,,,Kaptai Lake / Karnafuli river system,Seasonal,Chattogram,Rangamati,,,,,
+BD-WB-0135,,,,,,,Perennial,Khulna,,,,,,
+BD-WB-0136,,,,,,,Perennial,Dhaka,Narsingdi,,,,,
+BD-WB-0137,,,,,,,,,,,,,,
+BD-WB-0138,,,,,,,,Dhaka / Mymensingh,,,,,,
+BD-WB-0139,,,,,,,Perennial,Khulna,Bagerhat,,,,,
+BD-WB-0140,,,,,,Bay of Bengal,,Barishal,Patuakhali,,,,,
+BD-WB-0141,,,,,Lower Meghna estuary,Bay of Bengal,,Barishal,Bhola,,,,,
