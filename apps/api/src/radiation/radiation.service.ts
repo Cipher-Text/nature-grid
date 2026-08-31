@@ -45,8 +45,6 @@ export class RadiationService {
             lat,
             lng,
             shortwaveRadiationSum: daily.shortwave_radiation_sum?.[i] ?? null,
-            sunshineDuration: daily.sunshine_duration?.[i] ?? null,
-            daylightDuration: daily.daylight_duration?.[i] ?? null,
           },
           create: {
             districtId: district.id,
@@ -54,8 +52,6 @@ export class RadiationService {
             lng,
             readingDate: new Date(dateStr),
             shortwaveRadiationSum: daily.shortwave_radiation_sum?.[i] ?? null,
-            sunshineDuration: daily.sunshine_duration?.[i] ?? null,
-            daylightDuration: daily.daylight_duration?.[i] ?? null,
           },
         }),
       ),

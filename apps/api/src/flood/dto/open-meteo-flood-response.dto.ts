@@ -10,5 +10,7 @@ export interface OpenMeteoFloodResponse {
     river_discharge_min?: Array<number | null>;
     river_discharge_p25?: Array<number | null>;
     river_discharge_p75?: Array<number | null>;
+    river_discharge_p10?: Array<number | null>;
+    river_discharge_p90?: Array<number | null>;
   };
 }

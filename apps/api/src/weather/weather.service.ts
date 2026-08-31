@@ -45,6 +45,8 @@ export class WeatherService {
         weatherCode: current.weather_code,
         cloudCover: current.cloud_cover,
         isDay: current.is_day === 1,
+        windGusts10m: current.wind_gusts_10m,
+        surfacePressure: current.surface_pressure,
       },
     });
   }
@@ -75,6 +77,7 @@ export class WeatherService {
           windSpeed10m: hourly.wind_speed_10m?.[i],
           windDirection10m: hourly.wind_direction_10m?.[i],
           cloudCover: hourly.cloud_cover?.[i],
+          windGusts10m: hourly.wind_gusts_10m?.[i],
         },
       });
     }
@@ -155,6 +158,8 @@ export class WeatherService {
     apparentTemperature: true,
     windSpeed10m: true,
     windDirection10m: true,
+    windGusts10m: true,
+    surfacePressure: true,
     precipitation: true,
     weatherCode: true,
     cloudCover: true,

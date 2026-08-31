@@ -669,6 +669,8 @@ export interface CurrentWeatherReading {
   apparentTemperature: number | null;
   windSpeed10m: number | null;
   windDirection10m: number | null;
+  windGusts10m: number | null;
+  surfacePressure: number | null;
   precipitation: number | null;
   weatherCode: number | null;
   cloudCover: number | null;
@@ -705,6 +707,8 @@ export interface StationFloodForecast {
   riverDischargeMin: number | null;
   riverDischargeP25: number | null;
   riverDischargeP75: number | null;
+  riverDischargeP10: number | null;
+  riverDischargeP90: number | null;
   createdAt: string;
   station?: {
     id: string;

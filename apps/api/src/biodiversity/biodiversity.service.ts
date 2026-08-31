@@ -68,6 +68,19 @@ export class BiodiversityService {
     });
     const districtCentroids = districts as { id: string; lat: number; lng: number }[];
 
+    // Incremental sync: only fetch records GBIF re-interpreted in the last 48 hours.
+    // On first run (empty DB) skip the date filter to bootstrap with recent records.
+    const hasExisting = (await this.prisma.occurrence.count()) > 0;
+    const sinceDate = hasExisting
+      ? new Date(Date.now() - 2 * 24 * 60 * 60 * 1_000).toISOString().slice(0, 10)
+      : undefined;
+
+    if (sinceDate) {
+      this.logger.log(`GBIF incremental sync — fetching records modified since ${sinceDate}`);
+    } else {
+      this.logger.log('GBIF initial bootstrap — fetching without date filter');
+    }
+
     let offset = 0;
     let fetched = 0;
     let speciesUpserted = 0;
@@ -75,7 +88,7 @@ export class BiodiversityService {
     let endOfRecords = false;
 
     while (fetched < MAX_RECORDS_PER_SYNC && !endOfRecords) {
-      const page = await this.gbifClient.fetchOccurrencePage(offset);
+      const page = await this.gbifClient.fetchOccurrencePage(offset, sinceDate);
       endOfRecords = page.endOfRecords;
       offset += page.results.length;
 

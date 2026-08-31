@@ -14,6 +14,7 @@ const DAILY_PARAMS = [
   'swell_wave_direction_dominant',
   'swell_wave_period_max',
   'swell_wave_peak_period_max',
+  'sea_surface_temperature_max',
 ].join(',');
 const FORECAST_DAYS = 7;
 const MAX_ATTEMPTS = 3;

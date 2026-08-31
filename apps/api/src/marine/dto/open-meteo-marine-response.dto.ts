@@ -16,5 +16,6 @@ export interface OpenMeteoMarineResponse {
     swell_wave_direction_dominant?: (number | null)[];
     swell_wave_period_max?: (number | null)[];
     swell_wave_peak_period_max?: (number | null)[];
+    sea_surface_temperature?: (number | null)[];
   };
 }

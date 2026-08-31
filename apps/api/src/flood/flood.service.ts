@@ -47,6 +47,8 @@ export class FloodService {
             riverDischargeMin: daily.river_discharge_min?.[i],
             riverDischargeP25: daily.river_discharge_p25?.[i],
             riverDischargeP75: daily.river_discharge_p75?.[i],
+            riverDischargeP10: daily.river_discharge_p10?.[i],
+            riverDischargeP90: daily.river_discharge_p90?.[i],
           },
           create: {
             stationId: station.id,
@@ -60,6 +62,8 @@ export class FloodService {
             riverDischargeMin: daily.river_discharge_min?.[i],
             riverDischargeP25: daily.river_discharge_p25?.[i],
             riverDischargeP75: daily.river_discharge_p75?.[i],
+            riverDischargeP10: daily.river_discharge_p10?.[i],
+            riverDischargeP90: daily.river_discharge_p90?.[i],
           },
         }),
       ),

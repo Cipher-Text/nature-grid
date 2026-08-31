@@ -36,7 +36,9 @@ export interface OpenMeteoCurrentResponse {
     apparent_temperature?: number;
     is_day?: number;
     wind_speed_10m?: number;
+    wind_gusts_10m?: number;
     wind_direction_10m?: number;
+    surface_pressure?: number;
     precipitation?: number;
     weather_code?: number;
     cloud_cover?: number;
@@ -55,6 +57,7 @@ export interface OpenMeteoHourlyResponse {
     precipitation?: number[];
     weather_code?: number[];
     wind_speed_10m?: number[];
+    wind_gusts_10m?: number[];
     wind_direction_10m?: number[];
     cloud_cover?: number[];
   };

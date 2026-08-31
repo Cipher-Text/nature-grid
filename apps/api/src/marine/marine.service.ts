@@ -58,6 +58,7 @@ export class MarineService {
             swellWaveDirectionDominant: daily.swell_wave_direction_dominant?.[i] ?? null,
             swellWavePeriodMax: daily.swell_wave_period_max?.[i] ?? null,
             swellWavePeakPeriodMax: daily.swell_wave_peak_period_max?.[i] ?? null,
+            seaSurfaceTemp: daily.sea_surface_temperature?.[i] ?? null,
           },
           create: {
             districtId: district.id,
@@ -75,6 +76,7 @@ export class MarineService {
             swellWaveDirectionDominant: daily.swell_wave_direction_dominant?.[i] ?? null,
             swellWavePeriodMax: daily.swell_wave_period_max?.[i] ?? null,
             swellWavePeakPeriodMax: daily.swell_wave_peak_period_max?.[i] ?? null,
+            seaSurfaceTemp: daily.sea_surface_temperature?.[i] ?? null,
           },
         }),
       ),
