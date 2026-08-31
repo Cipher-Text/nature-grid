@@ -5,7 +5,7 @@ import {
   routes,
   type CurrentWeatherReading,
   type Dataset,
-  type FloodForecast,
+  type StationFloodForecast,
   type HourlyAirQualityReading,
   type Occurrence,
   type PaginatedEnvelope,
@@ -55,7 +55,7 @@ export default async function DatasetDetailPage({ params }: { params: { id: stri
   const access = ACCESS_LABEL[dataset.accessPolicy];
   let weather: CurrentWeatherReading[] = [];
   let airQuality: HourlyAirQualityReading[] = [];
-  let flood: FloodForecast[] = [];
+  let flood: StationFloodForecast[] = [];
   let species: Species[] = [];
   let occurrences: Occurrence[] = [];
 
@@ -66,7 +66,7 @@ export default async function DatasetDetailPage({ params }: { params: { id: stri
     ]);
   }
   if (dataset.source === 'openmeteo-flood') {
-    flood = await apiGet<FloodForecast[]>(routes.flood.forecast, 300).catch(() => []);
+    flood = await apiGet<StationFloodForecast[]>(routes.flood.forecast, 300).catch(() => []);
   }
   if (dataset.source === 'gbif') {
     [species, occurrences] = await Promise.all([
@@ -160,10 +160,10 @@ export default async function DatasetDetailPage({ params }: { params: { id: stri
         <article className="panel dataset-detail-panel">
           <div className="panel-header"><div><h2>Flood forecast</h2><p>Nearest river discharge forecast, in m³/s.</p></div></div>
           <DataTable>
-            <div className="table-row table-head"><span>District</span><span>Date</span><span>Discharge</span><span>Range</span></div>
+            <div className="table-row table-head"><span>Station</span><span>Date</span><span>Discharge</span><span>Range</span></div>
             {flood.slice(0, 20).map((row) => (
               <div className="table-row" key={row.id}>
-                <strong>{row.district?.name ?? row.districtId}</strong>
+                <strong>{row.station?.name ?? row.stationId}</strong>
                 <span>{formatDate(row.forecastDate)}</span>
                 <span>{row.riverDischarge != null ? `${row.riverDischarge.toFixed(1)} m³/s` : '—'}</span>
                 <span>{row.riverDischargeMin != null && row.riverDischargeMax != null ? `${row.riverDischargeMin.toFixed(1)}–${row.riverDischargeMax.toFixed(1)}` : '—'}</span>

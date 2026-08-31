@@ -12,6 +12,28 @@ export class LocationsService implements OnModuleInit {
   async onModuleInit() {
     const count = await this.prisma.division.count();
     if (count === 0) await this.seed();
+    await this.seedCoastalMetadata();
+  }
+
+  /**
+   * Always runs on boot — idempotent upsert of isCoastal + coastal monitoring
+   * coordinates for coastal districts. Sourced from SEED_DATA so coordinates
+   * are maintained in bangladesh.ts rather than duplicated here.
+   */
+  private async seedCoastalMetadata() {
+    const coastal = SEED_DATA.flatMap(div =>
+      div.districts.filter(d => d.isCoastal && d.coastLat != null && d.coastLng != null),
+    );
+
+    let updated = 0;
+    for (const d of coastal) {
+      const result = await this.prisma.district.updateMany({
+        where: { name: d.name },
+        data: { isCoastal: true, coastLat: d.coastLat, coastLng: d.coastLng },
+      });
+      updated += result.count;
+    }
+    this.logger.log(`Coastal metadata seeded: ${updated} districts updated`);
   }
 
   private async seed() {
@@ -42,12 +64,14 @@ export class LocationsService implements OnModuleInit {
             bnName: dist.bnName, slug: dist.slug, pcode: dist.pcode,
             lat: dist.lat, lng: dist.lng, centerLat: dist.centerLat, centerLng: dist.centerLng,
             areaSqKm: dist.areaSqKm, url: dist.url, isCoastal: dist.isCoastal ?? false,
+            coastLat: dist.coastLat ?? null, coastLng: dist.coastLng ?? null,
             boundary: dist.boundary as Prisma.InputJsonValue ?? Prisma.JsonNull,
           },
           create: {
             name: dist.name, bnName: dist.bnName, slug: dist.slug, pcode: dist.pcode,
             lat: dist.lat, lng: dist.lng, centerLat: dist.centerLat, centerLng: dist.centerLng,
             areaSqKm: dist.areaSqKm, url: dist.url, isCoastal: dist.isCoastal ?? false,
+            coastLat: dist.coastLat ?? null, coastLng: dist.coastLng ?? null,
             boundary: dist.boundary as Prisma.InputJsonValue ?? Prisma.JsonNull,
             divisionId: division.id,
           },

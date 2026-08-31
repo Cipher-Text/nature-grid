@@ -1,4 +1,4 @@
-import { routes, type FloodForecast } from '@nature-grid/contracts';
+import { routes, type StationFloodForecast } from '@nature-grid/contracts';
 import { apiGet } from '../lib/api';
 
 type RiskLevel = 'HIGH' | 'ELEVATED';
@@ -24,29 +24,31 @@ function computeRisk(
 }
 
 export default async function FloodRiskStrip() {
-  let forecasts: FloodForecast[] = [];
+  let forecasts: StationFloodForecast[] = [];
   try {
-    forecasts = await apiGet<FloodForecast[]>(routes.flood.forecast);
+    forecasts = await apiGet<StationFloodForecast[]>(routes.flood.forecast);
   } catch {
     return null;
   }
 
-  // Take the most recent forecast per district, then filter to elevated/high risk
-  const latestByDistrict = new Map<string, FloodForecast>();
+  // Take the highest-risk station per district, then filter to elevated/high risk
+  const latestByDistrict = new Map<string, StationFloodForecast>();
   for (const f of forecasts) {
-    const existing = latestByDistrict.get(f.districtId);
+    const districtId = f.station?.districtId ?? '';
+    if (!districtId) continue;
+    const existing = latestByDistrict.get(districtId);
     if (!existing || new Date(f.forecastDate) > new Date(existing.forecastDate)) {
-      latestByDistrict.set(f.districtId, f);
+      latestByDistrict.set(districtId, f);
     }
   }
 
   const atRisk: FloodRiskDistrict[] = [];
-  for (const f of latestByDistrict.values()) {
+  for (const [districtId, f] of latestByDistrict.entries()) {
     const risk = computeRisk(f.riverDischarge, f.riverDischargeMean, f.riverDischargeP75);
     if (risk && f.riverDischarge != null && f.riverDischargeMean != null && f.riverDischargeMean > 0) {
       atRisk.push({
-        districtId: f.districtId,
-        districtName: f.district?.name ?? f.districtId,
+        districtId,
+        districtName: f.station?.district?.name ?? districtId,
         ratio: f.riverDischarge / f.riverDischargeMean,
         discharge: f.riverDischarge,
         risk,

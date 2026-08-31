@@ -444,6 +444,8 @@ model District {
   url        String?
   boundary   Json?
   isCoastal  Boolean  @default(false)
+  coastLat   Float?
+  coastLng   Float?
   divisionId String
   division   Division @relation(fields: [divisionId], references: [id])
 

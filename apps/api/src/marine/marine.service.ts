@@ -3,7 +3,8 @@ import { District } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { MarineOpenMeteoClient } from './marine-openmeteo.client';
 
-type DistrictWithCoords = District & { lat: number; lng: number };
+/** Coastal districts with proper ocean/port/estuary coordinates set by seedCoastalMetadata(). */
+type CoastalDistrict = District & { coastLat: number; coastLng: number };
 
 @Injectable()
 export class MarineService {
@@ -14,24 +15,25 @@ export class MarineService {
     private readonly client: MarineOpenMeteoClient,
   ) {}
 
-  getFetchableDistricts(): Promise<DistrictWithCoords[]> {
+  getFetchableDistricts(): Promise<CoastalDistrict[]> {
     return this.prisma.district.findMany({
-      where: { lat: { not: null }, lng: { not: null }, isCoastal: true },
-    }) as Promise<DistrictWithCoords[]>;
+      where: { isCoastal: true, coastLat: { not: null }, coastLng: { not: null } },
+    }) as Promise<CoastalDistrict[]>;
   }
 
   async hasForecasts(): Promise<boolean> {
     return (await this.prisma.marineForecast.count()) > 0;
   }
 
-  async syncDistrict(district: DistrictWithCoords): Promise<void> {
-    const response = await this.client.fetch(district.lat, district.lng);
+  async syncDistrict(district: CoastalDistrict): Promise<void> {
+    // Use coastal monitoring coordinates, not the inland district centroid
+    const response = await this.client.fetch(district.coastLat, district.coastLng);
     const daily = response.daily;
     if (!daily?.time?.length) return;
 
-    // API returns the actual marine grid-cell coordinates — may differ from district centroid
-    const lat = response.latitude ?? district.lat;
-    const lng = response.longitude ?? district.lng;
+    // API returns the actual marine grid-cell coordinates snapped from the coastal point
+    const lat = response.latitude ?? district.coastLat;
+    const lng = response.longitude ?? district.coastLng;
 
     await this.prisma.$transaction(
       daily.time.map((dateStr, i) =>
