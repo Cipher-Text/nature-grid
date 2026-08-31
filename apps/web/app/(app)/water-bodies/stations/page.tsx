@@ -45,20 +45,11 @@ export default async function WaterLevelStationsPage({
         </Link>
       </div>
 
-      {/* Filters */}
-      <div className="toolbar" aria-label="Filters" style={{ flexWrap: 'wrap', gap: '0.5rem' }}>
-        <select
-          className="select-field"
-          defaultValue={districtId ?? ''}
-          style={{ minWidth: '12rem' }}
-          onChange={undefined}
-          name="districtId"
-          aria-label="Filter by district"
-        />
-        {/* Static filter links for district and tidal status */}
+      {/* Tidal status filter */}
+      <div className="toolbar" aria-label="Tidal status filter">
         <Link
-          className={`chip${!districtId && !tidalStatus ? ' active' : ''}`}
-          href="/water-bodies/stations"
+          className={`chip${!tidalStatus ? ' active' : ''}`}
+          href={buildHref({ tidalStatus: '', page: 1 })}
         >
           All stations
         </Link>
