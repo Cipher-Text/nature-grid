@@ -21,7 +21,7 @@ export class WeatherService {
     }) as Promise<DistrictWithCoords[]>;
   }
 
-  async syncCurrentWeather(district: DistrictWithCoords) {
+  async syncCurrentWeather(district: DistrictWithCoords, jobId?: string | null) {
     const { lat, lng } = district;
     const response = await this.client.fetchCurrent(lat, lng);
     const current = response.current;
@@ -47,11 +47,12 @@ export class WeatherService {
         isDay: current.is_day === 1,
         windGusts10m: current.wind_gusts_10m,
         surfacePressure: current.surface_pressure,
+        ingestionJobId: jobId ?? undefined,
       },
     });
   }
 
-  async syncHourlyWeather(district: DistrictWithCoords) {
+  async syncHourlyWeather(district: DistrictWithCoords, jobId?: string | null) {
     const { lat, lng } = district;
     const response = await this.client.fetchHourly(lat, lng);
     const hourly = response.hourly;
@@ -78,12 +79,13 @@ export class WeatherService {
           windDirection10m: hourly.wind_direction_10m?.[i],
           cloudCover: hourly.cloud_cover?.[i],
           windGusts10m: hourly.wind_gusts_10m?.[i],
+          ingestionJobId: jobId ?? undefined,
         },
       });
     }
   }
 
-  async syncDailyWeather(district: DistrictWithCoords) {
+  async syncDailyWeather(district: DistrictWithCoords, jobId?: string | null) {
     const { lat, lng } = district;
     const response = await this.client.fetchDaily(lat, lng);
     const daily = response.daily;
@@ -111,12 +113,13 @@ export class WeatherService {
           uvIndexMax: daily.uv_index_max?.[i],
           sunrise: daily.sunrise?.[i] ? new Date(daily.sunrise[i]) : undefined,
           sunset: daily.sunset?.[i] ? new Date(daily.sunset[i]) : undefined,
+          ingestionJobId: jobId ?? undefined,
         },
       });
     }
   }
 
-  async syncAirQuality(district: DistrictWithCoords) {
+  async syncAirQuality(district: DistrictWithCoords, jobId?: string | null) {
     const { lat, lng } = district;
     const response = await this.client.fetchAirQuality(lat, lng);
     const hourly = response.hourly;
@@ -140,6 +143,7 @@ export class WeatherService {
           sulphurDioxide: hourly.sulphur_dioxide?.[i],
           ozone: hourly.ozone?.[i],
           uvIndex: hourly.uv_index?.[i],
+          ingestionJobId: jobId ?? undefined,
         },
       });
     }

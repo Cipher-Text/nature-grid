@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
-import { AlertStatus, AlertSeverity } from '@prisma/client';
+import { AlertStatus, AlertSeverity, AlertType } from '@prisma/client';
 import { AlertsService } from './alerts.service';
 import { CreateAlertDto } from './dto/create-alert.dto';
 import { UpdateAlertDto } from './dto/update-alert.dto';
@@ -19,6 +19,7 @@ export class AlertsController {
   list(
     @Query('status') status?: string,
     @Query('severity') severity?: string,
+    @Query('alertType') alertType?: string,
     @Query('districtId') districtId?: string,
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
@@ -26,6 +27,7 @@ export class AlertsController {
     return this.alertsService.list(
       status as AlertStatus | undefined,
       severity as AlertSeverity | undefined,
+      alertType as AlertType | undefined,
       districtId,
       Number(page ?? 1),
       Number(pageSize ?? 20),

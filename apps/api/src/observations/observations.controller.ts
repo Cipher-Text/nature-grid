@@ -14,6 +14,7 @@ import {
 import { ObservationCategory, ObservationTrustLevel } from '@prisma/client';
 import { ObservationsService } from './observations.service';
 import { CreateObservationDto } from './dto/create-observation.dto';
+import { CreateMeasurementDto } from './dto/create-measurement.dto';
 import { UpdateObservationDto } from './dto/update-observation.dto';
 import { UpdateObservationTrustDto } from './dto/update-trust.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
@@ -33,6 +34,8 @@ export class ObservationsController {
     @Query('category') category?: string,
     @Query('trustLevel') trustLevel?: string,
     @Query('districtId') districtId?: string,
+    @Query('upazilaId') upazilaId?: string,
+    @Query('unionId') unionId?: string,
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
   ) {
@@ -40,6 +43,8 @@ export class ObservationsController {
       category as ObservationCategory | undefined,
       trustLevel as ObservationTrustLevel | undefined,
       districtId,
+      upazilaId,
+      unionId,
       Number(page ?? 1),
       Number(pageSize ?? 20),
     );
@@ -98,5 +103,27 @@ export class ObservationsController {
   @HttpCode(HttpStatus.NO_CONTENT)
   delete(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     return this.observationsService.delete(id, user);
+  }
+
+  /** Owner only: add a structured measurement to an UNVERIFIED observation. */
+  @Permissions('observations.create')
+  @Post(':id/measurements')
+  addMeasurement(
+    @Param('id') id: string,
+    @Body() dto: CreateMeasurementDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.observationsService.addMeasurement(id, dto, user);
+  }
+
+  /** Owner or MODERATOR/ADMIN: remove a measurement from an observation. */
+  @Delete(':id/measurements/:measurementId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  deleteMeasurement(
+    @Param('id') id: string,
+    @Param('measurementId') measurementId: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.observationsService.deleteMeasurement(id, measurementId, user);
   }
 }

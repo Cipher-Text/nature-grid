@@ -1,5 +1,16 @@
-import { IsEnum, IsISO8601, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
-import { AlertSeverity } from '@prisma/client';
+import {
+  IsArray,
+  IsEnum,
+  IsISO8601,
+  IsOptional,
+  IsString,
+  MaxLength,
+  MinLength,
+  ValidateNested,
+} from 'class-validator';
+import { Type } from 'class-transformer';
+import { AlertSeverity, AlertType } from '@prisma/client';
+import { CreateAlertAreaDto } from './create-alert-area.dto';
 
 export class CreateAlertDto {
   @IsString()
@@ -21,8 +32,19 @@ export class CreateAlertDto {
   instructions?: string;
 
   @IsOptional()
+  @IsEnum(AlertType)
+  alertType?: AlertType;
+
+  /** Legacy single-district field. Prefer `areas` for new integrations. */
+  @IsOptional()
   @IsString()
   districtId?: string;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateAlertAreaDto)
+  areas?: CreateAlertAreaDto[];
 
   @IsOptional()
   @IsISO8601()

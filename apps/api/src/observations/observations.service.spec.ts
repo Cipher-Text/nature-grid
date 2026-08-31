@@ -9,8 +9,9 @@ const MOD  = { sub: 'u2', email: 'm@b.c', role: 'MODERATOR' };
 
 function mockPrisma() {
   const tx = {
-    observation: { create: jest.fn(), update: jest.fn(), delete: jest.fn() },
-    auditEvent:  { create: jest.fn().mockResolvedValue({}) },
+    observation:            { create: jest.fn(), update: jest.fn(), delete: jest.fn() },
+    observationMeasurement: { create: jest.fn(), delete: jest.fn() },
+    auditEvent:             { create: jest.fn().mockResolvedValue({}) },
   };
   return {
     observation: {
@@ -19,6 +20,11 @@ function mockPrisma() {
       count:      jest.fn().mockResolvedValue(0),
       create:     jest.fn(),
       update:     jest.fn(),
+      delete:     jest.fn(),
+    },
+    observationMeasurement: {
+      findUnique: jest.fn(),
+      create:     jest.fn(),
       delete:     jest.fn(),
     },
     district:   { findUnique: jest.fn() },
@@ -48,6 +54,8 @@ const BASE_OBS = {
   trustLevel: ObservationTrustLevel.UNVERIFIED,
   description: 'murky water',
   districtId: 'd1',
+  upazilaId: null,
+  unionId: null,
   lat: 23.8,
   lng: 90.4,
   species: null,
@@ -56,6 +64,9 @@ const BASE_OBS = {
   updatedAt: new Date(),
   observer: { id: 'u1', displayName: 'Alice' },
   district: { id: 'd1', name: 'Dhaka', division: { id: 'dv1', name: 'Dhaka Division' } },
+  upazila: null,
+  union: null,
+  measurements: [],
 };
 
 describe('ObservationsService', () => {

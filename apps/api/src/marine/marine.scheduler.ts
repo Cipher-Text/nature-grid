@@ -34,7 +34,7 @@ export class MarineScheduler implements OnModuleInit {
         this.logger.log(`Syncing marine forecasts for ${districts.length} districts`);
         for (const district of districts) {
           try {
-            await this.marineService.syncDistrict(district);
+            await this.marineService.syncDistrict(district, jobId);
           } catch (err) {
             // Inland districts will fail — the marine API has no grid cell for them.
             // Per-district errors are logged but do not fail the overall job.

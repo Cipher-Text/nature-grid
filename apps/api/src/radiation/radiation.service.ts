@@ -24,7 +24,7 @@ export class RadiationService {
     return (await this.prisma.satelliteRadiationReading.count()) > 0;
   }
 
-  async syncDistrict(district: DistrictWithCoords): Promise<void> {
+  async syncDistrict(district: DistrictWithCoords, jobId?: string | null): Promise<void> {
     const response = await this.client.fetch(district.lat, district.lng);
     const daily = response.daily;
     if (!daily?.time?.length) return;
@@ -45,6 +45,7 @@ export class RadiationService {
             lat,
             lng,
             shortwaveRadiationSum: daily.shortwave_radiation_sum?.[i] ?? null,
+            ingestionJobId: jobId ?? undefined,
           },
           create: {
             districtId: district.id,
@@ -52,6 +53,7 @@ export class RadiationService {
             lng,
             readingDate: new Date(dateStr),
             shortwaveRadiationSum: daily.shortwave_radiation_sum?.[i] ?? null,
+            ingestionJobId: jobId ?? undefined,
           },
         }),
       ),

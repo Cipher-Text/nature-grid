@@ -26,7 +26,7 @@ export class WeatherScheduler {
         this.logger.log(`Syncing current weather for ${districts.length} districts`);
         for (const district of districts) {
           try {
-            await this.weatherService.syncCurrentWeather(district);
+            await this.weatherService.syncCurrentWeather(district, jobId);
           } catch (err) {
             this.logger.error(`Current weather fetch failed for ${district.name}: ${String(err)}`);
           }
@@ -49,12 +49,12 @@ export class WeatherScheduler {
         this.logger.log(`Syncing hourly weather + air quality for ${districts.length} districts`);
         for (const district of districts) {
           try {
-            await this.weatherService.syncHourlyWeather(district);
+            await this.weatherService.syncHourlyWeather(district, jobId);
           } catch (err) {
             this.logger.error(`Hourly weather fetch failed for ${district.name}: ${String(err)}`);
           }
           try {
-            await this.weatherService.syncAirQuality(district);
+            await this.weatherService.syncAirQuality(district, jobId);
           } catch (err) {
             this.logger.error(`Air quality fetch failed for ${district.name}: ${String(err)}`);
           }
@@ -77,7 +77,7 @@ export class WeatherScheduler {
         this.logger.log(`Syncing daily weather for ${districts.length} districts`);
         for (const district of districts) {
           try {
-            await this.weatherService.syncDailyWeather(district);
+            await this.weatherService.syncDailyWeather(district, jobId);
           } catch (err) {
             this.logger.error(`Daily weather fetch failed for ${district.name}: ${String(err)}`);
           }

@@ -8,12 +8,25 @@ import {
 import { ObservationCategory, ObservationTrustLevel } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { CreateObservationDto } from './dto/create-observation.dto';
+import { CreateMeasurementDto } from './dto/create-measurement.dto';
 import { UpdateObservationDto } from './dto/update-observation.dto';
 import { UpdateObservationTrustDto } from './dto/update-trust.dto';
 import type { JwtPayload } from '../common/decorators/current-user.decorator';
 import { clampPagination } from '../common/pagination';
-import { assertDistrictExists } from '../common/validate-district';
+import { resolveGeoHierarchy } from '../common/validate-district';
 import { GamificationService } from '../gamification/gamification.service';
+
+const MEASUREMENT_SELECT = {
+  id: true,
+  parameter: true,
+  value: true,
+  unit: true,
+  method: true,
+  detectionLimit: true,
+  qualityFlag: true,
+  notes: true,
+  recordedAt: true,
+} as const;
 
 const OBSERVATION_SELECT = {
   id: true,
@@ -21,6 +34,8 @@ const OBSERVATION_SELECT = {
   trustLevel: true,
   description: true,
   districtId: true,
+  upazilaId: true,
+  unionId: true,
   lat: true,
   lng: true,
   species: true,
@@ -29,6 +44,9 @@ const OBSERVATION_SELECT = {
   updatedAt: true,
   observer: { select: { id: true, displayName: true } },
   district: { select: { id: true, name: true, division: { select: { id: true, name: true } } } },
+  upazila:  { select: { id: true, name: true } },
+  union:    { select: { id: true, name: true } },
+  measurements: { select: MEASUREMENT_SELECT, orderBy: { recordedAt: 'asc' as const } },
 } as const;
 
 @Injectable()
@@ -41,7 +59,7 @@ export class ObservationsService {
   ) {}
 
   async create(dto: CreateObservationDto, user: JwtPayload) {
-    if (dto.districtId) await assertDistrictExists(this.prisma,dto.districtId);
+    const geo = await resolveGeoHierarchy(this.prisma, dto);
 
     if (dto.observedAt && new Date(dto.observedAt) > new Date()) {
       throw new BadRequestException('observedAt cannot be in the future');
@@ -52,13 +70,30 @@ export class ObservationsService {
         data: {
           category: dto.category,
           description: dto.description,
-          districtId: dto.districtId,
+          districtId: geo.districtId,
+          upazilaId: geo.upazilaId,
+          unionId: geo.unionId,
           lat: dto.lat,
           lng: dto.lng,
           species: dto.species,
           observedAt: dto.observedAt ? new Date(dto.observedAt) : undefined,
           observerId: user.sub,
           trustLevel: ObservationTrustLevel.UNVERIFIED,
+          ...(dto.measurements?.length && {
+            measurements: {
+              createMany: {
+                data: dto.measurements.map((m) => ({
+                  parameter: m.parameter,
+                  value: m.value,
+                  unit: m.unit,
+                  method: m.method,
+                  detectionLimit: m.detectionLimit,
+                  qualityFlag: m.qualityFlag,
+                  notes: m.notes,
+                })),
+              },
+            },
+          }),
         },
         select: OBSERVATION_SELECT,
       });
@@ -69,6 +104,7 @@ export class ObservationsService {
           userId: user.sub,
           entityType: 'Observation',
           entityId: observation.id,
+          meta: dto.measurements?.length ? { measurementCount: dto.measurements.length } : undefined,
         },
       });
 
@@ -95,6 +131,8 @@ export class ObservationsService {
     category?: ObservationCategory,
     trustLevel?: ObservationTrustLevel,
     districtId?: string,
+    upazilaId?: string,
+    unionId?: string,
     rawPage = 1,
     rawPageSize = 20,
   ) {
@@ -104,6 +142,8 @@ export class ObservationsService {
       ...(category ? { category } : {}),
       ...(trustLevel ? { trustLevel } : { trustLevel: { not: ObservationTrustLevel.FLAGGED } }),
       ...(districtId ? { districtId } : {}),
+      ...(upazilaId ? { upazilaId } : {}),
+      ...(unionId ? { unionId } : {}),
     };
     return Promise.all([
       this.prisma.observation.findMany({
@@ -136,9 +176,18 @@ export class ObservationsService {
     if (observation.trustLevel !== ObservationTrustLevel.UNVERIFIED) {
       throw new ForbiddenException('Only UNVERIFIED observations can be edited');
     }
-    if (dto.districtId) await assertDistrictExists(this.prisma,dto.districtId);
     if (dto.observedAt && new Date(dto.observedAt) > new Date()) {
       throw new BadRequestException('observedAt cannot be in the future');
+    }
+
+    // Resolve geo hierarchy only if any geo field is being updated
+    let geo: { districtId?: string; upazilaId?: string; unionId?: string } = {};
+    if (dto.districtId !== undefined || dto.upazilaId !== undefined || dto.unionId !== undefined) {
+      geo = await resolveGeoHierarchy(this.prisma, {
+        districtId: dto.districtId,
+        upazilaId: dto.upazilaId,
+        unionId: dto.unionId,
+      });
     }
 
     const [updated] = await this.prisma.$transaction([
@@ -146,7 +195,9 @@ export class ObservationsService {
         where: { id },
         data: {
           ...(dto.description !== undefined && { description: dto.description }),
-          ...(dto.districtId !== undefined && { districtId: dto.districtId }),
+          ...(geo.districtId !== undefined && { districtId: geo.districtId }),
+          ...(geo.upazilaId !== undefined && { upazilaId: geo.upazilaId }),
+          ...(geo.unionId !== undefined && { unionId: geo.unionId }),
           ...(dto.lat !== undefined && { lat: dto.lat }),
           ...(dto.lng !== undefined && { lng: dto.lng }),
           ...(dto.species !== undefined && { species: dto.species }),
@@ -210,6 +261,81 @@ export class ObservationsService {
           userId: actor.sub,
           entityType: 'Observation',
           entityId: id,
+        },
+      }),
+    ]);
+  }
+
+  /** Owner only: add a measurement to an UNVERIFIED observation. */
+  async addMeasurement(observationId: string, dto: CreateMeasurementDto, user: JwtPayload) {
+    const observation = await this.getById(observationId);
+
+    if (observation.observer?.id !== user.sub) {
+      throw new ForbiddenException('You can only add measurements to your own observations');
+    }
+    if (observation.trustLevel !== ObservationTrustLevel.UNVERIFIED) {
+      throw new ForbiddenException('Measurements cannot be modified once the observation is verified');
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const measurement = await tx.observationMeasurement.create({
+        data: {
+          observationId,
+          parameter: dto.parameter,
+          value: dto.value,
+          unit: dto.unit,
+          method: dto.method,
+          detectionLimit: dto.detectionLimit,
+          qualityFlag: dto.qualityFlag,
+          notes: dto.notes,
+        },
+        select: MEASUREMENT_SELECT,
+      });
+
+      await tx.auditEvent.create({
+        data: {
+          action: 'OBSERVATION_MEASUREMENT_ADD',
+          userId: user.sub,
+          entityType: 'ObservationMeasurement',
+          entityId: measurement.id,
+          meta: { observationId, parameter: dto.parameter },
+        },
+      });
+
+      return measurement;
+    });
+  }
+
+  /** Owner or MODERATOR/ADMIN: delete a single measurement from an observation. */
+  async deleteMeasurement(observationId: string, measurementId: string, actor: JwtPayload) {
+    const observation = await this.getById(observationId);
+
+    const isOwner = observation.observer?.id === actor.sub;
+    const isMod = actor.role === 'MODERATOR' || actor.role === 'ADMIN';
+
+    if (!isOwner && !isMod) {
+      throw new ForbiddenException('You can only delete measurements from your own observations');
+    }
+    if (isOwner && !isMod && observation.trustLevel !== ObservationTrustLevel.UNVERIFIED) {
+      throw new ForbiddenException('Measurements cannot be modified once the observation is verified');
+    }
+
+    const measurement = await this.prisma.observationMeasurement.findUnique({
+      where: { id: measurementId },
+    });
+    if (!measurement || measurement.observationId !== observationId) {
+      throw new NotFoundException('Measurement not found');
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.observationMeasurement.delete({ where: { id: measurementId } }),
+      this.prisma.auditEvent.create({
+        data: {
+          action: 'OBSERVATION_MEASUREMENT_DELETE',
+          userId: actor.sub,
+          entityType: 'ObservationMeasurement',
+          entityId: measurementId,
+          meta: { observationId, parameter: measurement.parameter },
         },
       }),
     ]);

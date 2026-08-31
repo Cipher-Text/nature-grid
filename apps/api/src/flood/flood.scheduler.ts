@@ -32,7 +32,7 @@ export class FloodScheduler implements OnModuleInit {
         this.logger.log(`Syncing flood forecasts for ${stations.length} stations`);
         for (const station of stations) {
           try {
-            await this.floodService.syncStation(station);
+            await this.floodService.syncStation(station, jobId);
           } catch (err) {
             this.logger.error(`Flood forecast fetch failed for station ${station.stationCode} (${station.name}): ${String(err)}`);
           }

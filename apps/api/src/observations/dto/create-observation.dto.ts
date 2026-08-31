@@ -1,4 +1,5 @@
 import {
+  IsArray,
   IsDateString,
   IsEnum,
   IsNumber,
@@ -8,8 +9,11 @@ import {
   MaxLength,
   Min,
   MinLength,
+  ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 import { ObservationCategory } from '@prisma/client';
+import { CreateMeasurementDto } from './create-measurement.dto';
 
 export class CreateObservationDto {
   @IsEnum(ObservationCategory)
@@ -23,6 +27,14 @@ export class CreateObservationDto {
   @IsOptional()
   @IsString()
   districtId?: string;
+
+  @IsOptional()
+  @IsString()
+  upazilaId?: string;
+
+  @IsOptional()
+  @IsString()
+  unionId?: string;
 
   @IsOptional()
   @IsNumber()
@@ -46,4 +58,11 @@ export class CreateObservationDto {
   @IsOptional()
   @IsDateString()
   observedAt?: string;
+
+  /** Structured measurements recorded at the time of observation. */
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateMeasurementDto)
+  measurements?: CreateMeasurementDto[];
 }

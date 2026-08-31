@@ -34,7 +34,7 @@ export class RadiationScheduler implements OnModuleInit {
         this.logger.log(`Syncing satellite radiation for ${districts.length} districts`);
         for (const district of districts) {
           try {
-            await this.radiationService.syncDistrict(district);
+            await this.radiationService.syncDistrict(district, jobId);
           } catch (err) {
             this.logger.error(
               `Satellite radiation fetch failed for ${district.name}: ${String(err)}`,

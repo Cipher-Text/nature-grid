@@ -24,6 +24,19 @@ export type AlertSeverity = 'INFO' | 'WATCH' | 'WARNING' | 'EMERGENCY';
 
 export type AlertStatus = 'DRAFT' | 'ACTIVE' | 'EXPIRED' | 'CANCELLED';
 
+export type AlertType =
+  | 'FLOOD'
+  | 'FLASH_FLOOD'
+  | 'CYCLONE'
+  | 'STORM_SURGE'
+  | 'HEATWAVE'
+  | 'AIR_QUALITY'
+  | 'WATER_POLLUTION'
+  | 'LANDSLIDE'
+  | 'DROUGHT'
+  | 'WILDFIRE'
+  | 'OTHER';
+
 // ─── Report Enums ─────────────────────────────────────────────────────────────
 
 export type ReportStatus =
@@ -151,9 +164,6 @@ export const ENVIRONMENTAL_RESEARCH_INTERESTS = [
 export type EnvironmentalResearchInterest = typeof ENVIRONMENTAL_RESEARCH_INTERESTS[number];
 
 // ─── Observation Enums ────────────────────────────────────────────────────────
-// No Prisma model exists yet (Observations module is a stub) — uppercased now
-// to follow the same convention as every other enum, avoiding this same bug
-// when that module ships.
 
 export type ObservationTrustLevel =
   | 'RESEARCH_GRADE'  // validated by researcher
@@ -167,6 +177,73 @@ export type ObservationCategory =
   | 'AIR_QUALITY'
   | 'LAND_USE'
   | 'RESTORATION';
+
+export type MeasurementParameter =
+  // Water quality
+  | 'PH'
+  | 'DISSOLVED_OXYGEN'
+  | 'WATER_TEMPERATURE'
+  | 'TURBIDITY'
+  | 'CONDUCTIVITY'
+  | 'SALINITY'
+  | 'NITRATE_N'
+  | 'PHOSPHATE_P'
+  | 'BOD'
+  | 'COD'
+  | 'TOTAL_DISSOLVED_SOLIDS'
+  | 'TOTAL_SUSPENDED_SOLIDS'
+  | 'ARSENIC'
+  | 'FECAL_COLIFORM'
+  | 'WATER_DEPTH'
+  | 'FLOW_VELOCITY'
+  // Air quality
+  | 'PM25'
+  | 'PM10'
+  | 'CO2'
+  | 'CO'
+  | 'NOX'
+  | 'SOX'
+  | 'OZONE'
+  | 'VOC'
+  | 'AQI'
+  | 'AMBIENT_TEMPERATURE'
+  | 'RELATIVE_HUMIDITY'
+  // Biodiversity / habitat
+  | 'SPECIES_COUNT'
+  | 'INDIVIDUAL_COUNT'
+  | 'CANOPY_COVER'
+  | 'VEGETATION_DENSITY'
+  // Soil / land
+  | 'SOIL_PH'
+  | 'SOIL_MOISTURE'
+  | 'AREA_AFFECTED'
+  | 'OTHER';
+
+export type MeasurementUnit =
+  | 'MG_PER_L'
+  | 'UG_PER_L'
+  | 'NTU'
+  | 'US_PER_CM'
+  | 'PPT'
+  | 'PH_UNITS'
+  | 'CELSIUS'
+  | 'PPM'
+  | 'PPB'
+  | 'UG_PER_M3'
+  | 'PERCENT'
+  | 'COUNT'
+  | 'METERS'
+  | 'METERS_PER_SECOND'
+  | 'CFU_PER_100ML'
+  | 'HECTARES'
+  | 'INDEX'
+  | 'OTHER';
+
+export type QualityFlag =
+  | 'GOOD'       // validated, reliable reading
+  | 'SUSPECT'    // needs verification
+  | 'BAD'        // likely erroneous
+  | 'ESTIMATED'; // interpolated or modelled
 
 // ─── Ingestion Enum ───────────────────────────────────────────────────────────
 

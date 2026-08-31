@@ -20,7 +20,7 @@ export class FloodService {
     return (await this.prisma.stationFloodForecast.count()) > 0;
   }
 
-  async syncStation(station: WaterLevelStation) {
+  async syncStation(station: WaterLevelStation, jobId?: string | null) {
     const response = await this.client.fetch(station.latitude, station.longitude);
     const daily = response.daily;
     if (!daily?.time?.length) return;
@@ -49,6 +49,7 @@ export class FloodService {
             riverDischargeP75: daily.river_discharge_p75?.[i],
             riverDischargeP10: daily.river_discharge_p10?.[i],
             riverDischargeP90: daily.river_discharge_p90?.[i],
+            ingestionJobId: jobId ?? undefined,
           },
           create: {
             stationId: station.id,
@@ -64,6 +65,7 @@ export class FloodService {
             riverDischargeP75: daily.river_discharge_p75?.[i],
             riverDischargeP10: daily.river_discharge_p10?.[i],
             riverDischargeP90: daily.river_discharge_p90?.[i],
+            ingestionJobId: jobId ?? undefined,
           },
         }),
       ),

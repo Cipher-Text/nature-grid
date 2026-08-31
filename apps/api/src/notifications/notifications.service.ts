@@ -111,6 +111,7 @@ export class NotificationsService {
         issuedAt: true,
         districtId: true,
         district: { select: { name: true } },
+        areas: { select: { districtId: true } },
       },
     });
 
@@ -118,16 +119,25 @@ export class NotificationsService {
 
     const qualifyingMinSeverities = QUALIFYING_MIN_SEVERITIES[alert.severity];
 
+    // Collect every district that this alert targets: legacy districtId field
+    // plus any districtId values from AlertArea rows. Use a Set to deduplicate.
+    const targetDistrictIds = new Set<string>();
+    if (alert.districtId) targetDistrictIds.add(alert.districtId);
+    for (const area of alert.areas) {
+      if (area.districtId) targetDistrictIds.add(area.districtId);
+    }
+    const districtIdList = [...targetDistrictIds];
+
     // Find subscriptions that match:
-    // 1. The alert's district (or global subscriptions that have no district)
+    // 1. A global subscription (no district) OR a subscription for any targeted district
     // 2. The alert's severity meets the subscriber's threshold
     // 3. The subscriber's account is still active
     const subscriptions = await this.prisma.alertSubscription.findMany({
       where: {
         minSeverity: { in: qualifyingMinSeverities },
         OR: [
-          { districtId: null },                                                  // global
-          ...(alert.districtId ? [{ districtId: alert.districtId }] : []),       // district-specific
+          { districtId: null },                                                         // global
+          ...(districtIdList.length ? [{ districtId: { in: districtIdList } }] : []),   // area-specific
         ],
         user: { isActive: true },
       },

@@ -58,12 +58,16 @@ const BASE_REPORT = {
   status: ReportStatus.SUBMITTED,
   summary: null,
   districtId: 'd1',
+  upazilaId: null,
+  unionId: null,
   lat: 23.8,
   lng: 90.4,
   createdAt: new Date(),
   updatedAt: new Date(),
   reporter: { id: 'u1', displayName: 'Alice' },
   district: { id: 'd1', name: 'Dhaka', division: { id: 'dv1', name: 'Dhaka Division' } },
+  upazila: null,
+  union: null,
 };
 
 describe('ReportsService', () => {

@@ -25,7 +25,7 @@ export class MarineService {
     return (await this.prisma.marineForecast.count()) > 0;
   }
 
-  async syncDistrict(district: CoastalDistrict): Promise<void> {
+  async syncDistrict(district: CoastalDistrict, jobId?: string | null): Promise<void> {
     // Use coastal monitoring coordinates, not the inland district centroid
     const response = await this.client.fetch(district.coastLat, district.coastLng);
     const daily = response.daily;
@@ -59,6 +59,7 @@ export class MarineService {
             swellWavePeriodMax: daily.swell_wave_period_max?.[i] ?? null,
             swellWavePeakPeriodMax: daily.swell_wave_peak_period_max?.[i] ?? null,
             seaSurfaceTemp: daily.sea_surface_temperature?.[i] ?? null,
+            ingestionJobId: jobId ?? undefined,
           },
           create: {
             districtId: district.id,
@@ -77,6 +78,7 @@ export class MarineService {
             swellWavePeriodMax: daily.swell_wave_period_max?.[i] ?? null,
             swellWavePeakPeriodMax: daily.swell_wave_peak_period_max?.[i] ?? null,
             seaSurfaceTemp: daily.sea_surface_temperature?.[i] ?? null,
+            ingestionJobId: jobId ?? undefined,
           },
         }),
       ),

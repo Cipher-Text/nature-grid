@@ -5,7 +5,7 @@ import { CreateRestorationProjectDto } from './dto/create-restoration-project.dt
 import { UpdateRestorationProjectDto } from './dto/update-restoration-project.dto';
 import type { JwtPayload } from '../common/decorators/current-user.decorator';
 import { clampPagination } from '../common/pagination';
-import { assertDistrictExists } from '../common/validate-district';
+import { resolveGeoHierarchy } from '../common/validate-district';
 import { GamificationService } from '../gamification/gamification.service';
 
 const PROJECT_SELECT = {
@@ -16,6 +16,8 @@ const PROJECT_SELECT = {
   status: true,
   organizationId: true,
   districtId: true,
+  upazilaId: true,
+  unionId: true,
   startDate: true,
   endDate: true,
   impactSummary: true,
@@ -24,6 +26,8 @@ const PROJECT_SELECT = {
   updatedAt: true,
   organization: { select: { id: true, name: true } },
   district: { select: { id: true, name: true, division: { select: { id: true, name: true } } } },
+  upazila:  { select: { id: true, name: true } },
+  union:    { select: { id: true, name: true } },
   _count: { select: { participants: true } },
 } as const;
 
@@ -37,7 +41,7 @@ export class RestorationService {
   ) {}
 
   async create(dto: CreateRestorationProjectDto, user: JwtPayload) {
-    if (dto.districtId) await assertDistrictExists(this.prisma, dto.districtId);
+    const geo = await resolveGeoHierarchy(this.prisma, dto);
     if (dto.organizationId) {
       const org = await this.prisma.organization.findUnique({ where: { id: dto.organizationId }, select: { id: true } });
       if (!org) throw new BadRequestException('Organization not found');
@@ -50,7 +54,9 @@ export class RestorationService {
           description: dto.description,
           category: dto.category,
           organizationId: dto.organizationId,
-          districtId: dto.districtId,
+          districtId: geo.districtId,
+          upazilaId: geo.upazilaId,
+          unionId: geo.unionId,
           startDate: dto.startDate ? new Date(dto.startDate) : undefined,
           endDate: dto.endDate ? new Date(dto.endDate) : undefined,
           impactSummary: dto.impactSummary,
@@ -72,12 +78,22 @@ export class RestorationService {
     });
   }
 
-  list(category?: RestorationCategory, status?: ProjectStatus, districtId?: string, rawPage = 1, rawPageSize = 20) {
+  list(
+    category?: RestorationCategory,
+    status?: ProjectStatus,
+    districtId?: string,
+    upazilaId?: string,
+    unionId?: string,
+    rawPage = 1,
+    rawPageSize = 20,
+  ) {
     const { page, pageSize } = clampPagination(rawPage, rawPageSize);
     const skip = (page - 1) * pageSize;
     const where = {
       ...(category ? { category } : {}),
       ...(status ? { status } : {}),
+      ...(upazilaId ? { upazilaId } : {}),
+      ...(unionId ? { unionId } : {}),
       ...(districtId ? { districtId } : {}),
     };
     return Promise.all([

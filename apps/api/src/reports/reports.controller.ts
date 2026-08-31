@@ -23,6 +23,8 @@ export class ReportsController {
     @Query('status') status?: string,
     @Query('category') category?: string,
     @Query('districtId') districtId?: string,
+    @Query('upazilaId') upazilaId?: string,
+    @Query('unionId') unionId?: string,
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
   ) {
@@ -30,6 +32,8 @@ export class ReportsController {
       status as ReportStatus | undefined,
       category as ReportCategory | undefined,
       districtId,
+      upazilaId,
+      unionId,
       Number(page ?? 1),
       Number(pageSize ?? 20),
     );

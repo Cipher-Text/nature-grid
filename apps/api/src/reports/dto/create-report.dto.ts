@@ -20,6 +20,14 @@ export class CreateReportDto {
   districtId?: string;
 
   @IsOptional()
+  @IsString()
+  upazilaId?: string;
+
+  @IsOptional()
+  @IsString()
+  unionId?: string;
+
+  @IsOptional()
   @IsNumber()
   @Min(-90) @Max(90)
   lat?: number;

@@ -36,6 +36,20 @@ enum AlertSeverity {
   EMERGENCY
 }
 
+enum AlertType {
+  FLOOD
+  FLASH_FLOOD
+  CYCLONE
+  STORM_SURGE
+  HEATWAVE
+  AIR_QUALITY
+  WATER_POLLUTION
+  LANDSLIDE
+  DROUGHT
+  WILDFIRE
+  OTHER
+}
+
 enum AlertStatus {
   DRAFT
   ACTIVE
@@ -158,6 +172,8 @@ enum AuditAction {
   OBSERVATION_TRUST_CHANGE
   OBSERVATION_UPDATE
   OBSERVATION_DELETE
+  OBSERVATION_MEASUREMENT_ADD
+  OBSERVATION_MEASUREMENT_DELETE
   RESTORATION_PROJECT_CREATE
   RESTORATION_PROJECT_UPDATE
   RESTORATION_PROJECT_JOIN
@@ -219,6 +235,76 @@ enum ObservationTrustLevel {
   COMMUNITY
   UNVERIFIED
   FLAGGED
+}
+
+enum MeasurementParameter {
+  // Water quality
+  PH
+  DISSOLVED_OXYGEN
+  WATER_TEMPERATURE
+  TURBIDITY
+  CONDUCTIVITY
+  SALINITY
+  NITRATE_N
+  PHOSPHATE_P
+  BOD
+  COD
+  TOTAL_DISSOLVED_SOLIDS
+  TOTAL_SUSPENDED_SOLIDS
+  ARSENIC
+  FECAL_COLIFORM
+  WATER_DEPTH
+  FLOW_VELOCITY
+  // Air quality
+  PM25
+  PM10
+  CO2
+  CO
+  NOX
+  SOX
+  OZONE
+  VOC
+  AQI
+  AMBIENT_TEMPERATURE
+  RELATIVE_HUMIDITY
+  // Biodiversity / habitat
+  SPECIES_COUNT
+  INDIVIDUAL_COUNT
+  CANOPY_COVER
+  VEGETATION_DENSITY
+  // Soil / land
+  SOIL_PH
+  SOIL_MOISTURE
+  AREA_AFFECTED
+  OTHER
+}
+
+enum MeasurementUnit {
+  MG_PER_L          // mg/L  — dissolved substances in water
+  UG_PER_L          // µg/L  — trace metals, arsenic
+  NTU               // turbidity
+  US_PER_CM         // µS/cm — conductivity
+  PPT               // parts per thousand — salinity
+  PH_UNITS          // dimensionless pH scale
+  CELSIUS           // °C — temperature
+  PPM               // parts per million
+  PPB               // parts per billion
+  UG_PER_M3         // µg/m³ — air particulates
+  PERCENT           // %
+  COUNT             // individual or species count
+  METERS            // depth or distance
+  METERS_PER_SECOND // flow velocity
+  CFU_PER_100ML     // colony-forming units — fecal coliform
+  HECTARES          // area affected
+  INDEX             // dimensionless index (AQI)
+  OTHER
+}
+
+enum QualityFlag {
+  GOOD      // validated, reliable reading
+  SUSPECT   // needs verification
+  BAD       // likely erroneous
+  ESTIMATED // interpolated or modelled
 }
 
 enum NotificationChannel {
@@ -465,6 +551,7 @@ model District {
   upazilas            Upazila[]
   reports             CitizenReport[]
   alerts              Alert[]
+  alertAreas          AlertArea[]
   observations        Observation[]
   restorationProjects RestorationProject[]
   occurrences         Occurrence[]
@@ -513,6 +600,10 @@ model Upazila {
   unions             Union[]
   waterBodies        WaterBodyUpazila[]
   waterLevelStations WaterLevelStation[]
+  reports            CitizenReport[]
+  alertAreas         AlertArea[]
+  observations       Observation[]
+  restorationProjects RestorationProject[]
 
   @@unique([name, districtId])
   @@index([districtId])
@@ -644,7 +735,11 @@ model Union {
   avgUvIndex30d    Float?
   climateUpdatedAt DateTime?
 
-  dailyClimate UnionDailyClimate[]
+  dailyClimate        UnionDailyClimate[]
+  reports             CitizenReport[]
+  alertAreas          AlertArea[]
+  observations        Observation[]
+  restorationProjects RestorationProject[]
 
   @@unique([name, upazilaId])
   @@index([upazilaId])
@@ -728,6 +823,10 @@ model CitizenReport {
   reporter    User?          @relation(fields: [reporterId], references: [id], onDelete: SetNull)
   districtId  String?
   district    District?      @relation(fields: [districtId], references: [id])
+  upazilaId   String?
+  upazila     Upazila?       @relation(fields: [upazilaId], references: [id])
+  unionId     String?
+  union       Union?         @relation(fields: [unionId], references: [id])
   lat         Float?
   lng         Float?
   resolvedAt  DateTime?
@@ -742,6 +841,8 @@ model CitizenReport {
   @@index([status])
   @@index([category])
   @@index([districtId])
+  @@index([upazilaId])
+  @@index([unionId])
   @@index([createdAt])
 }
 
@@ -796,6 +897,10 @@ model Observation {
   observer    User?                 @relation(fields: [observerId], references: [id], onDelete: SetNull)
   districtId  String?
   district    District?             @relation(fields: [districtId], references: [id])
+  upazilaId   String?
+  upazila     Upazila?              @relation(fields: [upazilaId], references: [id])
+  unionId     String?
+  union       Union?                @relation(fields: [unionId], references: [id])
   lat         Float?
   lng         Float?
   species     String?
@@ -803,10 +908,31 @@ model Observation {
   createdAt   DateTime              @default(now())
   updatedAt   DateTime              @updatedAt
 
+  measurements ObservationMeasurement[]
+
   @@index([observerId])
   @@index([category])
   @@index([trustLevel])
   @@index([districtId])
+  @@index([upazilaId])
+  @@index([unionId])
+}
+
+model ObservationMeasurement {
+  id             String               @id @default(cuid())
+  observationId  String
+  observation    Observation          @relation(fields: [observationId], references: [id], onDelete: Cascade)
+  parameter      MeasurementParameter
+  value          Float
+  unit           MeasurementUnit
+  method         String?              // e.g. "Hach HQ30d field meter", "visual estimate"
+  detectionLimit Float?               // minimum detectable value for lab results
+  qualityFlag    QualityFlag          @default(GOOD)
+  notes          String?
+  recordedAt     DateTime             @default(now())
+
+  @@index([observationId])
+  @@index([parameter])
 }
 
 // ─── Restoration Projects ──────────────────────────────────────────────────────
@@ -821,6 +947,10 @@ model RestorationProject {
   organization   Organization?       @relation(fields: [organizationId], references: [id])
   districtId     String?
   district       District?           @relation(fields: [districtId], references: [id])
+  upazilaId      String?
+  upazila        Upazila?            @relation(fields: [upazilaId], references: [id])
+  unionId        String?
+  union          Union?              @relation(fields: [unionId], references: [id])
   startDate      DateTime?
   endDate        DateTime?
   impactSummary  String?
@@ -834,6 +964,8 @@ model RestorationProject {
   @@index([category])
   @@index([status])
   @@index([districtId])
+  @@index([upazilaId])
+  @@index([unionId])
 }
 
 model RestorationParticipant {
@@ -897,7 +1029,10 @@ model Alert {
   description  String
   severity     AlertSeverity @default(INFO)
   status       AlertStatus   @default(DRAFT)
+  alertType    AlertType?
   instructions String?
+  // districtId kept for backward-compat with notification fan-out.
+  // Canonical multi-area scope lives in AlertArea[].
   districtId   String?
   district     District?     @relation(fields: [districtId], references: [id])
   issuedAt     DateTime      @default(now())
@@ -905,10 +1040,29 @@ model Alert {
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
+  areas      AlertArea[]
   deliveries NotificationDelivery[]
 
   @@index([status])
   @@index([severity])
+  @@index([alertType])
+}
+
+model AlertArea {
+  id         String    @id @default(cuid())
+  alertId    String
+  alert      Alert     @relation(fields: [alertId], references: [id], onDelete: Cascade)
+  districtId String?
+  district   District? @relation(fields: [districtId], references: [id])
+  upazilaId  String?
+  upazila    Upazila?  @relation(fields: [upazilaId], references: [id])
+  unionId    String?
+  union      Union?    @relation(fields: [unionId], references: [id])
+
+  @@index([alertId])
+  @@index([districtId])
+  @@index([upazilaId])
+  @@index([unionId])
 }
 
 // ─── Notifications ────────────────────────────────────────────────────────────
@@ -997,11 +1151,13 @@ model StationFloodForecast {
   riverDischargeP75    Float?
   riverDischargeP10    Float?
   riverDischargeP90    Float?
+  ingestionJobId       String?           // IngestionJob that last wrote this row
   createdAt            DateTime          @default(now())
 
   @@unique([stationId, forecastDate])
   @@index([stationId])
   @@index([forecastDate])
+  @@index([ingestionJobId])
 }
 
 // ─── Marine Weather (OpenMeteo Marine API) ───────────────────────────────────
@@ -1028,11 +1184,13 @@ model MarineForecast {
   swellWavePeriodMax         Float?
   swellWavePeakPeriodMax     Float?
   seaSurfaceTemp             Float?
+  ingestionJobId             String?  // IngestionJob that last wrote this row
   createdAt                  DateTime @default(now())
 
   @@unique([districtId, forecastDate])
   @@index([districtId])
   @@index([forecastDate])
+  @@index([ingestionJobId])
 }
 
 // ─── Satellite Radiation (OpenMeteo Satellite API) ───────────────────────────
@@ -1049,11 +1207,13 @@ model SatelliteRadiationReading {
   lng                   Float
   readingDate           DateTime @db.Date
   shortwaveRadiationSum Float?
+  ingestionJobId        String?  // IngestionJob that last wrote this row
   createdAt             DateTime @default(now())
 
   @@unique([districtId, readingDate])
   @@index([districtId])
   @@index([readingDate])
+  @@index([ingestionJobId])
 }
 
 // ─── Weather ──────────────────────────────────────────────────────────────────
@@ -1078,10 +1238,12 @@ model CurrentWeatherReading {
   isDay               Boolean?
   windGusts10m        Float?
   surfacePressure     Float?
+  ingestionJobId      String?  // IngestionJob that created this row
   createdAt           DateTime @default(now())
 
   @@unique([districtId, readingTime])
   @@index([districtId])
+  @@index([ingestionJobId])
 }
 
 model HourlyWeatherForecast {
@@ -1101,10 +1263,12 @@ model HourlyWeatherForecast {
   windDirection10m         Int?
   cloudCover               Int?
   windGusts10m             Float?
+  ingestionJobId           String?  // IngestionJob that created this row
   createdAt                DateTime @default(now())
 
   @@unique([districtId, forecastTime])
   @@index([districtId])
+  @@index([ingestionJobId])
 }
 
 model DailyWeatherForecast {
@@ -1125,10 +1289,12 @@ model DailyWeatherForecast {
   uvIndexMax                  Float?
   sunrise                     DateTime?
   sunset                      DateTime?
+  ingestionJobId              String?   // IngestionJob that created this row
   createdAt                   DateTime  @default(now())
 
   @@unique([districtId, forecastDate])
   @@index([districtId])
+  @@index([ingestionJobId])
 }
 
 model HourlyAirQuality {
@@ -1145,10 +1311,12 @@ model HourlyAirQuality {
   sulphurDioxide  Float?
   ozone           Float?
   uvIndex         Float?
+  ingestionJobId  String?  // IngestionJob that created this row
   createdAt       DateTime @default(now())
 
   @@unique([districtId, forecastTime])
   @@index([districtId])
+  @@index([ingestionJobId])
 }
 
 // ─── Emissions ────────────────────────────────────────────────────────────────

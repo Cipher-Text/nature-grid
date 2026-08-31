@@ -24,6 +24,14 @@ export class CreateRestorationProjectDto {
   districtId?: string;
 
   @IsOptional()
+  @IsString()
+  upazilaId?: string;
+
+  @IsOptional()
+  @IsString()
+  unionId?: string;
+
+  @IsOptional()
   @IsISO8601()
   startDate?: string;
 

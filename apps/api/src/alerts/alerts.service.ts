@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { AlertStatus, AlertSeverity } from '@prisma/client';
+import { AlertStatus, AlertSeverity, AlertType } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CreateAlertDto } from './dto/create-alert.dto';
@@ -8,17 +8,29 @@ import type { JwtPayload } from '../common/decorators/current-user.decorator';
 import { clampPagination } from '../common/pagination';
 import { assertDistrictExists } from '../common/validate-district';
 
+const AREA_SELECT = {
+  id: true,
+  districtId: true,
+  upazilaId: true,
+  unionId: true,
+  district: { select: { id: true, name: true } },
+  upazila: { select: { id: true, name: true } },
+  union: { select: { id: true, name: true } },
+} as const;
+
 const ALERT_SELECT = {
   id: true,
   title: true,
   description: true,
   severity: true,
   status: true,
+  alertType: true,
   instructions: true,
   issuedAt: true,
   expiresAt: true,
   createdAt: true,
   district: { select: { id: true, name: true, division: { select: { id: true, name: true } } } },
+  areas: { select: AREA_SELECT },
 } as const;
 
 @Injectable()
@@ -28,14 +40,29 @@ export class AlertsService {
     private readonly notifications: NotificationsService,
   ) {}
 
-  list(status?: AlertStatus, severity?: AlertSeverity, districtId?: string, rawPage = 1, rawPageSize = 20) {
+  list(
+    status?: AlertStatus,
+    severity?: AlertSeverity,
+    alertType?: AlertType,
+    districtId?: string,
+    rawPage = 1,
+    rawPageSize = 20,
+  ) {
     const { page, pageSize } = clampPagination(rawPage, rawPageSize);
     const skip = (page - 1) * pageSize;
-    const where = {
+    const where: Record<string, unknown> = {
       ...(status ? { status } : { status: AlertStatus.ACTIVE }),
       ...(severity ? { severity } : {}),
-      ...(districtId ? { districtId } : {}),
+      ...(alertType ? { alertType } : {}),
     };
+
+    if (districtId) {
+      where['OR'] = [
+        { districtId },
+        { areas: { some: { districtId } } },
+      ];
+    }
+
     return Promise.all([
       this.prisma.alert.findMany({
         where,
@@ -58,31 +85,67 @@ export class AlertsService {
   }
 
   async create(dto: CreateAlertDto, actor: JwtPayload) {
-    if (dto.districtId) await assertDistrictExists(this.prisma, dto.districtId);
+    // Validate legacy single-district field if provided without areas.
+    if (dto.districtId && !dto.areas?.length) {
+      await assertDistrictExists(this.prisma, dto.districtId);
+    }
 
-    const alert = await this.prisma.alert.create({
-      data: {
-        title: dto.title,
-        severity: dto.severity,
-        description: dto.description,
-        instructions: dto.instructions,
-        districtId: dto.districtId,
-        expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : undefined,
-        status: AlertStatus.ACTIVE,
-      },
+    // Determine the districtId for backward-compat notification fan-out:
+    // prefer the first district-level area, fall back to dto.districtId.
+    const firstAreaDistrictId = dto.areas?.find((a) => a.districtId)?.districtId;
+    const legacyDistrictId = firstAreaDistrictId ?? dto.districtId;
+
+    const alert = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.alert.create({
+        data: {
+          title: dto.title,
+          severity: dto.severity,
+          description: dto.description,
+          instructions: dto.instructions,
+          alertType: dto.alertType,
+          districtId: legacyDistrictId,
+          expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : undefined,
+          status: AlertStatus.ACTIVE,
+        },
+        select: ALERT_SELECT,
+      });
+
+      if (dto.areas?.length) {
+        await tx.alertArea.createMany({
+          data: dto.areas.map((area) => ({
+            alertId: created.id,
+            districtId: area.districtId,
+            upazilaId: area.upazilaId,
+            unionId: area.unionId,
+          })),
+        });
+      }
+
+      await tx.auditEvent.create({
+        data: {
+          action: 'ALERT_CREATE',
+          userId: actor.sub,
+          entityType: 'Alert',
+          entityId: created.id,
+          meta: {
+            ...(dto.alertType ? { alertType: dto.alertType } : {}),
+            ...(dto.areas?.length ? { areaCount: dto.areas.length } : {}),
+          },
+        },
+      });
+
+      return created;
+    });
+
+    // Re-fetch to include any created AlertArea rows.
+    const full = await this.prisma.alert.findUniqueOrThrow({
+      where: { id: alert.id },
       select: ALERT_SELECT,
     });
-    await this.prisma.auditEvent.create({
-      data: {
-        action: 'ALERT_CREATE',
-        userId: actor.sub,
-        entityType: 'Alert',
-        entityId: alert.id,
-      },
-    });
+
     // Dispatch is fire-and-forget: delivery failures must not fail the HTTP response.
-    this.notifications.dispatchForAlert(alert.id);
-    return alert;
+    this.notifications.dispatchForAlert(full.id);
+    return full;
   }
 
   async update(id: string, dto: UpdateAlertDto, actor: JwtPayload) {

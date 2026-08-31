@@ -44,6 +44,7 @@ const BASE_ALERT = {
   issuedAt: new Date('2026-01-01T08:00:00Z'),
   districtId: 'd1',
   district: { name: 'Sylhet' },
+  areas: [] as { districtId: string | null }[],
 };
 
 const makeSubscription = (userId: string, districtId: string | null, id = `sub-${userId}`) => ({
