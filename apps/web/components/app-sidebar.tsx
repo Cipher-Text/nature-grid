@@ -24,6 +24,7 @@ const NAV_SECTIONS = [
       { href: '/reports', label: 'Citizen Reports' },
       { href: '/alerts', label: 'Alerts' },
       { href: '/biodiversity', label: 'Biodiversity' },
+      { href: '/water-bodies', label: 'Water Bodies' },
       { href: '/restoration', label: 'Restoration' },
       { href: '/organizations', label: 'Organizations' },
       { href: '/community', label: 'Community' },

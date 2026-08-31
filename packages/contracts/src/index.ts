@@ -162,6 +162,12 @@ export const routes = {
     forecastByDistrict: (districtId: string) => `${apiPrefix}/marine/forecast/${districtId}`,
   },
 
+  waterBodies: {
+    list: `${apiPrefix}/water-bodies`,
+    detail: (id: string) => `${apiPrefix}/water-bodies/${id}`,
+    stations: `${apiPrefix}/water-bodies/stations`,
+  },
+
   emissions: {
     sources: `${apiPrefix}/emissions/sources`,
     source: (id: string) => `${apiPrefix}/emissions/sources/${id}`,
@@ -840,5 +846,89 @@ export interface GamificationSummary {
   level:           number;
   levelLabel:      string;
   nextLevelPoints: number; // -1 means max level reached
+}
+
+// ─── Water Bodies ─────────────────────────────────────────────────────────────
+
+export type HydrologicalClass = 'LOTIC' | 'LENTIC';
+export type WaterBodyType = 'RIVER' | 'WETLAND' | 'LAKE';
+
+export interface LoticDetails {
+  id: string;
+  waterBodyId: string;
+  lengthKmBd: number | null;
+  averageWidthM: number | null;
+  maxDepthM: number | null;
+  meanDischargeM3s: number | null;
+  hydrologicalOrigin: string | null;
+  outfallTo: string | null;
+  flowRegime: string | null;
+  divisionsTraversed: string[];
+  districtsTraversed: string[];
+  bwdbGaugingStations: string | null;
+  banglapediaMatchName: string | null;
+  banglapediaLengthKm: number | null;
+  banglapediaAreaCoveredOldDistricts: string | null;
+  banglapediaSource: string | null;
+}
+
+export interface LenticDetails {
+  id: string;
+  waterBodyId: string;
+  areaMonsoonSqKm: number | null;
+  areaDrySqKm: number | null;
+  waterVolumeEst: number | null;
+  seasonality: string | null;
+}
+
+export interface WaterLevelStation {
+  id: string;
+  serial: number;
+  stationCode: string;
+  name: string;
+  riverName: string | null;
+  tidalStatus: string | null;
+  districtId: string | null;
+  upazilaId: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  waterBodies?: Array<{ waterBody: { id: string; code: string; nameEn: string } }>;
+}
+
+export interface WaterBody {
+  id: string;
+  code: string;
+  slug: string;
+  nameEn: string;
+  nameBn: string | null;
+  hydrologicalClass: HydrologicalClass;
+  waterBodyType: WaterBodyType;
+  waterBodySubtype: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  transboundaryFlag: boolean;
+  transboundaryCountries: string[];
+  upazilas: Array<{
+    upazila: { id: string; name: string; district: { id: string; name: string } };
+  }>;
+  loticDetails: LoticDetails | null;
+  lenticDetails: LenticDetails | null;
+  stations?: Array<{ station: WaterLevelStation }>;
+}
+
+export interface WaterBodyPagedResponse {
+  data: WaterBody[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface WaterLevelStationPagedResponse {
+  data: WaterLevelStation[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 }
 
