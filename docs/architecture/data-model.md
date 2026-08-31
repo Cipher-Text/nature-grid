@@ -2,7 +2,7 @@
 
 Nature Grid uses PostgreSQL as the primary database. The Prisma schema lives at `packages/database/prisma/schema.prisma`. The Prisma client is regenerated via `pnpm run db:generate` from the `packages/database` directory.
 
-Current state: **39 models, 23 enums, 1 migration applied (`20260826150548_init`).**
+Current state: **54 models, 31 enums, 8 migrations applied.**
 
 ## Enums
 
@@ -12,13 +12,21 @@ Current state: **39 models, 23 enums, 1 migration applied (`20260826150548_init`
 | `OrganizationMemberRole` | `ADMIN MEMBER` |
 | `ProfileVisibility` | `PUBLIC MEMBERS_ONLY PRIVATE` |
 | `AlertSeverity` | `INFO WATCH WARNING EMERGENCY` |
+| `AlertType` | `FLOOD FLASH_FLOOD CYCLONE STORM_SURGE HEATWAVE AIR_QUALITY WATER_POLLUTION LANDSLIDE DROUGHT WILDFIRE OTHER` |
 | `AlertStatus` | `DRAFT ACTIVE EXPIRED CANCELLED` |
 | `ReportStatus` | `SUBMITTED UNDER_REVIEW VERIFIED REJECTED RESOLVED` |
 | `ReportCategory` | `WATER_POLLUTION ILLEGAL_DUMPING DEFORESTATION WILDLIFE_INCIDENT FLOODING AIR_POLLUTION OTHER` |
 | `ObservationCategory` | `BIODIVERSITY WATER_QUALITY AIR_QUALITY LAND_USE RESTORATION` |
 | `ObservationTrustLevel` | `RESEARCH_GRADE COMMUNITY UNVERIFIED FLAGGED` |
+| `MeasurementParameter` | Water quality: `PH DISSOLVED_OXYGEN WATER_TEMPERATURE TURBIDITY CONDUCTIVITY SALINITY NITRATE_N PHOSPHATE_P BOD COD TOTAL_DISSOLVED_SOLIDS TOTAL_SUSPENDED_SOLIDS ARSENIC FECAL_COLIFORM WATER_DEPTH FLOW_VELOCITY` · Air: `PM25 PM10 CO2 CO NOX SOX OZONE VOC AQI AMBIENT_TEMPERATURE RELATIVE_HUMIDITY` · Biodiversity: `SPECIES_COUNT INDIVIDUAL_COUNT CANOPY_COVER VEGETATION_DENSITY` · Soil: `SOIL_PH SOIL_MOISTURE AREA_AFFECTED OTHER` |
+| `MeasurementUnit` | `MG_PER_L UG_PER_L NTU US_PER_CM PPT PH_UNITS CELSIUS PPM PPB UG_PER_M3 PERCENT COUNT METERS METERS_PER_SECOND CFU_PER_100ML HECTARES INDEX OTHER` |
+| `QualityFlag` | `GOOD SUSPECT BAD ESTIMATED` |
 | `ProjectStatus` | `PLANNED ACTIVE COMPLETED PAUSED` |
 | `RestorationCategory` | `TREE_PLANTING WETLAND_RESTORATION RIVERBANK_PROTECTION MANGROVE WASTE_MANAGEMENT OTHER` |
+| `RestorationTargetMetric` | `TREES_PLANTED AREA_RESTORED_HA SEEDLINGS_SURVIVED SPECIES_REINTRODUCED WATER_QUALITY_SCORE CARBON_SEQUESTERED_T VOLUNTEER_HOURS OTHER` |
+| `WaterBodyType` | `RIVER CANAL LAKE HAOR BEEL POND ESTUARY RESERVOIR OTHER` |
+| `HydrologicalClass` | `PERENNIAL SEASONAL EPHEMERAL` |
+| `WaterLevelTrend` | `RISING FALLING STEADY` |
 | `DatasetCategory` | `WEATHER AIR_QUALITY WATER BIODIVERSITY REPORTS MONITORING GEOSPATIAL` |
 | `DatasetAccessPolicy` | `PUBLIC LOGIN_REQUIRED RESEARCHER APPROVED GOVERNMENT` |
 | `DatasetAccessRequestStatus` | `PENDING APPROVED REJECTED` |
@@ -30,9 +38,9 @@ Current state: **39 models, 23 enums, 1 migration applied (`20260826150548_init`
 | `PollutionSourceType` | `FACTORY POWER_PLANT VEHICLE_FLEET AGRICULTURE CONSTRUCTION WASTE_FACILITY OTHER` |
 | `PollutantType` | `CO2 CH4 N2O PM25 PM10 NOX SOX VOC CO OTHER` |
 | `EmissionUnit` | `TONS_PER_YEAR KG_PER_DAY GRAMS_PER_HOUR MG_PER_M3 OTHER` |
-| `AuditAction` | `USER_REGISTER USER_LOGIN USER_LOGIN_FAILED USER_LOGOUT USER_ROLE_CHANGE USER_DEACTIVATE REPORT_SUBMIT REPORT_STATUS_CHANGE REPORT_COMMENT_ADD REPORT_MEDIA_ADD ALERT_CREATE ALERT_STATUS_CHANGE DATASET_ACCESS DATASET_DOWNLOAD DATASET_UPDATE OBSERVATION_SUBMIT OBSERVATION_TRUST_CHANGE OBSERVATION_UPDATE OBSERVATION_DELETE RESTORATION_PROJECT_CREATE RESTORATION_PROJECT_UPDATE RESTORATION_PROJECT_JOIN DATASET_ACCESS_DECISION PERMISSION_GRANT PERMISSION_REVOKE EMISSION_SOURCE_CREATE EMISSION_ENTRY_CREATE` |
+| `AuditAction` | `USER_REGISTER USER_LOGIN USER_LOGIN_FAILED USER_LOGOUT USER_ROLE_CHANGE USER_DEACTIVATE REPORT_SUBMIT REPORT_STATUS_CHANGE REPORT_COMMENT_ADD REPORT_MEDIA_ADD ALERT_CREATE ALERT_STATUS_CHANGE DATASET_ACCESS DATASET_DOWNLOAD DATASET_UPDATE DATASET_VERSION_PUBLISH DATASET_ACCESS_DECISION OBSERVATION_SUBMIT OBSERVATION_TRUST_CHANGE OBSERVATION_UPDATE OBSERVATION_DELETE OBSERVATION_MEASUREMENT_ADD OBSERVATION_MEASUREMENT_DELETE RESTORATION_PROJECT_CREATE RESTORATION_PROJECT_UPDATE RESTORATION_PROJECT_JOIN RESTORATION_TARGET_ADD RESTORATION_ACTIVITY_ADD RESTORATION_METRIC_ADD PERMISSION_GRANT PERMISSION_REVOKE EMISSION_SOURCE_CREATE EMISSION_ENTRY_CREATE` |
 
-All 27 `AuditAction` values are written by services. See the `audit` section in [modules.md](modules.md) for which services write what.
+All 33 `AuditAction` values are written by services. See the `audit` section in [modules.md](modules.md) for which services write what.
 
 ## Users & Auth
 
@@ -58,8 +66,8 @@ All 27 `AuditAction` values are written by services. See the `audit` section in 
 | Model | Key Fields | Relations |
 | --- | --- | --- |
 | `Division` | `id`, `name unique`, `bnName?`, `slug`, `pcode`, `lat`, `lng`, `areaSqKm`, `url`; climate: `avgTemp30d`, `minTemp30d`, `maxTemp30d`, `avgHumidity30d`, `totalPrecip30d`, `avgWindSpeed30d`, `avgCloudCover30d`, `avgPm25_30d`, `avgPm10_30d`, `avgUvIndex30d`, `climateUpdatedAt` | → `District[]` |
-| `District` | `id`, `name`, `bnName?`, `slug`, `pcode`, `lat`, `lng`, `areaSqKm`, `url`, `centerLat`, `centerLng`, `boundary Json?`, `divisionId`; climate columns (same 11 as Division) | → `Division`, `Upazila[]`, `CitizenReport[]`, `Alert[]`, `Observation[]`, `RestorationProject[]`, `Occurrence[]`, plus all 4 weather tables; unique `(name, divisionId)` |
-| `Upazila` | `id`, `name`, `bnName?`, `slug`, `pcode`, `lat`, `lng`, `areaSqKm`, `url`, `districtId`; climate columns (same 11 as Division) | → `District`, `Union[]`; unique `(name, districtId)` |
+| `District` | `id`, `name`, `bnName?`, `slug`, `pcode`, `lat`, `lng`, `geom geography(Point,4326)?`, `centerLat`, `centerLng`, `areaSqKm`, `url`, `boundary Json?`, `isCoastal Boolean`, `coastLat?`, `coastLng?`, `divisionId`; climate columns (same 11 as Division) | → `Division`, `Upazila[]`, `CitizenReport[]`, `Alert[]`, `AlertArea[]`, `Observation[]`, `RestorationProject[]`, `Occurrence[]`, plus all 4 weather tables; unique `(name, divisionId)` |
+| `Upazila` | `id`, `name`, `bnName?`, `slug`, `pcode`, `lat`, `lng`, `areaSqKm`, `url`, `districtId`; climate columns (same 11 as Division) | → `District`, `Union[]`, `CitizenReport[]`, `AlertArea[]`, `Observation[]`, `RestorationProject[]`; unique `(name, districtId)` |
 | `Union` | `id`, `name`, `bnName?`, `slug`, `pcode`, `lat`, `lng`, `areaSqKm`, `url`, `upazilaId`; climate columns (same 11 as Division) | → `Upazila`, `UnionDailyClimate[]`; unique `(name, upazilaId)` |
 | `UnionDailyClimate` | `id`, `unionId`, `date Date`, `avgTemp`, `minTemp`, `maxTemp`, `avgHumidity`, `totalPrecip`, `avgWindSpeed`, `maxWindSpeed`, `avgCloudCover`, `avgPm25`, `avgPm10`, `avgUvIndex`, `avgOzone`, `fetchedAt`; unique `(unionId, date)` | → `Union` |
 
@@ -67,10 +75,11 @@ All 27 `AuditAction` values are written by services. See the `audit` section in 
 
 | Model | Key Fields | Relations |
 | --- | --- | --- |
-| `Dataset` | `id`, `name`, `category DatasetCategory`, `accessPolicy DatasetAccessPolicy`, `source`, `providerId?`, `description?`, `recordCount?`, `lastSyncedAt?`, `isPublished` | → `Provider?`, `DatasetAccessRequest[]` |
+| `Dataset` | `id`, `name`, `category DatasetCategory`, `accessPolicy DatasetAccessPolicy`, `source`, `providerId?`, `description?`, `recordCount?`, `lastSyncedAt?`, `isPublished` | → `Provider?`, `DatasetAccessRequest[]`, `DatasetVersion[]` |
 | `DatasetAccessRequest` | `id`, `datasetId`, `userId`, `status DatasetAccessRequestStatus`, `decidedById?`, `decidedAt?` | → `Dataset`, `User` (requester), `User?` (decider); unique `(datasetId, userId)` |
+| `DatasetVersion` | `id`, `datasetId`, `version`, `description?`, `publishedById`, `publishedAt`, `recordCount?`, `fileUrl?`, `metadata Json?` | → `Dataset`, `User` (publisher) |
 
-`DatasetAccessRequest` is implemented by `DatasetsService` and `DatasetsController`. `POST /datasets/:id/access-request` creates a request, admins can list and decide requests, and `GET /datasets/:id/download` applies the dataset policy before returning API access information. The unique constraint on `(datasetId, userId)` means one request per user per dataset; re-requesting after rejection still needs an explicit product decision.
+`DatasetAccessRequest` is implemented by `DatasetsService` and `DatasetsController`. `POST /datasets/:id/access-request` creates a request, admins can list and decide requests, and `GET /datasets/:id/download` applies the dataset policy before returning API access information. The unique constraint on `(datasetId, userId)` means one request per user per dataset; re-requesting after rejection still needs an explicit product decision. `DatasetVersion` tracks published snapshots of a dataset; each publish writes a `DATASET_VERSION_PUBLISH` audit event.
 
 ## Reports
 
@@ -85,18 +94,22 @@ All 27 `AuditAction` values are written by services. See the `audit` section in 
 
 | Model | Key Fields | Relations |
 | --- | --- | --- |
-| `Observation` | `id`, `category ObservationCategory`, `trustLevel ObservationTrustLevel`, `description`, `observerId?`, `districtId?`, `lat?`, `lng?`, `species?`, `observedAt` | → `User?`, `District?` |
+| `Observation` | `id`, `category ObservationCategory`, `trustLevel ObservationTrustLevel`, `description`, `observerId?`, `districtId?`, `upazilaId?`, `lat?`, `lng?`, `species?`, `observedAt` | → `User?`, `District?`, `Upazila?`, `ObservationMeasurement[]` |
+| `ObservationMeasurement` | `id`, `observationId`, `parameter MeasurementParameter`, `value Float`, `unit MeasurementUnit`, `qualityFlag QualityFlag default GOOD`, `measuredAt?`, `notes?` | → `Observation` |
 
-Submissions always start at `UNVERIFIED`; only `RESEARCHER`/`ADMIN` can change `trustLevel`, and each change writes an `OBSERVATION_TRUST_CHANGE` audit event recording `from` and `to`. `species` is a free-text string here, deliberately not a FK to `Species` — generic observations are not required to resolve to a GBIF taxon.
+Submissions always start at `UNVERIFIED`; only `RESEARCHER`/`ADMIN` can change `trustLevel`, and each change writes an `OBSERVATION_TRUST_CHANGE` audit event recording `from` and `to`. `species` is a free-text string here, deliberately not a FK to `Species` — generic observations are not required to resolve to a GBIF taxon. Measurements can be attached after submission (`POST /observations/:id/measurements`); each add/delete writes an audit event. `GET /observations/nearby` accepts a lat/lng and radius for spatial queries.
 
 ## Restoration
 
 | Model | Key Fields | Relations |
 | --- | --- | --- |
-| `RestorationProject` | `id`, `title`, `description`, `category RestorationCategory`, `status ProjectStatus`, `organizationId?`, `districtId?`, `startDate?`, `endDate?`, `impactSummary?`, `createdById` | → `Organization?`, `District?`, `User` (creator), `RestorationParticipant[]` |
+| `RestorationProject` | `id`, `title`, `description`, `category RestorationCategory`, `status ProjectStatus`, `organizationId?`, `districtId?`, `upazilaId?`, `startDate?`, `endDate?`, `impactSummary?`, `createdById` | → `Organization?`, `District?`, `Upazila?`, `User` (creator), `RestorationParticipant[]`, `ProjectTarget[]` |
 | `RestorationParticipant` | `id`, `projectId`, `userId`, `joinedAt` | → `RestorationProject`, `User`; unique `(projectId, userId)` |
+| `ProjectTarget` | `id`, `projectId`, `metric RestorationTargetMetric`, `targetValue Float`, `currentValue Float default 0`, `unit?`, `dueDate?` | → `RestorationProject`, `ProjectMetric[]` |
+| `ProjectActivity` | `id`, `projectId`, `title`, `description?`, `activityDate`, `recordedById` | → `RestorationProject`, `User` |
+| `ProjectMetric` | `id`, `targetId`, `value Float`, `recordedAt`, `notes?`, `recordedById` | → `ProjectTarget`, `User` |
 
-The unique constraint on `(projectId, userId)` is what makes joining a project idempotent. Field set is simplified relative to the original M5 scoping — see `docs/implementation-plan.md` M11.
+The unique constraint on `(projectId, userId)` is what makes joining a project idempotent. `ProjectTarget` records measurable goals (trees planted, hectares restored, etc.); `ProjectMetric` logs progress readings against a target; `ProjectActivity` captures narrative activity logs. Create/update/join each write audit events; adding targets, activities, and metrics each write their own audit events.
 
 ## Biodiversity
 
@@ -111,7 +124,8 @@ The unique constraint on `(projectId, userId)` is what makes joining a project i
 
 | Model | Key Fields | Relations |
 | --- | --- | --- |
-| `Alert` | `id`, `title`, `description`, `severity AlertSeverity`, `status AlertStatus`, `instructions?`, `districtId?`, `issuedAt`, `expiresAt?` | → `District?`, `NotificationDelivery[]` |
+| `Alert` | `id`, `title`, `description`, `type AlertType`, `severity AlertSeverity`, `status AlertStatus`, `instructions?`, `districtId?`, `issuedAt`, `expiresAt?` | → `District?`, `AlertArea[]`, `NotificationDelivery[]` |
+| `AlertArea` | `id`, `alertId`, `districtId?`, `upazilaId?`, `description?` | → `Alert`, `District?`, `Upazila?` — allows an alert to cover multiple geographic sub-areas |
 | `AlertSubscription` | `id`, `userId`, `districtId?` (null = nationwide), `channel NotificationChannel`, `minSeverity AlertSeverity` | → `User`, `District?`, `NotificationDelivery[]`; uniqueness enforced in service (Postgres `NULL != NULL` in unique indexes breaks naive deduplication for global subscriptions) |
 | `NotificationDelivery` | `id`, `subscriptionId`, `alertId`, `userId`, `channel`, `address` (captured at send time), `status DeliveryStatus`, `sentAt?`, `failedAt?`, `error?` | → `AlertSubscription` (cascade delete), `Alert`, `User` |
 
@@ -122,7 +136,7 @@ The unique constraint on `(projectId, userId)` is what makes joining a project i
 | `IngestionJob` | `id`, `providerId`, `status IngestionStatus`, `startedAt?`, `endedAt?`, `errorMsg?` | → `Provider` |
 | `AuditEvent` | `id`, `action AuditAction`, `userId?`, `entityType?`, `entityId?`, `meta Json?`, `ipAddress?` | → `User?` |
 
-`IngestionJob` records are written by `IngestionService.startJob`/`completeJob`/`failJob`, called from `WeatherScheduler`, `BiodiversityScheduler`, `FloodScheduler`, `RadiationScheduler`, `MarineScheduler`, and `LocationClimateScheduler` on every cron run. Successful jobs set `Dataset.lastSyncedAt` for matching dataset categories. See the `ingestion` module in [modules.md](modules.md).
+`IngestionJob` records are written by `IngestionService.startJob`/`completeJob`/`failJob`, called from `WeatherScheduler`, `BiodiversityScheduler`, `FloodScheduler`, `RadiationScheduler`, `MarineScheduler`, and `LocationClimateScheduler` on every cron run. (`FloodScheduler` now persists to `StationFloodForecast`, not the old district-based `FloodForecast` model.) Successful jobs set `Dataset.lastSyncedAt` for matching dataset categories. See the `ingestion` module in [modules.md](modules.md).
 
 ## Permissions
 
@@ -166,18 +180,38 @@ All 4 weather tables are keyed by `districtId`, not raw `lat`/`lng` proximity ma
 
 Note `carbonMonoxide` on `HourlyAirQuality` is an OpenMeteo air-quality pollutant reading. It is unrelated to carbon accounting or footprint tracking, which Nature Grid does not model yet — that is roadmap Phase 7.
 
+## Water Bodies
+
+| Model | Key Fields | Relations |
+| --- | --- | --- |
+| `WaterBody` | `id`, `name`, `bnName?`, `type WaterBodyType`, `hydrologicalClass HydrologicalClass?`, `description?`, `lat?`, `lng?`, `areaSqKm?`, `length?` | → `WaterBodyUpazila[]`, `WaterBodyStation[]`, `LoticWaterBodyDetails?`, `LenticWaterBodyDetails?` |
+| `WaterBodyUpazila` | `id`, `waterBodyId`, `upazilaId` | → `WaterBody`, `Upazila`; unique `(waterBodyId, upazilaId)` — a water body may span multiple upazilas |
+| `LoticWaterBodyDetails` | `waterBodyId unique`, `source?`, `mouth?`, `basinArea?`, `avgDischarge?`, `maxDischarge?`, `tributaries String[]` | → `WaterBody` — flowing water specifics (rivers, canals) |
+| `LenticWaterBodyDetails` | `waterBodyId unique`, `maxDepth?`, `avgDepth?`, `catchmentArea?`, `waterLevel?` | → `WaterBody` — still water specifics (haors, lakes, reservoirs) |
+| `WaterLevelStation` | `id`, `name`, `stationCode?`, `latitude`, `longitude`, `districtId?`, `upazilaId?`, `dangerLevel Float?`, `warningLevel Float?`, `normalLevel Float?` | → `District?`, `Upazila?`, `WaterBodyStation[]`, `StationFloodForecast[]`, `WaterLevelReading[]` |
+| `WaterBodyStation` | `waterBodyId`, `stationId` | → `WaterBody`, `WaterLevelStation`; unique `(waterBodyId, stationId)` |
+| `WaterLevelReading` | `id`, `stationId`, `readingTime`, `waterLevel Float`, `trend WaterLevelTrend?`, `discharge Float?`, `dataSource?` | → `WaterLevelStation`; unique `(stationId, readingTime)` |
+
+`WaterLevelStation.dangerLevel/warningLevel/normalLevel` are gauge thresholds in metres above datum; null means the threshold has not been configured for that station. Seeded from a CSV via `WaterBodiesService.onModuleInit`. Endpoints: `GET /water-bodies`, `GET /water-bodies/stations`, `GET /water-bodies/:id`. Water level readings are accessed via the flood module: `GET /flood/stations/:stationId/readings` and `GET /flood/stations/:stationId/latest`.
+
+## Flood Forecasting
+
+| Model | Key Fields | Relations |
+| --- | --- | --- |
+| `StationFloodForecast` | `id`, `stationId`, `forecastDate Date`, `discharge Float?`, `dischargeMin Float?`, `dischargeMax Float?`, `dischargeMedian Float?`, `dischargeQ25 Float?`, `dischargeQ75 Float?`, `unit?`, `forecastedAt` | → `WaterLevelStation`; unique `(stationId, forecastDate)` |
+
+Flood forecasts are now station-based (replaced the earlier district-based `FloodForecast` model). Endpoints: `GET /flood/forecast` (all stations, latest day), `GET /flood/forecast/station/:stationId` (full forecast window), `GET /flood/forecast/district/:districtId` (stations in a district). The `FloodScheduler` runs every six hours and triggers an initial sync on empty table.
+
 ## Geospatial
 
-`lat Float?` / `lng Float?` are used on `District` (populated for all 64), `CitizenReport`, and `Observation`. `Occurrence` and the 4 weather tables carry non-nullable `lat`/`lng`. Replace with PostGIS `geography(Point, 4326)` when the PostGIS extension is enabled — the Docker image already provides it, but no migration has enabled it yet.
-
-`FloodForecast` stores daily OpenMeteo/GloFAS river-discharge forecasts per district, including ensemble statistics where returned. The initial fetch uses district coordinates; these are monitoring proxies and should be replaced or supplemented with river-specific points for basin-level flood operations.
+`lat Float?` / `lng Float?` are used on `District`, `CitizenReport`, and `Observation`. `Occurrence` and the 4 weather tables carry non-nullable `lat`/`lng`. **`District.geom`** is now a PostGIS `geography(Point, 4326)` generated column, added by migration `20260901000000_postgis_geometry` — PostGIS is now active for point queries on districts. `coastLat`/`coastLng` on `District` hold the representative coastal coordinate used by the marine module for coastal districts.
 
 Future candidates for proper geometry fields:
 
-- `Alert` — affected zone polygon
-- `District` — administrative boundary polygon
+- `Alert` / `AlertArea` — affected zone polygon
+- `District` — administrative boundary polygon (currently stored as GeoJSON in `boundary Json?`)
 - `Upazila` — boundary polygon
-- `WaterBody` — shape (planned model, not yet in schema)
+- `WaterBody` — shape
 
 ## Notable schema decisions
 
@@ -189,11 +223,10 @@ Future candidates for proper geometry fields:
 | --- | --- | --- |
 | `Habitat` | Phase 3 | Habitat records linked to districts |
 | `MediaAsset` | Phase 3 | Uploaded photos/files for reports and observations |
-| `WaterBody` | Phase 3 | Rivers, haors, wetlands, ponds |
 | `CampaignPost` | Phase 5 | Community campaigns and education resources |
 | `Notification` | ~~Phase 5~~ **Done (Phase 6c, 2026-08-22)** | Built as `AlertSubscription` + `NotificationDelivery` — see schema above |
 
-`Observation`, `Species`, and `RestorationProject` were previously listed here and are now in the schema (M9, M10, M11 — all 2026-08-17 to 2026-08-19).
+`Observation`, `Species`, `RestorationProject`, and `WaterBody` were previously listed here and are now in the schema.
 
 Advanced domain models — climate forecasts, carbon footprint, research publications, structured surveys — are planned for Phase 7 and get their schema when that phase starts. Emissions tracking (`PollutionSource`, `EmissionEntry`) shipped in Phase 7 as the first domain (2026-08-28). See `docs/roadmap.md` Phase 7 and `docs/architecture/feature-map.md`.
 
@@ -253,12 +286,19 @@ pnpm run db:generate          # Regenerate Prisma client after schema changes
 pnpm run db:studio            # Open Prisma Studio at localhost:5555
 ```
 
-**Migrations applied (1):**
+**Migrations applied (8):**
 
 | Migration | Adds |
 | --- | --- |
-| `20260826150548_init` | Full schema — all 39 tables and 23 enums in a single fresh migration (includes `SatelliteRadiationReading`, `MarineForecast`, `PollutionSource`, `EmissionEntry` and the 3 emission enums added 2026-08-28) |
+| `20260826150548_init` | Full base schema — 39 tables, 23 enums (includes `SatelliteRadiationReading`, `MarineForecast`, `PollutionSource`, `EmissionEntry`) |
+| `20260828000000_gamification` | Gamification columns on `UserProfile` |
+| `20260828010000_auth_tokens` | `PasswordResetToken`, `EmailVerificationToken` |
+| `20260831000000_water_bodies_and_stations` | `WaterBody`, `LoticWaterBodyDetails`, `LenticWaterBodyDetails`, `WaterBodyUpazila`, `WaterLevelStation`, `WaterBodyStation`, `StationFloodForecast`, `WaterLevelReading`; `DatasetVersion`; `ObservationMeasurement`; `ProjectTarget`, `ProjectActivity`, `ProjectMetric`; `AlertArea`; new enums: `AlertType`, `WaterBodyType`, `HydrologicalClass`, `WaterLevelTrend`, `MeasurementParameter`, `MeasurementUnit`, `QualityFlag`, `RestorationTargetMetric`; new `AuditAction` values |
+| `20260831010000_water_body_upazila_district_fk` | Adds `districtId` FK to `WaterBodyUpazila` |
+| `20260831020000_remove_water_body_upazila_district_id` | Removes that FK (schema refinement) |
+| `20260831030000_water_level_station_fk` | Updates `WaterLevelStation` to use proper FK references for district and upazila |
+| `20260901000000_postgis_geometry` | Adds `District.geom geography(Point, 4326)` — PostGIS point geometry now active; adds `coastLat`/`coastLng` to `District`; adds gauge threshold columns to `WaterLevelStation`; adds upazila FK relations to `CitizenReport`, `Observation`, `RestorationProject`, `AlertArea` |
 
-39 tables live.
+54 tables live.
 
 The `LocationsService`, `DatasetsService`, `ProvidersService`, `PermissionsService`, and `SeedService` auto-seed data on first boot via `OnModuleInit`. `LocationsService` seeds 8 divisions, 64 districts (all with GeoJSON boundary), 494 upazilas, and 4,540 unions — all with lat/lng. All coordinates are hardcoded in `apps/api/src/locations/seed/bangladesh.ts`; no runtime file reads are required. This file is the source of truth — edit it directly if location data needs updating. `DatasetsService` seeds 9 catalog records (OpenMeteo Weather, OpenMeteo Flood, District Air Quality Index, Water Body Registry, Biodiversity Occurrences, Sundarbans Monitoring, Emissions Inventory, OpenMeteo Marine Weather, OpenMeteo Satellite Radiation). `ProvidersService` seeds both the OpenMeteo and GBIF provider records. `PermissionsService` seeds 13 named permissions and default role grants. `SeedService` seeds 6 dev user accounts (one per role) and a seed organization for local development. No separate seed script is required for those tables.

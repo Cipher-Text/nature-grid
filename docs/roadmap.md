@@ -74,7 +74,7 @@ Exit criteria met:
 Remaining gaps (carry into Phase 3):
 
 - ~~Auth refresh/logout needs Redis token store~~ Done (2026-08-16) — Postgres-backed `RefreshToken` model with rotation, not Redis; see `docs/progress.md` "Auth Refresh/Logout".
-- `lat/lng Float` should be replaced with PostGIS `geography` type
+- ~~`lat/lng Float` should be replaced with PostGIS `geography` type~~ Partially done (2026-09-01) — `District.geom geography(Point, 4326)` added by migration `20260901000000_postgis_geometry`. Polygon geometry (boundaries, alert zones, water bodies) still planned.
 - ~~Prisma migration and seed not yet run (no live database)~~ Stale — migrations have run and the database has been live since M4.
 - ~~Role-gated endpoints reject every user due to an enum-casing bug~~ Done (2026-08-17) — see `docs/progress.md` "Critical RBAC Fix". Open follow-up: no automated regression test guards against this recurring.
 
@@ -94,7 +94,7 @@ Deliverables:
 - Dataset download and access-request endpoints
 - ~~Connect public web page to live API (replace static seed data)~~ Done (2026-08-19) — every homepage section now fetches live data with a fallback to static content if the API is unreachable: weather sidebar (2026-08-16), metrics cards (2026-08-19), dataset preview/reports/alerts previews/biodiversity+restoration highlights (2026-08-19); the community feed has no backend to wire to, so it shows an honest empty state instead (same treatment as the `/community` page). Nav is session-aware (real login state, 2026-08-16). See `docs/progress.md` "Homepage Preview Sections Wired" — a real honesty bug (treating an empty-but-successful response the same as an API failure) was caught and fixed during this pass.
 - ~~Auth refresh / logout with Redis token store~~ Done (2026-08-16) — Postgres-backed, not Redis (see Phase 2 note above). Frontend login/register/logout flow also wired (2026-08-16): httpOnly cookie sessions, middleware-based route protection + token refresh, new `/login`/`/register`/`/profile` routes. `/profile` rebuilt (2026-08-17) to match its mockup's sidebar app-shell design, with honest empty states instead of the mock's fabricated eco score/badges/activity feed — this also established a reusable sidebar shell (`AppSidebar`). ~~Build `/data`, `/observations`, `/reports`, `/alerts`, `/biodiversity`, `/restoration`, `/community` as real routes (Milestone 15).~~ Done (2026-08-17) — `/data`, `/reports`, `/alerts` wired to real backend data (see `docs/progress.md` "App-Shell Pages: Data, Reports, Alerts"), `/reports` also gained a real submission form (see "Report Submission Form"), and `/observations`, `/biodiversity`, `/restoration`, `/community` shipped with honest empty states since none of them had a backend yet (see "App-Shell Pages: Observations, Biodiversity, Restoration, Community"). `/observations`, `/restoration`, and `/biodiversity` have since been upgraded to real data as their backends shipped (M9 2026-08-17, M11 and M10 both 2026-08-19); only `/community` remains an honest empty state.
-- PostGIS geography fields (requires PostGIS extension + migration)
+- ~~PostGIS geography fields~~ Partially done (2026-09-01) — point geometry on `District`. Polygon geometry still needed.
 
 Exit criteria:
 

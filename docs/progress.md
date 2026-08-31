@@ -1,6 +1,6 @@
 # Progress
 
-Last updated: 2026-08-29 (BullMQ wired — email queue in NotificationsModule, gamification queue in GamificationModule; Media module fully implemented (StorageService, MediaService, MediaController, presign + upload endpoints); all 64 districts now have GeoJSON boundaries; test suite expanded to 153 tests in 11 spec files; CI updated with pnpm audit and docker-build job. Previously: 2026-08-28 OpenMeteo integration audit, Satellite Radiation, Marine Weather, Emissions Tracking.)
+Last updated: 2026-09-01 (PostGIS point geometry on District; Water Bodies module; flood module refactored to station-based; observation measurements; restoration sub-resources; AlertType enum + AlertArea; DatasetVersion; water level readings. Previously: 2026-08-29 BullMQ, Media module; 2026-08-28 OpenMeteo audit, Radiation, Marine, Emissions.)
 
 ## Status Legend
 
@@ -24,8 +24,8 @@ Last updated: 2026-08-29 (BullMQ wired — email queue in NotificationsModule, g
 | Frontend "app shell" layout (sidebar pages) — M15 | Done | Established via `/profile`, powers all 7 pages. `/data`, `/reports`, `/alerts`, `/observations`, `/restoration`, and now `/biodiversity` (all real backend data) — only `/community` still shows an honest empty state (no API module planned for it at all yet). See "App-Shell Pages: Data, Reports, Alerts", "App-Shell Pages: Observations, Biodiversity, Restoration, Community", "Observations Module", "Restoration Projects Module", and "Biodiversity + GBIF Module" below. |
 | Shared types and contracts — M2 | Done | Full enums, DTOs, paginated envelopes, request/response types, route contract map |
 | Backend foundation — M3 | Done | Auth (JWT/bcrypt), users, orgs, locations (8 div/64 district auto-seed), providers, datasets (catalog seed), reports (status workflow + audit), alerts (severity + audit), global validation, guard infrastructure. **Caveat:** role-gated endpoints shipped with a casing bug that rejected every user until 2026-08-17 — see "Critical RBAC Fix" below. |
-| Prisma schema | Done | 23 enums, 39 models — includes Permission/RolePermission, SatelliteRadiationReading, MarineForecast, PollutionSource, EmissionEntry; client regenerated |
-| Database migration | Done | 1 migration applied (`20260826150548_init`) — full schema in a single fresh migration; 39 tables live; Postgres on port 5432 |
+| Prisma schema | Done | 31 enums, 54 models — includes water bodies, observation measurements, restoration sub-resources, AlertType/AlertArea, DatasetVersion, StationFloodForecast, WaterLevelReading, PostGIS geom on District |
+| Database migration | Done | 8 migrations applied (latest `20260901000000_postgis_geometry`); 54 tables live; Postgres on port 5432 |
 | District coordinates | Done | Migration `add_district_coordinates`; all 64 districts backfilled with real lat/lng sourced from `open-nature`'s district registry (`LocationsService.onModuleInit` backfills on boot if missing) |
 | Seed data | Done | LocationsService auto-seeds 8 divisions + 64 districts (all with GeoJSON boundary) on boot; DatasetsService auto-seeds 9 catalog records; ProvidersService auto-seeds `OpenMeteo` and `GBIF` providers on boot idempotently; no separate seed script needed |
 | Auth — refresh / logout | Done | Postgres-backed `RefreshToken` model (not Redis — see "Auth Refresh/Logout" below), opaque tokens with rotation, daily cleanup cron |
@@ -39,15 +39,20 @@ Last updated: 2026-08-29 (BullMQ wired — email queue in NotificationsModule, g
 | Audit coverage | Done | 25 `AuditAction` values defined and all written. Latest additions: `PERMISSION_GRANT`/`PERMISSION_REVOKE` (permissions module), `OBSERVATION_UPDATE`/`OBSERVATION_DELETE`. See "Audit Coverage Gap", "Phase 6a Complete", and "Ingestion Module + Dataset Access" below. |
 | ESLint | Done | 2026-08-21 — `.eslintrc.json` for api/web/admin apps. See "Phase 6a Complete" below. |
 | RBAC / role guard casing bug | Done | Fixed 2026-08-17 — see "Critical RBAC Fix" below. Every role-gated endpoint (`POST /alerts`, `PATCH /alerts/:id`, `PATCH /reports/:id/status`, `PATCH /users/:id/role`, `PATCH /users/:id/deactivate`) previously rejected all users, including admins. |
-| PostGIS / geospatial fields | Planned | `lat/lng` Float on `District` (populated) and `CitizenReport`; replace with PostGIS `geography` type when ready |
+| PostGIS point geometry | Done | `District.geom geography(Point, 4326)` added by migration `20260901000000_postgis_geometry`. Polygon geometry (boundaries, alert zones) still planned. |
 | Observations module — M9 | Done | Full CRUD + trust-level workflow live (2026-08-17) — see "Observations Module" below. `/observations` now shows real data with a working submission form. |
 | Biodiversity module — M10 | Done | Daily GBIF sync + public species/occurrence endpoints live (2026-08-19) — see "Biodiversity + GBIF Module" below. `/biodiversity` now shows real species and occurrence data with a working search. |
 | Report media (M5) | Done | `ReportMedia` schema + `POST/GET /reports/:id/media` endpoints done (2026-08-22). Clients register an external URL. File upload via MinIO/S3 is handled by the separate `media` module (see below). |
 | Media module | Done | `StorageService` (S3/MinIO, `forcePathStyle`), `MediaService` (MIME validation, 100 MB limit, key generation), `MediaController` (`POST /media/upload`, `POST /media/presign`), `media.constants.ts`. Env vars: `STORAGE_ENDPOINT`, `STORAGE_ACCESS_KEY`, `STORAGE_SECRET_KEY`, `STORAGE_BUCKET`, `STORAGE_PUBLIC_URL`. |
+| Water Bodies module | Done | 2026-08-31 — `WaterBody`, `WaterLevelStation`, `WaterLevelReading`; CSV seeding; `GET /water-bodies`, `GET /water-bodies/stations`, `GET /water-bodies/:id` — see "2026-08-31 Water Bodies & Schema Expansion" below |
+| Observation measurements | Done | 2026-09-01 — `ObservationMeasurement` with `MeasurementParameter`, `MeasurementUnit`, `QualityFlag`; `POST/DELETE /observations/:id/measurements`; `GET /observations/nearby` |
+| Restoration sub-resources | Done | 2026-09-01 — `ProjectTarget`, `ProjectActivity`, `ProjectMetric`; `RestorationTargetMetric` enum; full target/activity/metric CRUD endpoints |
+| Alert types + geographic areas | Done | 2026-09-01 — `AlertType` enum (11 disaster types); `AlertArea` model for multi-location alerts |
+| Dataset versioning | Done | 2026-09-01 — `DatasetVersion` model; `GET/POST /datasets/:id/versions`; audited `DATASET_VERSION_PUBLISH` |
 | BullMQ queues | Done | `email` queue in NotificationsModule (`EmailProcessor` — password-reset, email-verification, alert-notification, 4-attempt exponential backoff); `gamification` queue in GamificationModule (`GamificationProcessor` — badge evaluation, deduped by `jobId: badge-eval:{userId}`). `BullModule.forRootAsync` in AppModule parses `REDIS_URL`. |
 | District GeoJSON boundaries | Done | All 64 districts now have GeoJSON boundaries. The 8 previously missing (Brahmanbaria, Chattogram, Bogura, Chapainawabganj, Jashore, Jhalakathi, Moulvibazar, Netrokona) are now included in `bangladesh.ts`. `administrative.json`, `districts.geojson`, and `scripts/gen-bangladesh-seed.py` deleted — `bangladesh.ts` is the sole source of truth. |
 | Weather ingestion (OpenMeteo) | Done | Live `weather` module — see "Weather ingestion" below |
-| Flood ingestion (OpenMeteo/GloFAS) | Done | Initial sync on an empty table, daily river-discharge forecasts persisted per district; public `/flood/forecast` routes and six-hour scheduler live — see "OpenMeteo Flood" below |
+| Flood ingestion (OpenMeteo/GloFAS) | Done | Refactored to station-based: `StationFloodForecast` per water level station, replacing earlier district-level model. Station readings via `GET /flood/stations/:stationId/readings|/latest`. Six-hour scheduler. — see "OpenMeteo Flood" and "2026-08-31 Water Bodies & Schema Expansion" below |
 | Satellite radiation ingestion (OpenMeteo) | Done | 2026-08-28 — `radiation/` module; daily at 1am; 3 daily variables per district; `SatelliteRadiationReading` model. See "2026-08-28 Integrations" below. |
 | Marine weather ingestion (OpenMeteo) | Done | 2026-08-28 — `marine/` module; daily at 2am; 11 wave/swell/wind-wave variables; coastal districts only; `MarineForecast` model. See "2026-08-28 Integrations" below. |
 | Emissions tracking | Done | 2026-08-28 — `emissions/` module; `PollutionSource` + `EmissionEntry` models; `emissions.manage` / `emissions.report` permissions; `EMISSION_SOURCE_CREATE` / `EMISSION_ENTRY_CREATE` audit events. See "2026-08-28 Integrations" below. |
@@ -65,6 +70,42 @@ Last updated: 2026-08-29 (BullMQ wired — email queue in NotificationsModule, g
 | Analytics module | Done | Role-scoped dashboard endpoints: admin, moderator, government, researcher, org admin — each returns aggregated stats relevant to that role. |
 | Seed service | Done | `SeedService` registered in `AppModule`; seeds 6 dev user accounts (one per role, password `NatureGrid123!`) and 1 seed organization on first boot. |
 | Users reactivate endpoint | Done | `PATCH /users/:id/reactivate` re-enables deactivated accounts. |
+
+## 2026-08-31 – 2026-09-01 Water Bodies, Schema Expansion & PostGIS
+
+### Water Bodies module (`apps/api/src/water-bodies/`)
+
+New module owning the water body registry and monitoring station directory. Models: `WaterBody`, `WaterBodyUpazila` (many-to-many to upazila), `LoticWaterBodyDetails` (rivers/canals), `LenticWaterBodyDetails` (haors/lakes/reservoirs), `WaterLevelStation` (with `dangerLevel`, `warningLevel`, `normalLevel` gauge thresholds in metres above datum — null if not configured), `WaterBodyStation`. Enums: `WaterBodyType`, `HydrologicalClass`. Seeded from CSV via `WaterBodiesService.onModuleInit`. Endpoints: `GET /water-bodies`, `GET /water-bodies/stations`, `GET /water-bodies/:id`.
+
+### Flood module refactored to station-based
+
+`FloodScheduler` now persists discharge forecasts to `StationFloodForecast` keyed by `stationId` rather than the old district-level `FloodForecast` model. New model `WaterLevelReading` stores observed (not forecasted) water levels per station. New enum: `WaterLevelTrend`. New endpoints: `GET /flood/forecast/station/:stationId`, `GET /flood/forecast/district/:districtId`, `GET /flood/stations/:stationId/readings`, `GET /flood/stations/:stationId/latest`. Old `GET /flood/forecast` now returns data for all stations (latest day).
+
+### PostGIS point geometry on District (`20260901000000_postgis_geometry`)
+
+`District.geom` is now `geography(Point, 4326)` — PostGIS is active for point queries on districts. The migration also adds `coastLat`/`coastLng` to `District` (coastal representative coordinates used by the marine module), gauge threshold columns to `WaterLevelStation`, and upazila-level FK relations on `CitizenReport`, `Observation`, `RestorationProject`, and `AlertArea`.
+
+### Observation measurements
+
+`ObservationMeasurement` model attached to `Observation`. Three new enums: `MeasurementParameter` (38 values covering water quality, air quality, biodiversity, and soil parameters), `MeasurementUnit` (18 values), `QualityFlag` (`GOOD | SUSPECT | BAD | ESTIMATED`). New endpoints: `POST /observations/:id/measurements` (audited `OBSERVATION_MEASUREMENT_ADD`), `DELETE /observations/:id/measurements/:measurementId` (audited `OBSERVATION_MEASUREMENT_DELETE`), `GET /observations/nearby` (spatial query). `Observation` now also accepts `upazilaId`.
+
+### Restoration sub-resources
+
+Three new models: `ProjectTarget` (measurable goal per project, using `RestorationTargetMetric` enum), `ProjectActivity` (narrative activity log entry), `ProjectMetric` (progress reading against a target). New enum: `RestorationTargetMetric` (8 values). New endpoints: `GET/POST /restoration/projects/:id/targets`, `GET/POST /restoration/projects/:id/activities`, `GET/POST /restoration/projects/:id/targets/:targetId/metrics`. Each write audits `RESTORATION_TARGET_ADD`, `RESTORATION_ACTIVITY_ADD`, `RESTORATION_METRIC_ADD`. `RestorationProject` now also accepts `upazilaId`.
+
+### Alert types and geographic areas
+
+New `AlertType` enum with 11 disaster type values: `FLOOD | FLASH_FLOOD | CYCLONE | STORM_SURGE | HEATWAVE | AIR_QUALITY | WATER_POLLUTION | LANDSLIDE | DROUGHT | WILDFIRE | OTHER`. New `AlertArea` model allows an alert to cover multiple districts/upazilas beyond the primary `districtId`. Replaces the earlier 7-type informal list in business-logic.md (which used different names: `SEVERE_AIR_QUALITY`, `SEVERE_WATER_POLLUTION`).
+
+### Dataset versioning
+
+`DatasetVersion` model tracks published snapshots of a dataset (version string, description, publishedById, recordCount, fileUrl, metadata). Endpoints: `GET /datasets/:id/versions`, `POST /datasets/:id/versions` (Admin; audited `DATASET_VERSION_PUBLISH`).
+
+### New AuditAction values (total now 33)
+
+Added: `OBSERVATION_MEASUREMENT_ADD`, `OBSERVATION_MEASUREMENT_DELETE`, `RESTORATION_TARGET_ADD`, `RESTORATION_ACTIVITY_ADD`, `RESTORATION_METRIC_ADD`, `DATASET_VERSION_PUBLISH`.
+
+---
 
 ## 2026-08-28 OpenMeteo Audit Fixes
 
@@ -189,9 +230,9 @@ Source-level pollution measurement — distinct from the ambient air-quality rea
 
 ## Ingestion Module + Dataset Access (2026-08-24)
 
-## OpenMeteo Flood (2026-08-25)
+## OpenMeteo Flood (initially 2026-08-25; refactored 2026-08-31)
 
-Added `apps/api/src/flood/` as a separate provider integration. It fetches OpenMeteo/GloFAS daily river discharge for all 64 district coordinates, stores 30-day forecasts in `FloodForecast`, refreshes every six hours, creates shared `IngestionJob` records, and exposes public `/flood/forecast` routes. The additive migration is `20260825120000_add_flood_forecasts`; the existing dataset catalog adds its Flood entry idempotently on API boot.
+Added `apps/api/src/flood/` as a separate provider integration. Originally stored 30-day district-level discharge forecasts in a `FloodForecast` model. **Refactored 2026-08-31** to station-based: forecasts now stored in `StationFloodForecast` keyed by `WaterLevelStation.id`. Old district-level endpoints replaced by `GET /flood/forecast/station/:stationId`, `GET /flood/forecast/district/:districtId`, `GET /flood/stations/:stationId/readings`, and `GET /flood/stations/:stationId/latest`. `IngestionJob` records created per scheduler run. The existing dataset catalog Flood entry seeded idempotently on API boot.
 
 This is model-derived river-discharge context. It does not replace official FFWC warnings, which remain a separate integration.
 

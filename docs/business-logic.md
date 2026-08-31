@@ -137,12 +137,16 @@ An alert is an official warning issued by a government user, moderator, or admin
 
 | Type | What it covers |
 |---|---|
-| `FLOOD` | River flooding, storm surge, or flash flood affecting a district or set of unions |
+| `FLOOD` | River flooding affecting a district or set of unions |
+| `FLASH_FLOOD` | Rapid onset flooding with little warning — typically rainfall-driven in low-lying or upstream-confined areas |
 | `CYCLONE` | Tropical cyclone, depression, or severe storm system |
+| `STORM_SURGE` | Coastal inundation driven by cyclone or high winds — distinct from river flooding |
 | `HEATWAVE` | Sustained extreme heat index above safe thresholds |
+| `AIR_QUALITY` | Air quality index at a level posing health risk — typically PM2.5 > 150 or AQI > 200 |
+| `WATER_POLLUTION` | Water body contamination serious enough to warn against contact or use |
+| `LANDSLIDE` | Slope failure risk or active landslide — common in hill district areas during monsoon |
+| `DROUGHT` | Prolonged moisture deficit affecting agriculture, water supply, or human health |
 | `WILDFIRE` | Active fire in a forested or agricultural zone |
-| `SEVERE_AIR_QUALITY` | Air quality index at a level posing health risk — typically PM2.5 > 150 or AQI > 200 |
-| `SEVERE_WATER_POLLUTION` | Water body contamination serious enough to warn against contact or use |
 | `OTHER` | Official environmental warning not covered by the above |
 
 ### Severity and what each level means operationally

@@ -6,7 +6,7 @@ Global prefix is `/api/v1` (see `packages/contracts/src/index.ts` for the canoni
 
 Legend: ✓ Implemented | ~ Stub only | ✗ Not started
 
-Registered in `app.module.ts`: `database`, `auth`, `users`, `organizations`, `locations`, `locations/climate`, `providers`, `datasets`, `reports`, `alerts`, `biodiversity`, `observations`, `restoration`, `media`, `ingestion`, `weather`, `flood`, `marine`, `radiation`, `emissions`, `metrics`, `notifications`, `permissions`, `analytics`. `SeedService` is also registered directly in `AppModule` (not its own module) and seeds dev users + a seed organization on first boot.
+Registered in `app.module.ts`: `database`, `auth`, `users`, `organizations`, `locations`, `locations/climate`, `providers`, `datasets`, `reports`, `alerts`, `biodiversity`, `observations`, `restoration`, `media`, `ingestion`, `weather`, `flood`, `marine`, `radiation`, `emissions`, `metrics`, `notifications`, `permissions`, `analytics`, `water-bodies`, `gamification`. `SeedService` is also registered directly in `AppModule` (not its own module) and seeds dev users + a seed organization on first boot.
 
 ## database ✓
 
@@ -109,7 +109,7 @@ Auto-seeds the `OpenMeteo` and `GBIF` provider records on first boot.
 
 ## datasets ✓
 
-Owns dataset catalog, metadata, access policy, and source references.
+Owns dataset catalog, metadata, access policy, version history, and source references.
 
 Access policies: `PUBLIC | LOGIN_REQUIRED | RESEARCHER | APPROVED | GOVERNMENT`
 
@@ -121,10 +121,16 @@ Seeded on first boot: 9 catalog records (OpenMeteo Weather, OpenMeteo Flood, Dis
 | GET | `/datasets/:id` | Public |
 | GET | `/datasets/weather/current` | Public — delegates to `weather` module |
 | GET | `/datasets/air-quality/current` | Public — delegates to `weather` module |
+| GET | `/datasets/:id/download` | Role-gated (policy-checked) |
+| POST | `/datasets/:id/access-request` | Authenticated |
+| GET | `/datasets/:id/access-requests` | Admin |
+| PATCH | `/datasets/:id/access-requests/:requestId` | Admin — approve/reject |
+| POST | `/datasets` | Admin — create dataset record |
+| PATCH | `/datasets/:id` | Admin — update metadata (audited `DATASET_UPDATE`) |
+| GET | `/datasets/:id/versions` | Authenticated |
+| POST | `/datasets/:id/versions` | Admin — publish a new dataset version (audited `DATASET_VERSION_PUBLISH`) |
 
-`@Public()` is applied at the controller level, so every implemented dataset route is public.
-
-Dataset access is implemented: `GET /datasets/:id/download` applies the dataset access policy, `POST /datasets/:id/access-request` creates a request, and admins can list and approve/reject requests. Dataset detail pages live at `/data/:id` in `apps/web`; they show metadata, API endpoints, and live previews for OpenMeteo, Flood, and GBIF datasets.
+Dataset detail pages live at `/data/:id` in `apps/web`; they show metadata, API endpoints, and live previews for OpenMeteo, Flood, and GBIF datasets.
 
 ## reports ✓
 
@@ -151,13 +157,15 @@ Submission writes a `REPORT_SUBMIT` audit event. Every status transition writes 
 
 ## alerts ✓
 
-Owns disaster and environmental alert records.
+Owns disaster and environmental alert records and geographic alert areas.
+
+Types: `FLOOD | FLASH_FLOOD | CYCLONE | STORM_SURGE | HEATWAVE | AIR_QUALITY | WATER_POLLUTION | LANDSLIDE | DROUGHT | WILDFIRE | OTHER`
 
 Severities: `INFO | WATCH | WARNING | EMERGENCY`
 
 Statuses: `DRAFT | ACTIVE | EXPIRED | CANCELLED`
 
-Default public list returns `ACTIVE` alerts, ordered by severity descending. Every create and status update writes an `AuditEvent`.
+Default public list returns `ACTIVE` alerts, ordered by severity descending. Every create and status update writes an `AuditEvent`. `AlertArea` records allow an alert to target multiple districts and/or upazilas beyond the primary `districtId`.
 
 | Method | Path | Access |
 | --- | --- | --- |
@@ -168,7 +176,7 @@ Default public list returns `ACTIVE` alerts, ordered by severity descending. Eve
 
 ## observations ✓
 
-Owns environmental observations submitted by users and researchers. Built in M9 (2026-08-17).
+Owns environmental observations submitted by users and researchers, with quantitative measurements attached per observation. Built in M9 (2026-08-17).
 
 Categories: `BIODIVERSITY | WATER_QUALITY | AIR_QUALITY | LAND_USE | RESTORATION`
 
@@ -178,11 +186,16 @@ Trust levels: `RESEARCH_GRADE | COMMUNITY | UNVERIFIED | FLAGGED`
 | --- | --- | --- |
 | GET | `/observations` | Public (`?category`, `?trustLevel`, `?districtId`, `?page`, `?pageSize`) |
 | GET | `/observations/mine` | Authenticated — caller's own observations, all trust levels |
+| GET | `/observations/nearby` | Public — spatial query by lat/lng + radius |
 | GET | `/observations/:id` | Public |
 | POST | `/observations` | Authenticated |
+| PATCH | `/observations/:id` | Owner / Admin |
 | PATCH | `/observations/:id/trust` | Researcher / Admin |
+| DELETE | `/observations/:id` | Owner / Admin |
+| POST | `/observations/:id/measurements` | Authenticated — attach a quantitative measurement (audited `OBSERVATION_MEASUREMENT_ADD`) |
+| DELETE | `/observations/:id/measurements/:measurementId` | Owner / Admin (audited `OBSERVATION_MEASUREMENT_DELETE`) |
 
-Submissions always start at `UNVERIFIED` regardless of submitter role. Public listings exclude `FLAGGED` unless `trustLevel` is filtered explicitly. Trust changes write an `OBSERVATION_TRUST_CHANGE` audit event recording the `from`/`to` levels. `species` is free text, not a FK to `Species` — see `architecture/data-model.md`.
+Submissions always start at `UNVERIFIED` regardless of submitter role. Public listings exclude `FLAGGED` unless `trustLevel` is filtered explicitly. Trust changes write an `OBSERVATION_TRUST_CHANGE` audit event recording the `from`/`to` levels. `species` is free text, not a FK to `Species` — see `architecture/data-model.md`. Measurements use `MeasurementParameter` + `MeasurementUnit` + `QualityFlag` enums for water quality, air quality, biodiversity, and soil parameters.
 
 ## biodiversity ✓
 
@@ -198,11 +211,13 @@ Owns species taxonomy and occurrence records sourced from GBIF. Separate from ge
 
 ## restoration ✓
 
-Owns community and organization restoration projects with a participant join workflow. Built in M11 (2026-08-19).
+Owns community and organization restoration projects with a participant join workflow, measurable targets, activity logs, and metric readings. Built in M11 (2026-08-19).
 
 Categories: `TREE_PLANTING | WETLAND_RESTORATION | RIVERBANK_PROTECTION | MANGROVE | WASTE_MANAGEMENT | OTHER`
 
 Statuses: `PLANNED | ACTIVE | COMPLETED | PAUSED`
+
+Target metrics: `TREES_PLANTED | AREA_RESTORED_HA | SEEDLINGS_SURVIVED | SPECIES_REINTRODUCED | WATER_QUALITY_SCORE | CARBON_SEQUESTERED_T | VOLUNTEER_HOURS | OTHER`
 
 | Method | Path | Access |
 | --- | --- | --- |
@@ -211,8 +226,14 @@ Statuses: `PLANNED | ACTIVE | COMPLETED | PAUSED`
 | POST | `/restoration/projects` | Organization Admin / Admin |
 | PATCH | `/restoration/projects/:id` | Authenticated — creator or Admin only |
 | POST | `/restoration/projects/:id/join` | Authenticated |
+| GET | `/restoration/projects/:id/targets` | Public |
+| POST | `/restoration/projects/:id/targets` | Creator / Admin (audited `RESTORATION_TARGET_ADD`) |
+| GET | `/restoration/projects/:id/activities` | Public |
+| POST | `/restoration/projects/:id/activities` | Authenticated (audited `RESTORATION_ACTIVITY_ADD`) |
+| GET | `/restoration/projects/:id/targets/:targetId/metrics` | Public |
+| POST | `/restoration/projects/:id/targets/:targetId/metrics` | Authenticated (audited `RESTORATION_METRIC_ADD`) |
 
-Note the controller prefix is `restoration/projects`, not `restoration`. `PATCH` has no route-level `@Roles` guard: ownership is enforced inside `RestorationService.update`, which throws `ForbiddenException` unless the caller is the project creator or an `ADMIN`. Joining is idempotent via the `(projectId, userId)` unique constraint on `RestorationParticipant`. Create, update, and join each write an audit event.
+Note the controller prefix is `restoration/projects`, not `restoration`. `PATCH` has no route-level `@Roles` guard: ownership is enforced inside `RestorationService.update`, which throws `ForbiddenException` unless the caller is the project creator or an `ADMIN`. Joining is idempotent via the `(projectId, userId)` unique constraint on `RestorationParticipant`.
 
 ## weather ✓
 
@@ -235,14 +256,17 @@ Also consumed by `DatasetsModule` to serve `/datasets/weather/current` and `/dat
 
 ## flood ✓
 
-Owns the OpenMeteo Flood / GloFAS integration: provider client, daily discharge persistence, six-hour scheduler, ingestion tracking, and public read endpoints. District coordinates are initial monitoring proxies; the provider selects the nearest supported river/grid cell.
+Owns the OpenMeteo Flood / GloFAS integration: provider client, station-based discharge persistence, six-hour scheduler, ingestion tracking, water level readings, and public read endpoints.
+
+Forecasts are now stored per **water level station** (`StationFloodForecast`) rather than per district. The `FloodScheduler` runs every six hours (`0 30 */6 * * *`) and triggers an initial sync when the table is empty. OpenMeteo Flood returns simulated river discharge, not an official Bangladesh flood warning; official FFWC integration remains a separate future source.
 
 | Method | Path | Access |
 | --- | --- | --- |
-| GET | `/flood/forecast` | Public — latest stored forecast day for every district |
-| GET | `/flood/forecast/:districtId` | Public — forecast rows (`?from`, `?to`) |
-
-When `FloodForecast` is empty, the module starts an initial sync on application boot. It then fetches a 30-day forecast for every district with coordinates at `0:30` every six hours. The stored data has daily resolution. OpenMeteo Flood returns simulated river discharge, not an official Bangladesh flood warning; official FFWC integration remains a separate future source.
+| GET | `/flood/forecast` | Public — latest stored forecast day for all stations |
+| GET | `/flood/forecast/station/:stationId` | Public — full forecast window for one station (`?from`, `?to`) |
+| GET | `/flood/forecast/district/:districtId` | Public — forecasts for all stations in a district |
+| GET | `/flood/stations/:stationId/readings` | Public — historical water level readings (`?from`, `?to`) |
+| GET | `/flood/stations/:stationId/latest` | Public — most recent water level reading for a station |
 
 ## radiation ✓
 
@@ -346,6 +370,18 @@ Owns role-scoped dashboard queries returning aggregated platform statistics.
 
 Each endpoint returns a tailored summary: admin sees user counts by role, report queue, alert severity counts, organizations, and species count; moderator sees queue breakdown and report submission trend; government sees active alerts by division, verified reports by category/district, and 30-day climate averages per division; researcher sees biodiversity totals, top species, and observation trust breakdown; org admin sees restoration project counts and engagement metrics.
 
+## water-bodies ✓
+
+Owns the water body registry — rivers, haors, beels, canals, lakes, ponds, reservoirs, and estuaries — including the network of water level monitoring stations.
+
+| Method | Path | Access |
+| --- | --- | --- |
+| GET | `/water-bodies` | Public — list with optional filters |
+| GET | `/water-bodies/stations` | Public — all water level stations |
+| GET | `/water-bodies/:id` | Public — water body detail including station list and upazila coverage |
+
+Seeded from CSV via `WaterBodiesService.onModuleInit`. Water level readings are served via the `flood` module endpoints (`GET /flood/stations/:stationId/readings`, `GET /flood/stations/:stationId/latest`). Gauge thresholds (`dangerLevel`, `warningLevel`, `normalLevel`) on each station determine alert threshold status at a given reading.
+
 ## audit (embedded)
 
 Audit events are written directly from services rather than via a separate injectable service. `AuditEvent` stores `action`, `userId`, `entityType`, `entityId`, `meta`, `ipAddress`, `createdAt`.
@@ -357,14 +393,14 @@ Services that write audit events:
 | `auth` | `USER_REGISTER`, `USER_LOGIN`, `USER_LOGIN_FAILED`, `USER_LOGOUT` |
 | `users` | `USER_ROLE_CHANGE`, `USER_DEACTIVATE` |
 | `alerts` | `ALERT_CREATE`, `ALERT_STATUS_CHANGE` |
-| `observations` | `OBSERVATION_SUBMIT`, `OBSERVATION_TRUST_CHANGE`, `OBSERVATION_UPDATE`, `OBSERVATION_DELETE` |
+| `observations` | `OBSERVATION_SUBMIT`, `OBSERVATION_TRUST_CHANGE`, `OBSERVATION_UPDATE`, `OBSERVATION_DELETE`, `OBSERVATION_MEASUREMENT_ADD`, `OBSERVATION_MEASUREMENT_DELETE` |
 | `reports` | `REPORT_SUBMIT`, `REPORT_STATUS_CHANGE`, `REPORT_COMMENT_ADD`, `REPORT_MEDIA_ADD` |
-| `restoration` | `RESTORATION_PROJECT_CREATE`, `RESTORATION_PROJECT_UPDATE`, `RESTORATION_PROJECT_JOIN` |
-| `datasets` | `DATASET_ACCESS`, `DATASET_DOWNLOAD`, `DATASET_UPDATE`, `DATASET_ACCESS_DECISION` |
+| `restoration` | `RESTORATION_PROJECT_CREATE`, `RESTORATION_PROJECT_UPDATE`, `RESTORATION_PROJECT_JOIN`, `RESTORATION_TARGET_ADD`, `RESTORATION_ACTIVITY_ADD`, `RESTORATION_METRIC_ADD` |
+| `datasets` | `DATASET_ACCESS`, `DATASET_DOWNLOAD`, `DATASET_UPDATE`, `DATASET_VERSION_PUBLISH`, `DATASET_ACCESS_DECISION` |
 | `permissions` | `PERMISSION_GRANT`, `PERMISSION_REVOKE` |
 | `emissions` | `EMISSION_SOURCE_CREATE`, `EMISSION_ENTRY_CREATE` |
 
-`AuditAction` declares 27 values. All are written by a service.
+`AuditAction` declares 33 values. All are written by a service.
 
 `auth` is the only service that populates `AuditEvent.ipAddress`, because it already captures request metadata for `RefreshToken` rows. The others leave it null.
 
@@ -380,4 +416,4 @@ These accounts exist only for local development and should not be created in pro
 
 ## Coverage note
 
-`app.module.ts` registers 22 modules: `database` plus 21 feature modules (including `locations/climate`, `flood`, `notifications`, `permissions`, and `analytics`). All are fully implemented — the `media` stub has been replaced with `StorageService` + `MediaService` + `MediaController`. `ingestion` owns provider job tracking; `permissions` owns the DB-backed permission model; `analytics` serves role-scoped dashboard data. BullMQ queues (`email`, `gamification`) are wired via `BullModule.forRootAsync` in `AppModule`. Advanced domains not yet represented by a module — satellite ingestion, long-range climate projections, carbon accounting, research publications, structured surveys — are planned for Phase 7. See `docs/roadmap.md` and `docs/architecture/feature-map.md`.
+`app.module.ts` registers 24 modules: `database` plus 23 feature modules (including `locations/climate`, `flood`, `notifications`, `permissions`, `analytics`, `water-bodies`, and `gamification`). All are fully implemented. BullMQ queues (`email`, `gamification`) are wired via `BullModule.forRootAsync` in `AppModule`. Advanced domains not yet represented by a module — satellite ingestion, long-range climate projections, carbon accounting, research publications, structured surveys — are planned for Phase 7. See `docs/roadmap.md` and `docs/architecture/feature-map.md`.

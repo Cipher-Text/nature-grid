@@ -60,7 +60,7 @@ Global setup in `apps/api/src/main.ts`:
 - `JwtAuthGuard` + `RolesGuard` + `PermissionsGuard` registered via `useGlobalGuards`; `ThrottlerGuard` registered via `APP_GUARD` in `AppModule` (needs DI)
 - Rate limits: global 120 req / 60 s; auth endpoints tightened — login/register 5 req / 60 s, refresh 20 req / 60 s
 
-**Feature modules** (`apps/api/src/`): `auth`, `users`, `organizations`, `locations`, `locations/climate`, `providers`, `datasets`, `reports`, `alerts`, `observations`, `restoration`, `biodiversity`, `weather`, `flood`, `radiation`, `marine`, `emissions`, `gamification`, `metrics`, `notifications`, `permissions`, `analytics`, `database`, `common`. Also registered in `AppModule`: a `SeedService` (seeds dev users + organization on boot). Implemented: `ingestion`, `media`.
+**Feature modules** (`apps/api/src/`): `auth`, `users`, `organizations`, `locations`, `locations/climate`, `providers`, `datasets`, `reports`, `alerts`, `observations`, `restoration`, `biodiversity`, `weather`, `flood`, `radiation`, `marine`, `emissions`, `gamification`, `metrics`, `notifications`, `permissions`, `analytics`, `water-bodies`, `ingestion`, `media`, `database`, `common`. Also registered in `AppModule`: a `SeedService` (seeds dev users + organization on boot).
 
 Each feature module follows: `*.module.ts` → `*.controller.ts` → `*.service.ts` → `dto/` folder.
 
@@ -79,7 +79,7 @@ Each feature module follows: `*.module.ts` → `*.controller.ts` → `*.service.
 
 ### Database (Prisma)
 
-Schema: `packages/database/prisma/schema.prisma` — 39 models, 23 enums. Single migration: `packages/database/prisma/migrations/20260826150548_init`.
+Schema: `packages/database/prisma/schema.prisma` — 54 models, 31 enums. 8 migrations applied (latest: `20260901000000_postgis_geometry`).
 
 **All IDs are Prisma CUIDs** (e.g. `cmstewlrj0012usw17sqz1d3n`). Use `@IsString()` in DTO validators, never `@IsUUID()`.
 
@@ -96,12 +96,21 @@ Every mutation writes an `AuditEvent` record (action, userId, entityType, entity
 
 Notable schema decisions:
 - `Occurrence.gbifOccurrenceKey` is `BigInt` — real GBIF keys exceed `INT4` range (caught on first live sync)
-- Geography fields are plain `Float` lat/lng, not PostGIS `geography` — the PostGIS image runs but the type is not yet used in schema
+- `District.geom` is `Unsupported("geography(Point, 4326)")` — PostGIS point geometry now active via migration `20260901000000_postgis_geometry`. `District.coastLat`/`coastLng` hold the representative coastal coordinate used by the marine module.
 - `OrganizationMembership` model links users to organizations with `ADMIN` or `MEMBER` role — users may belong to multiple organizations. `ORGANIZATION_ADMIN` is also a platform-level role in `UserRole`, separate from org-scoped membership.
 - All 4 geography models (`Division`, `District`, `Upazila`, `Union`) carry 11 climate columns (`avgTemp30d`, `minTemp30d`, `maxTemp30d`, `avgHumidity30d`, `totalPrecip30d`, `avgWindSpeed30d`, `avgCloudCover30d`, `avgPm25_30d`, `avgPm10_30d`, `avgUvIndex30d`, `climateUpdatedAt`) — populated nightly by `LocationClimateModule`
 - `UnionDailyClimate` — raw daily history per union; the source for 30-day rolling averages
 - `UserProfile.earnedBadges` (String[]) + `UserProfile.contributionPoints` (Int) — gamification data stored on the profile model; no separate Badge model
 - `PollutionSource` + `EmissionEntry` — emissions tracking with enums `PollutionSourceType`, `PollutantType`, `EmissionUnit`
+- `ObservationMeasurement` — quantitative measurements per observation using `MeasurementParameter`, `MeasurementUnit`, and `QualityFlag` enums (water/air/biodiversity/soil parameters)
+- `ProjectTarget` + `ProjectActivity` + `ProjectMetric` — restoration project sub-resources for tracking measurable goals, activity logs, and metric readings using `RestorationTargetMetric` enum
+- `AlertType` enum (11 values) — distinguishes FLOOD, FLASH_FLOOD, CYCLONE, STORM_SURGE, HEATWAVE, AIR_QUALITY, WATER_POLLUTION, LANDSLIDE, DROUGHT, WILDFIRE, OTHER
+- `AlertArea` — allows an alert to cover multiple districts/upazilas beyond the primary `districtId`
+- `DatasetVersion` — published snapshots of a dataset with version string, metadata, and optional file URL
+- `WaterBody`, `WaterBodyUpazila`, `LoticWaterBodyDetails`, `LenticWaterBodyDetails` — water body registry using `WaterBodyType` and `HydrologicalClass` enums
+- `WaterLevelStation` — gauge stations with `dangerLevel`, `warningLevel`, `normalLevel` thresholds (metres above datum, nullable)
+- `StationFloodForecast` — flood discharge forecasts per station (replaced earlier district-based model)
+- `WaterLevelReading` — observed water level readings per station with `WaterLevelTrend` enum
 
 ### Frontend (apps/web)
 
@@ -143,7 +152,7 @@ These modules handle external data ingestion. All use `IngestionService` (import
 
 - `weather/` — OpenMeteo HTTP client (`WeatherOpenMeteoClient`, exported from `WeatherModule`), three cron jobs (current every 15 min, hourly/AQ every 2 h, daily every 12 h), public read endpoints. Fetches at **district** level (64 locations).
 - `biodiversity/` — GBIF HTTP client, daily sync cron (fetches 1,000 occurrences), species + occurrence read endpoints
-- `flood/` — OpenMeteo Flood / GloFAS HTTP client, six-hour scheduler (initial sync on empty table), public forecast endpoints. Fetches 30-day discharge forecasts at **district** level.
+- `flood/` — OpenMeteo Flood / GloFAS HTTP client, six-hour scheduler (initial sync on empty table), station-based forecast and water level reading endpoints. Forecasts are persisted as `StationFloodForecast` per water level station (replaced earlier district-level `FloodForecast` model). Endpoints: `GET /flood/forecast`, `GET /flood/forecast/station/:stationId`, `GET /flood/forecast/district/:districtId`, `GET /flood/stations/:stationId/readings`, `GET /flood/stations/:stationId/latest`.
 - `radiation/` — OpenMeteo Satellite Radiation HTTP client (`RadiationOpenMeteoClient`), daily cron at 1am, initial sync on empty table. Fetches `shortwave_radiation_sum`, `sunshine_duration`, `daylight_duration` for all 64 districts (7-day window from the archive API). **Aggregation:** 10-minute native W/m² samples are summed to daily MJ/m² via `Σ(W/m²) × step_seconds / 1,000,000`; step interval is inferred from the first two timestamps. 3-attempt retry with exponential backoff (500 ms, 1500 ms); 30-second fetch timeout. Upserts per `(districtId, readingDate)`. Endpoints: `GET /radiation/daily`, `GET /radiation/daily/:districtId?from=&to=`.
 - `marine/` — OpenMeteo Marine Weather HTTP client (`MarineOpenMeteoClient`), daily cron at 2am, initial sync on empty table. Fetches 11 daily wave/swell/wind-wave variables for all 64 district centroids; inland districts produce a fetch error logged as `warn` and skipped. Endpoints: `GET /marine/forecast`, `GET /marine/forecast/:districtId?from=&to=`.
 - `locations/climate/` — `LocationClimateModule` with a daily cron (`0 0 0 * * *`). Fetches OpenMeteo at **union** level using the batch API (up to 1,000 coords per HTTP request — 4,540 unions = 6 total requests). Stores raw daily data in `UnionDailyClimate`, then recomputes 30-day rolling averages bottom-up: Union → Upazila → District → Division via bulk `UPDATE … FROM (SELECT … GROUP BY)` SQL wrapped in a single Prisma `$transaction`. Reuses `WeatherOpenMeteoClient` from `WeatherModule` (import `WeatherModule` to get it). Writes `IngestionJob` records via `IngestionService` (categories `WEATHER` + `AIR_QUALITY`).
@@ -161,6 +170,16 @@ These modules handle external data ingestion. All use `IngestionService` (import
   - `GET /emissions/sources/:sourceId/entries` — public paginated entries
   - `POST /emissions/sources/:sourceId/entries` — requires `emissions.report` permission
 - Audit actions: `EMISSION_SOURCE_CREATE`, `EMISSION_ENTRY_CREATE`
+
+### Water Bodies module
+
+`apps/api/src/water-bodies/` — water body registry and monitoring station directory.
+
+- **Models**: `WaterBody` (type, hydrological class, lat/lng, area), `WaterBodyUpazila` (many-to-many), `LoticWaterBodyDetails` (river/canal specifics), `LenticWaterBodyDetails` (haor/lake specifics), `WaterLevelStation` (gauge thresholds: `dangerLevel`, `warningLevel`, `normalLevel`), `WaterBodyStation`, `WaterLevelReading`
+- **Enums**: `WaterBodyType`, `HydrologicalClass`, `WaterLevelTrend`
+- **Endpoints**: `GET /water-bodies`, `GET /water-bodies/stations`, `GET /water-bodies/:id`
+- Water level readings served via flood module: `GET /flood/stations/:stationId/readings`, `GET /flood/stations/:stationId/latest`
+- Seeded from CSV via `WaterBodiesService.onModuleInit`
 
 ### Media module
 

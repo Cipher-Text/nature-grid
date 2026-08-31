@@ -61,7 +61,6 @@ Refresh tokens are opaque, Postgres-backed, and rotated on use — not Redis, no
 | GET | `/locations/districts/:id` | Public | ✓ | District detail |
 | GET | `/locations/upazilas` | Public | ✓ | Upazilas (`?districtId` filter) |
 | GET | `/locations/unions` | Public | ✓ | Unions (`?upazilaId` filter) |
-| GET | `/locations/water-bodies` | Public | ✗ | Water body registry |
 | GET | `/locations/pollution-sources` | Public | ✗ | Known pollution sources |
 
 ## Providers
@@ -81,8 +80,12 @@ Refresh tokens are opaque, Postgres-backed, and rotated on use — not Redis, no
 | GET | `/datasets/air-quality/current` | Public | ✓ | Live current air quality for all districts, via `weather` module |
 | GET | `/datasets/:id/download` | Role-gated | ✓ | Policy-checked API access information |
 | POST | `/datasets/:id/access-request` | Authenticated | ✓ | Request access |
+| GET | `/datasets/:id/access-requests` | Admin | ✓ | List access requests |
+| PATCH | `/datasets/:id/access-requests/:requestId` | Admin | ✓ | Approve or reject a request |
 | POST | `/datasets` | Admin | ✓ | Create dataset record |
 | PATCH | `/datasets/:id` | Admin | ✓ | Update metadata |
+| GET | `/datasets/:id/versions` | Authenticated | ✓ | List published versions |
+| POST | `/datasets/:id/versions` | Admin | ✓ | Publish a new version (audited) |
 
 ## Weather
 
@@ -97,14 +100,25 @@ Refresh tokens are opaque, Postgres-backed, and rotated on use — not Redis, no
 
 Source: OpenMeteo, via a `@nestjs/schedule` cron scheduler (current every 15min, hourly + AQ every 2h, daily every 12h). See `docs/architecture/modules.md` "weather" for design notes and `docs/integrations/openmeteo.md` for provider details.
 
-### Flood (OpenMeteo / GloFAS)
+### Flood (OpenMeteo / GloFAS) and Water Level Stations
 
 | Method | Path | Access | Status | Notes |
 |---|---|---|---|---|
-| GET | `/flood/forecast` | Public | ✓ | Latest stored discharge forecast day for every district |
-| GET | `/flood/forecast/:districtId` | Public | ✓ | Daily 30-day forecast by default; accepts `from` and `to` |
+| GET | `/flood/forecast` | Public | ✓ | Latest stored discharge forecast day for all stations |
+| GET | `/flood/forecast/station/:stationId` | Public | ✓ | Full forecast window for one station (`?from`, `?to`) |
+| GET | `/flood/forecast/district/:districtId` | Public | ✓ | Forecasts for all stations in a district |
+| GET | `/flood/stations/:stationId/readings` | Public | ✓ | Historical water level readings (`?from`, `?to`) |
+| GET | `/flood/stations/:stationId/latest` | Public | ✓ | Most recent water level reading |
 
-Source: OpenMeteo Flood API, persisted as `FloodForecast`. An empty table triggers an initial sync; normal refresh runs every six hours. See `docs/integrations/openmeteo-flood.md`.
+Source: OpenMeteo Flood API, persisted as `StationFloodForecast` (station-based, replaced earlier district-based model). An empty table triggers an initial sync; normal refresh runs every six hours. See `docs/integrations/openmeteo-flood.md`.
+
+### Water Bodies
+
+| Method | Path | Access | Status | Notes |
+|---|---|---|---|---|
+| GET | `/water-bodies` | Public | ✓ | Water body registry with type/class filters |
+| GET | `/water-bodies/stations` | Public | ✓ | All water level monitoring stations |
+| GET | `/water-bodies/:id` | Public | ✓ | Water body detail including stations and upazila coverage |
 
 ## Reports
 
@@ -131,11 +145,17 @@ Source: OpenMeteo Flood API, persisted as `FloodForecast`. An empty table trigge
 | Method | Path | Access | Status | Purpose |
 | --- | --- | --- | --- | --- |
 | GET | `/observations` | Public | ✓ | Observations (`?category`, `?trustLevel`, `?districtId`); excludes `FLAGGED` by default |
+| GET | `/observations/mine` | Authenticated | ✓ | Caller's own observations, all trust levels |
+| GET | `/observations/nearby` | Public | ✓ | Spatial query by lat/lng + radius |
 | GET | `/observations/:id` | Public | ✓ | Observation detail |
 | POST | `/observations` | Authenticated | ✓ | Submit observation (audited; always starts `UNVERIFIED`) |
+| PATCH | `/observations/:id` | Owner / Admin | ✓ | Edit observation |
 | PATCH | `/observations/:id/trust` | Researcher / Admin | ✓ | Update trust level (audited, records from/to) |
+| DELETE | `/observations/:id` | Owner / Admin | ✓ | Delete observation (audited) |
+| POST | `/observations/:id/measurements` | Authenticated | ✓ | Attach a quantitative measurement (audited `OBSERVATION_MEASUREMENT_ADD`) |
+| DELETE | `/observations/:id/measurements/:measurementId` | Owner / Admin | ✓ | Remove a measurement (audited `OBSERVATION_MEASUREMENT_DELETE`) |
 
-Note the implemented path is `/trust`, not the `/verification` originally planned here, and moderators are **not** granted trust-level changes — only `RESEARCHER` and `ADMIN`.
+Note the trust-level path is `/trust`, not `/verification`. Moderators are **not** granted trust-level changes — only `RESEARCHER` and `ADMIN`.
 
 ## Restoration
 
@@ -146,6 +166,12 @@ Note the implemented path is `/trust`, not the `/verification` originally planne
 | POST | `/restoration/projects` | Org admin / Admin | ✓ | Create project (audited) |
 | PATCH | `/restoration/projects/:id` | Creator / Admin | ✓ | Update project (audited; ownership checked in the service, not by a route guard) |
 | POST | `/restoration/projects/:id/join` | Authenticated | ✓ | Join project (audited; idempotent) |
+| GET | `/restoration/projects/:id/targets` | Public | ✓ | List project targets |
+| POST | `/restoration/projects/:id/targets` | Creator / Admin | ✓ | Add target (audited `RESTORATION_TARGET_ADD`) |
+| GET | `/restoration/projects/:id/activities` | Public | ✓ | List activity log entries |
+| POST | `/restoration/projects/:id/activities` | Authenticated | ✓ | Log an activity (audited `RESTORATION_ACTIVITY_ADD`) |
+| GET | `/restoration/projects/:id/targets/:targetId/metrics` | Public | ✓ | List metric readings for a target |
+| POST | `/restoration/projects/:id/targets/:targetId/metrics` | Authenticated | ✓ | Record a metric reading (audited `RESTORATION_METRIC_ADD`) |
 
 Controller prefix is `restoration/projects`, not `restoration`.
 
@@ -153,9 +179,8 @@ Controller prefix is `restoration/projects`, not `restoration`.
 
 | Method | Path | Access | Status | Purpose |
 | --- | --- | --- | --- | --- |
-| POST | `/media` | Authenticated | ✗ | Create upload record |
-| GET | `/media/:id` | Permission-based | ✗ | Media metadata |
-| DELETE | `/media/:id` | Owner / Moderator / Admin | ✗ | Remove media |
+| POST | `/media/upload` | Authenticated | ✓ | Multipart file upload — MIME validation, 100 MB limit |
+| POST | `/media/presign` | Authenticated | ✓ | Returns presigned S3/MinIO URL for direct client upload |
 
 ## Biodiversity
 

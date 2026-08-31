@@ -30,15 +30,18 @@ Legend: **Done** | **Partial** | *Planned* | ~~Deferred~~
 | --- | --- | --- |
 | Weather ingestion — current, hourly, daily (OpenMeteo) | `weather` | **Done** |
 | Air quality ingestion — hourly (OpenMeteo) | `weather` | **Done** |
-| Flood discharge forecasts — district-level, 30-day (OpenMeteo/GloFAS) | `flood` | **Done** |
+| Flood discharge forecasts — station-based (OpenMeteo/GloFAS) | `flood` | **Done** — refactored to `StationFloodForecast` per water level station; district-level proxy replaced by station FK |
 | Satellite radiation — daily shortwave, sunshine, daylight (OpenMeteo) | `radiation` | **Done** |
 | Marine wave/swell/wind-wave forecasts — coastal districts (OpenMeteo) | `marine` | **Done** |
 | Location climate rolling averages — 30-day, union→district→division (OpenMeteo) | `locations/climate` | **Done** |
 | Urban AQI — station-level (WAQI) | `weather` | *Planned* — free key needed at aqicn.org |
 | Dataset catalog with access policy | `datasets` | **Done** — 9 catalog records |
 | Dataset download + access request endpoints | `datasets` | **Done** |
+| Dataset version history and publishing | `datasets` | **Done** — `DatasetVersion` model; `GET/POST /datasets/:id/versions`; audited `DATASET_VERSION_PUBLISH` |
 | Biodiversity — species and occurrence records (GBIF daily sync) | `biodiversity` | **Done** |
 | Ingestion job lifecycle (queue, track, retry, audit) | `ingestion` | **Partial** — job tracking implemented (RUNNING → SUCCEEDED/FAILED); no retry queue or manual trigger endpoint |
+| Water body registry (rivers, haors, canals, lakes) with monitoring stations | `water-bodies` | **Done** — `WaterBody`, `WaterLevelStation`, `WaterLevelReading`; seeded from CSV |
+| Water level readings and gauge threshold status | `flood`, `water-bodies` | **Done** — `GET /flood/stations/:stationId/readings`, `GET /flood/stations/:stationId/latest` |
 | BMD / FFWC government data | `ingestion` | *Planned* — requires gov access or scraping |
 
 ---
@@ -53,7 +56,9 @@ Legend: **Done** | **Partial** | *Planned* | ~~Deferred~~
 | Report media attachments (URL registration) | `reports` | **Done** |
 | Report media upload (file storage) | `reports`, `media` | **Done** — `POST /media/upload` (multipart) and `POST /media/presign` (presigned URL); requires `STORAGE_*` env vars |
 | Environmental observations with trust levels | `observations` | **Done** |
+| Quantitative observation measurements (water/air/soil/biodiversity parameters) | `observations` | **Done** — `ObservationMeasurement` with `MeasurementParameter`, `MeasurementUnit`, `QualityFlag` |
 | Restoration project creation, tracking, and joining | `restoration` | **Done** |
+| Restoration targets, activity logs, and metric readings | `restoration` | **Done** — `ProjectTarget`, `ProjectActivity`, `ProjectMetric`; `RestorationTargetMetric` enum |
 | Structured survey campaigns | — | *Planned* (Phase 7) |
 | Community posts, comments, and polls | `community` | *Planned* — `CommunityPost`, `PostComment`, `Poll`, `PollOption`, `PollVote` models; `/community/posts` CRUD + `/poll/vote`; updates `/community` page |
 
@@ -97,7 +102,8 @@ Legend: **Done** | **Partial** | *Planned* | ~~Deferred~~
 | Feature | Module / App | Status |
 | --- | --- | --- |
 | District-level point coordinates (lat/lng) | `locations` | **Done** — all 64 districts backfilled |
-| PostGIS geometry (polygons, boundaries) | `packages/database` | *Planned* — Docker image ready; no migration yet |
+| PostGIS point geometry on District | `packages/database` | **Done** — `District.geom geography(Point, 4326)` added by migration `20260901000000_postgis_geometry` |
+| PostGIS polygon geometry (boundaries, alert zones) | `packages/database` | *Planned* — boundary data exists as `Json?`; polygon type not yet applied |
 | Satellite / remote sensing ingestion | `data-worker` | *Planned* (Phase 7) — depends on PostGIS + object storage |
 | Change detection (deforestation, flooding) | `data-worker` | *Planned* (Phase 7) |
 
