@@ -22,16 +22,45 @@ export class WaterBodiesService implements OnModuleInit {
   constructor(private readonly prisma: PrismaService) {}
 
   async onModuleInit() {
-    // Skip if already seeded (same guard pattern as LocationsService)
     const existing = await this.prisma.waterBody.count();
-    if (existing > 0) {
-      this.logger.log(`Water bodies already seeded (${existing} records) — skipping`);
+    if (existing === 0) {
+      try {
+        await this.seed();
+      } catch (err) {
+        this.logger.error('Water-body seed failed', err instanceof Error ? err.stack : String(err));
+      }
       return;
     }
-    try {
-      await this.seed();
-    } catch (err) {
-      this.logger.error('Water-body seed failed', err instanceof Error ? err.stack : String(err));
+
+    // Stations may have lost their FK references after the schema migration that replaced plain
+    // district/upazila string columns with FK columns. Re-seed if station count doesn't match
+    // the seed file, or if any station is missing its districtId when one should be resolvable.
+    const totalStations = await this.prisma.waterLevelStation.count();
+    if (totalStations !== WATER_LEVEL_STATIONS.length) {
+      this.logger.log(
+        `Station count mismatch (${totalStations} in DB vs ${WATER_LEVEL_STATIONS.length} expected) — re-seeding stations…`,
+      );
+      try {
+        await this.seedStationLocations();
+      } catch (err) {
+        this.logger.error('Station re-seed failed', err instanceof Error ? err.stack : String(err));
+      }
+      return;
+    }
+
+    this.logger.log(`Water bodies already seeded (${existing} records) — checking station FKs…`);
+
+    const linkedStations = await this.prisma.waterLevelStation.count({ where: { districtId: { not: null } } });
+    const expectedLinked = WATER_LEVEL_STATIONS.filter((s) => !!s.district).length;
+    if (linkedStations < expectedLinked) {
+      this.logger.log(
+        `Station FK references incomplete (${linkedStations}/${expectedLinked} with districtId) — re-seeding station locations…`,
+      );
+      try {
+        await this.seedStationLocations();
+      } catch (err) {
+        this.logger.error('Station FK re-seed failed', err instanceof Error ? err.stack : String(err));
+      }
     }
   }
 
@@ -165,32 +194,9 @@ export class WaterBodiesService implements OnModuleInit {
       }
     }
 
-    // ── Phase 2: water-level stations ────────────────────────────────────────
-    const stationIdByCode = new Map<string, string>();
-
-    for (const seed of WATER_LEVEL_STATIONS) {
-      const data: Prisma.WaterLevelStationCreateInput = {
-        serial: seed.serial,
-        stationCode: seed.stationCode,
-        name: seed.name,
-        riverName: seed.riverName,
-        tidalStatus: seed.tidalStatus,
-        district: seed.district,
-        upazila: seed.upazila,
-        latitude: seed.latitude,
-        longitude: seed.longitude,
-      };
-      const station = await this.prisma.waterLevelStation.upsert({
-        where: { stationCode: seed.stationCode },
-        create: data,
-        update: data,
-      });
-      stationIdByCode.set(seed.stationCode, station.id);
-    }
+    const stationIdByCode = await this.seedStationLocations();
 
     // ── Phase 3: link stations to water bodies via explicit station codes ─────
-    // Lotic water bodies carry a stationCodes[] from the bwdb_gauging_stations
-    // column — far more reliable than fuzzy river-name matching.
     let stationLinks = 0;
     for (const seed of WATER_BODIES) {
       if (!seed.lotic?.stationCodes.length) continue;
@@ -219,25 +225,98 @@ export class WaterBodiesService implements OnModuleInit {
     );
   }
 
+  /** Upserts all WaterLevelStation rows, resolving district/upazila names to FK IDs.
+   *  Called from seed() on first run and from onModuleInit() when FKs are missing after a migration. */
+  private async seedStationLocations(): Promise<Map<string, string>> {
+    const districts = await this.prisma.district.findMany({ select: { id: true, name: true } });
+    const upazilas = await this.prisma.upazila.findMany({
+      select: { id: true, name: true, districtId: true },
+    });
+
+    const districtByName = new Map(districts.map((d) => [normalised(d.name), d]));
+    const upazilasByName = new Map<string, typeof upazilas>();
+    for (const u of upazilas) {
+      const key = normalised(u.name);
+      upazilasByName.set(key, [...(upazilasByName.get(key) ?? []), u]);
+    }
+
+    const stationIdByCode = new Map<string, string>();
+
+    for (const seed of WATER_LEVEL_STATIONS) {
+      const districtId = seed.district
+        ? districtByName.get(normalised(seed.district))?.id ?? undefined
+        : undefined;
+
+      let upazilaId: string | undefined;
+      if (seed.upazila) {
+        const key = normalised(seed.upazila);
+        const candidates = (upazilasByName.get(key) ?? []).filter(
+          (u) => !districtId || u.districtId === districtId,
+        );
+        if (candidates.length === 1) {
+          upazilaId = candidates[0].id;
+        } else if (candidates.length > 1) {
+          this.logger.debug(`Ambiguous upazila "${seed.upazila}" for station ${seed.stationCode} — skipped`);
+        }
+      }
+
+      const data = {
+        serial: seed.serial,
+        name: seed.name,
+        riverName: seed.riverName,
+        tidalStatus: seed.tidalStatus ?? null,
+        districtId: districtId ?? null,
+        upazilaId: upazilaId ?? null,
+        latitude: seed.latitude,
+        longitude: seed.longitude,
+      };
+      const station = await this.prisma.waterLevelStation.upsert({
+        where: { stationCode: seed.stationCode },
+        create: { stationCode: seed.stationCode, ...data },
+        update: data,
+      });
+      stationIdByCode.set(seed.stationCode, station.id);
+    }
+
+    this.logger.log(`Station locations seeded: ${stationIdByCode.size} stations with FK references`);
+    return stationIdByCode;
+  }
+
   // ── Public read methods ────────────────────────────────────────────────────
 
-  list(query: { hydrologicalClass?: HydrologicalClass; upazilaId?: string; districtId?: string }) {
-    return this.prisma.waterBody.findMany({
-      where: {
-        hydrologicalClass: query.hydrologicalClass,
-        upazilas: query.upazilaId
-          ? { some: { upazilaId: query.upazilaId } }
-          : query.districtId
-            ? { some: { upazila: { districtId: query.districtId } } }
-            : undefined,
-      },
-      orderBy: { nameEn: 'asc' },
-      include: {
-        upazilas: { include: { upazila: { include: { district: true } } } },
-        loticDetails: true,
-        lenticDetails: true,
-      },
-    });
+  async list(query: {
+    hydrologicalClass?: HydrologicalClass;
+    upazilaId?: string;
+    districtId?: string;
+    page: number;
+    limit: number;
+  }) {
+    const where: Prisma.WaterBodyWhereInput = {
+      hydrologicalClass: query.hydrologicalClass,
+      upazilas: query.upazilaId
+        ? { some: { upazilaId: query.upazilaId } }
+        : query.districtId
+          ? { some: { upazila: { districtId: query.districtId } } }
+          : undefined,
+    };
+    const skip = (query.page - 1) * query.limit;
+
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.waterBody.findMany({
+        where,
+        orderBy: { nameEn: 'asc' },
+        skip,
+        take: query.limit,
+        include: {
+          upazilas: { include: { upazila: { include: { district: true } } } },
+          loticDetails: true,
+          lenticDetails: true,
+        },
+      }),
+      this.prisma.waterBody.count({ where }),
+    ]);
+
+    return { data, total, page: query.page, limit: query.limit, totalPages: Math.ceil(total / query.limit) };
   }
 
   findOne(id: string) {
@@ -252,16 +331,25 @@ export class WaterBodiesService implements OnModuleInit {
     });
   }
 
-  listStations(query: { districtName?: string; tidalStatus?: string } = {}) {
-    return this.prisma.waterLevelStation.findMany({
-      where: {
-        district: query.districtName
-          ? { contains: query.districtName, mode: 'insensitive' }
-          : undefined,
-        tidalStatus: query.tidalStatus,
-      },
-      orderBy: { serial: 'asc' },
-      include: { waterBodies: { include: { waterBody: { select: { id: true, code: true, nameEn: true } } } } },
-    });
+  async listStations(query: { districtId?: string; upazilaId?: string; tidalStatus?: string; page: number; limit: number }) {
+    const where: Prisma.WaterLevelStationWhereInput = {
+      districtId: query.districtId,
+      upazilaId: query.upazilaId,
+      tidalStatus: query.tidalStatus,
+    };
+    const skip = (query.page - 1) * query.limit;
+
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.waterLevelStation.findMany({
+        where,
+        orderBy: { serial: 'asc' },
+        skip,
+        take: query.limit,
+        include: { waterBodies: { include: { waterBody: { select: { id: true, code: true, nameEn: true } } } } },
+      }),
+      this.prisma.waterLevelStation.count({ where }),
+    ]);
+
+    return { data, total, page: query.page, limit: query.limit, totalPages: Math.ceil(total / query.limit) };
   }
 }

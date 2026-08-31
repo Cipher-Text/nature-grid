@@ -476,6 +476,7 @@ model District {
   satelliteRadiationReadings SatelliteRadiationReading[]
   marineForecasts            MarineForecast[]
   pollutionSources           PollutionSource[]
+  waterLevelStations         WaterLevelStation[]
 
   @@unique([name, divisionId])
   @@index([divisionId])
@@ -507,8 +508,9 @@ model Upazila {
   avgUvIndex30d    Float?
   climateUpdatedAt DateTime?
 
-  unions      Union[]
-  waterBodies WaterBodyUpazila[]
+  unions             Union[]
+  waterBodies        WaterBodyUpazila[]
+  waterLevelStations WaterLevelStation[]
 
   @@unique([name, districtId])
   @@index([districtId])
@@ -587,15 +589,19 @@ model WaterLevelStation {
   name        String
   riverName   String
   tidalStatus String?
-  district    String?
-  upazila     String?
+  districtId  String?
+  upazilaId   String?
   latitude    Float
   longitude   Float
 
+  district    District? @relation(fields: [districtId], references: [id])
+  upazila     Upazila?  @relation(fields: [upazilaId], references: [id])
   waterBodies WaterBodyStation[]
 
   @@unique([serial])
   @@index([riverName])
+  @@index([districtId])
+  @@index([upazilaId])
 }
 
 model WaterBodyStation {
