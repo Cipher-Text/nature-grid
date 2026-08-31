@@ -335,6 +335,7 @@ export interface UpazilaSummary {
   lat?: number | null;
   lng?: number | null;
   areaSqKm?: number | null;
+  isThana: boolean;
   district?: { id: string; name: string };
   _count?: { unions: number };
 }

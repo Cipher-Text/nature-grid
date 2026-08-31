@@ -23,8 +23,12 @@ export class LocationsController {
   }
 
   @Get('upazilas')
-  getUpazilas(@Query('districtId') districtId?: string) {
-    return this.locationsService.getUpazilas(districtId);
+  getUpazilas(
+    @Query('districtId') districtId?: string,
+    @Query('isThana') isThana?: string,
+  ) {
+    const thana = isThana === 'true' ? true : isThana === 'false' ? false : undefined;
+    return this.locationsService.getUpazilas(districtId, thana);
   }
 
   @Get('upazilas/:id')

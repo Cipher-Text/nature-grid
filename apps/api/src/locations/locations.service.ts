@@ -19,6 +19,7 @@ export class LocationsService implements OnModuleInit {
 
     let districtCount = 0;
     let upazilaCount = 0;
+    let thanaCount = 0;
     let unionCount = 0;
 
     for (const div of SEED_DATA) {
@@ -59,14 +60,16 @@ export class LocationsService implements OnModuleInit {
             update: {
               bnName: up.bnName, slug: up.slug, pcode: up.pcode,
               lat: up.lat, lng: up.lng, areaSqKm: up.areaSqKm, url: up.url,
+              isThana: up.isThana ?? false,
             },
             create: {
               name: up.name, bnName: up.bnName, slug: up.slug, pcode: up.pcode,
               lat: up.lat, lng: up.lng, areaSqKm: up.areaSqKm, url: up.url,
+              isThana: up.isThana ?? false,
               districtId: district.id,
             },
           });
-          upazilaCount++;
+          if (up.isThana) thanaCount++; else upazilaCount++;
 
           for (const un of up.unions) {
             await this.prisma.union.upsert({
@@ -91,7 +94,7 @@ export class LocationsService implements OnModuleInit {
 
     this.logger.log(
       `Geography seeded: ${SEED_DATA.length} divisions, ${districtCount} districts, ` +
-      `${upazilaCount} upazilas, ${unionCount} unions`,
+      `${upazilaCount} upazilas, ${thanaCount} thanas, ${unionCount} unions`,
     );
   }
 
@@ -130,9 +133,12 @@ export class LocationsService implements OnModuleInit {
     return district;
   }
 
-  getUpazilas(districtId?: string) {
+  getUpazilas(districtId?: string, isThana?: boolean) {
     return this.prisma.upazila.findMany({
-      where: districtId ? { districtId } : undefined,
+      where: {
+        ...(districtId ? { districtId } : {}),
+        ...(isThana !== undefined ? { isThana } : {}),
+      },
       orderBy: { name: 'asc' },
       include: {
         district: { select: { id: true, name: true } },

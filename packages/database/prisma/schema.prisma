@@ -492,6 +492,7 @@ model Upazila {
   lng        Float?
   areaSqKm   Float?
   url        String?
+  isThana    Boolean  @default(false)
   districtId String
   district   District @relation(fields: [districtId], references: [id])
 

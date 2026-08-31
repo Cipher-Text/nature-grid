@@ -1727,7 +1727,7 @@ export const WATER_BODIES: WaterBodySeed[] = [
     longitude: 90.3795438,
     transboundaryFlag: false,
     districtNames: ["Dhaka"],
-    upazilaNames: ["Uttara"],
+    upazilaNames: ["Uttara East","Uttara West"],
     lotic: {
       hydrologicalOrigin: "Lowland around Dhaka",
       outfallTo: "Balu River",
@@ -1909,7 +1909,7 @@ export const WATER_BODIES: WaterBodySeed[] = [
     longitude: 91.8348606,
     transboundaryFlag: false,
     districtNames: ["Chattogram","Rangamati"],
-    upazilaNames: ["Chittagong Sadar","Barkal"],
+    upazilaNames: ["Chittagong Kotwali","Barkal"],
     lotic: {
       lengthKmBd: 161,
       averageWidthM: "453",
