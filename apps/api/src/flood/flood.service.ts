@@ -1,7 +1,35 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import type { WaterLevelStation } from '@prisma/client';
+import type { WaterLevelThresholdStatus } from '@nature-grid/shared';
 import { PrismaService } from '../database/prisma.service';
 import { FloodOpenMeteoClient } from './flood-openmeteo.client';
+import { clampPagination } from '../common/pagination';
+
+const STATION_SELECT = {
+  id: true,
+  serial: true,
+  stationCode: true,
+  name: true,
+  riverName: true,
+  tidalStatus: true,
+  latitude: true,
+  longitude: true,
+  dangerLevel: true,
+  warningLevel: true,
+  normalLevel: true,
+  districtId: true,
+  district: { select: { id: true, name: true } },
+} as const;
+
+const READING_SELECT = {
+  id: true,
+  stationId: true,
+  readingAt: true,
+  waterLevel: true,
+  discharge: true,
+  trend: true,
+  createdAt: true,
+} as const;
 
 @Injectable()
 export class FloodService {
@@ -136,5 +164,63 @@ export class FloodService {
         },
       },
     });
+  }
+
+  // ─── Water level readings ────────────────────────────────────────────────────
+
+  private async findStationOrThrow(stationId: string) {
+    const station = await this.prisma.waterLevelStation.findUnique({
+      where: { id: stationId },
+      select: STATION_SELECT,
+    });
+    if (!station) throw new NotFoundException('Water level station not found');
+    return station;
+  }
+
+  private computeThresholdStatus(
+    waterLevel: number,
+    station: Pick<WaterLevelStation, 'dangerLevel' | 'warningLevel'>,
+  ): WaterLevelThresholdStatus {
+    if (station.dangerLevel !== null && station.dangerLevel !== undefined && waterLevel >= station.dangerLevel) {
+      return 'DANGER';
+    }
+    if (station.warningLevel !== null && station.warningLevel !== undefined && waterLevel >= station.warningLevel) {
+      return 'WARNING';
+    }
+    return 'NORMAL';
+  }
+
+  async getStationReadings(stationId: string, from?: Date, to?: Date, rawPage = 1, rawPageSize = 100) {
+    await this.findStationOrThrow(stationId);
+    const { page, pageSize } = clampPagination(rawPage, rawPageSize);
+    const skip = (page - 1) * pageSize;
+    const where = {
+      stationId,
+      ...(from || to ? { readingAt: { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) } } : {}),
+    };
+    const [data, total] = await Promise.all([
+      this.prisma.waterLevelReading.findMany({
+        where,
+        skip,
+        take: pageSize,
+        orderBy: { readingAt: 'desc' },
+        select: READING_SELECT,
+      }),
+      this.prisma.waterLevelReading.count({ where }),
+    ]);
+    return { data, total, page, pageSize };
+  }
+
+  async getLatestReading(stationId: string) {
+    const station = await this.findStationOrThrow(stationId);
+    const reading = await this.prisma.waterLevelReading.findFirst({
+      where: { stationId },
+      orderBy: { readingAt: 'desc' },
+      select: READING_SELECT,
+    });
+    const thresholdStatus = reading
+      ? this.computeThresholdStatus(reading.waterLevel, station)
+      : null;
+    return { station, latestReading: reading ?? null, thresholdStatus };
   }
 }

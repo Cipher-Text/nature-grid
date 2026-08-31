@@ -20,4 +20,24 @@ export class UpdateDatasetDto {
   @IsOptional()
   @IsBoolean()
   isPublished?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  license?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  refreshCron?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  version?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  spatialExtent?: string;
 }

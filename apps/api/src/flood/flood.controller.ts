@@ -40,4 +40,36 @@ export class FloodController {
     if (!rows.length) throw new NotFoundException('No flood forecast for stations in this district');
     return rows;
   }
+
+  // ─── Observed water level readings ──────────────────────────────────────────
+
+  /**
+   * Paginated time-series of observed gauge readings for a station.
+   * Ordered newest-first. Default page size 100 (suitable for charting).
+   */
+  @Get('stations/:stationId/readings')
+  getStationReadings(
+    @Param('stationId') stationId: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
+    return this.floodService.getStationReadings(
+      stationId,
+      from ? new Date(from) : undefined,
+      to ? new Date(to) : undefined,
+      Number(page ?? 1),
+      Number(pageSize ?? 100),
+    );
+  }
+
+  /**
+   * Most recent gauge reading for a station, plus station metadata
+   * and computed threshold status (NORMAL | WARNING | DANGER).
+   */
+  @Get('stations/:stationId/latest')
+  getLatestReading(@Param('stationId') stationId: string) {
+    return this.floodService.getLatestReading(stationId);
+  }
 }

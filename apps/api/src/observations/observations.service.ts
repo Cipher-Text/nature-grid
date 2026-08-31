@@ -5,7 +5,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { ObservationCategory, ObservationTrustLevel } from '@prisma/client';
+import { Prisma, ObservationCategory, ObservationTrustLevel } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { CreateObservationDto } from './dto/create-observation.dto';
 import { CreateMeasurementDto } from './dto/create-measurement.dto';
@@ -15,6 +15,12 @@ import type { JwtPayload } from '../common/decorators/current-user.decorator';
 import { clampPagination } from '../common/pagination';
 import { resolveGeoHierarchy } from '../common/validate-district';
 import { GamificationService } from '../gamification/gamification.service';
+
+export interface NearbyObservationRow {
+  id: string; category: string; trustLevel: string;
+  lat: number | null; lng: number | null; districtId: string | null;
+  species: string | null; observedAt: Date; distance_m: number;
+}
 
 const MEASUREMENT_SELECT = {
   id: true,
@@ -339,5 +345,58 @@ export class ObservationsService {
         },
       }),
     ]);
+  }
+
+  // ─── Spatial proximity search ──────────────────────────────────────────────
+
+  async findNearby(lat: number, lng: number, radiusKm: number, rawPage = 1, rawPageSize = 20) {
+    if (!isFinite(lat) || lat < -90 || lat > 90) throw new BadRequestException('lat must be between -90 and 90');
+    if (!isFinite(lng) || lng < -180 || lng > 180) throw new BadRequestException('lng must be between -180 and 180');
+    if (!isFinite(radiusKm) || radiusKm <= 0 || radiusKm > 500) throw new BadRequestException('radiusKm must be between 0 and 500');
+
+    const { page, pageSize } = clampPagination(rawPage, rawPageSize);
+    const skip = (page - 1) * pageSize;
+    const radiusM = radiusKm * 1000;
+
+    const [rows, countRows] = await Promise.all([
+      this.prisma.$queryRaw<NearbyObservationRow[]>(Prisma.sql`
+        SELECT
+          o.id,
+          o.category,
+          o."trustLevel",
+          o.lat,
+          o.lng,
+          o."districtId",
+          o.species,
+          o."observedAt",
+          ST_Distance(
+            o.geom,
+            ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography
+          )::float8 AS distance_m
+        FROM "Observation" o
+        WHERE o.geom IS NOT NULL
+          AND ST_DWithin(
+            o.geom,
+            ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography,
+            ${radiusM}
+          )
+          AND o."trustLevel" != 'FLAGGED'
+        ORDER BY distance_m ASC
+        LIMIT ${pageSize} OFFSET ${skip}
+      `),
+      this.prisma.$queryRaw<[{ total: bigint }]>(Prisma.sql`
+        SELECT COUNT(*)::bigint AS total
+        FROM "Observation" o
+        WHERE o.geom IS NOT NULL
+          AND ST_DWithin(
+            o.geom,
+            ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography,
+            ${radiusM}
+          )
+          AND o."trustLevel" != 'FLAGGED'
+      `),
+    ]);
+
+    return { data: rows, total: Number(countRows[0]?.total ?? 0), page, pageSize, radiusKm };
   }
 }

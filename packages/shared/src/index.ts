@@ -245,6 +245,13 @@ export type QualityFlag =
   | 'BAD'        // likely erroneous
   | 'ESTIMATED'; // interpolated or modelled
 
+// ─── Water Level Enums ───────────────────────────────────────────────────────
+
+export type WaterLevelTrend = 'RISING' | 'FALLING' | 'STEADY';
+
+/** Computed threshold status for a station at a given water level. */
+export type WaterLevelThresholdStatus = 'NORMAL' | 'WARNING' | 'DANGER';
+
 // ─── Ingestion Enum ───────────────────────────────────────────────────────────
 
 export type IngestionStatus =
@@ -265,6 +272,16 @@ export type RestorationCategory =
   | 'RIVERBANK_PROTECTION'
   | 'MANGROVE'
   | 'WASTE_MANAGEMENT'
+  | 'OTHER';
+
+export type RestorationTargetMetric =
+  | 'TREES_PLANTED'
+  | 'AREA_RESTORED_HA'
+  | 'SEEDLINGS_SURVIVED'
+  | 'SPECIES_REINTRODUCED'
+  | 'WATER_QUALITY_SCORE'
+  | 'CARBON_SEQUESTERED_T'
+  | 'VOLUNTEER_HOURS'
   | 'OTHER';
 
 // ─── Location Types ───────────────────────────────────────────────────────────

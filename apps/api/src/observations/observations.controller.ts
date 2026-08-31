@@ -64,6 +64,28 @@ export class ObservationsController {
     );
   }
 
+  /**
+   * Public: returns non-FLAGGED observations within radiusKm of a point.
+   * Results are ordered nearest-first and include distance_m in metres.
+   */
+  @Public()
+  @Get('nearby')
+  findNearby(
+    @Query('lat') lat?: string,
+    @Query('lng') lng?: string,
+    @Query('radiusKm') radiusKm?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
+    return this.observationsService.findNearby(
+      Number(lat),
+      Number(lng),
+      Number(radiusKm ?? 10),
+      Number(page ?? 1),
+      Number(pageSize ?? 20),
+    );
+  }
+
   @Public()
   @Get(':id')
   getById(@Param('id') id: string) {

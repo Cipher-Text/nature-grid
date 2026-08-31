@@ -1,5 +1,5 @@
-import { ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { ReportStatus, ReportCategory } from '@prisma/client';
+import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Prisma, ReportStatus, ReportCategory } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { CreateReportDto } from './dto/create-report.dto';
 import { UpdateReportStatusDto } from './dto/update-status.dto';
@@ -9,6 +9,12 @@ import type { JwtPayload } from '../common/decorators/current-user.decorator';
 import { clampPagination } from '../common/pagination';
 import { resolveGeoHierarchy } from '../common/validate-district';
 import { GamificationService } from '../gamification/gamification.service';
+
+export interface NearbyReportRow {
+  id: string; title: string; category: string; status: string;
+  summary: string | null; lat: number | null; lng: number | null;
+  districtId: string | null; createdAt: Date; distance_m: number;
+}
 
 /** Allowed status transitions per role. */
 const STATUS_TRANSITIONS: Record<ReportStatus, ReportStatus[]> = {
@@ -297,5 +303,59 @@ export class ReportsService {
     }
 
     return updated;
+  }
+
+  // ─── Spatial proximity search ──────────────────────────────────────────────
+
+  async findNearby(lat: number, lng: number, radiusKm: number, rawPage = 1, rawPageSize = 20) {
+    if (!isFinite(lat) || lat < -90 || lat > 90) throw new BadRequestException('lat must be between -90 and 90');
+    if (!isFinite(lng) || lng < -180 || lng > 180) throw new BadRequestException('lng must be between -180 and 180');
+    if (!isFinite(radiusKm) || radiusKm <= 0 || radiusKm > 500) throw new BadRequestException('radiusKm must be between 0 and 500');
+
+    const { page, pageSize } = clampPagination(rawPage, rawPageSize);
+    const skip = (page - 1) * pageSize;
+    const radiusM = radiusKm * 1000;
+
+    const [rows, countRows] = await Promise.all([
+      this.prisma.$queryRaw<NearbyReportRow[]>(Prisma.sql`
+        SELECT
+          r.id,
+          r.title,
+          r.category,
+          r.status,
+          r.summary,
+          r.lat,
+          r.lng,
+          r."districtId",
+          r."createdAt",
+          ST_Distance(
+            r.geom,
+            ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography
+          )::float8 AS distance_m
+        FROM "CitizenReport" r
+        WHERE r.geom IS NOT NULL
+          AND ST_DWithin(
+            r.geom,
+            ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography,
+            ${radiusM}
+          )
+          AND r.status IN ('VERIFIED', 'RESOLVED')
+        ORDER BY distance_m ASC
+        LIMIT ${pageSize} OFFSET ${skip}
+      `),
+      this.prisma.$queryRaw<[{ total: bigint }]>(Prisma.sql`
+        SELECT COUNT(*)::bigint AS total
+        FROM "CitizenReport" r
+        WHERE r.geom IS NOT NULL
+          AND ST_DWithin(
+            r.geom,
+            ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography,
+            ${radiusM}
+          )
+          AND r.status IN ('VERIFIED', 'RESOLVED')
+      `),
+    ]);
+
+    return { data: rows, total: Number(countRows[0]?.total ?? 0), page, pageSize, radiusKm };
   }
 }

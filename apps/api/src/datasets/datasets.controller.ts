@@ -5,6 +5,7 @@ import { UpdateDatasetDto } from './dto/update-dataset.dto';
 import { CreateDatasetDto } from './dto/create-dataset.dto';
 import { RequestDatasetAccessDto } from './dto/request-dataset-access.dto';
 import { DecideDatasetAccessDto } from './dto/decide-dataset-access.dto';
+import { PublishDatasetVersionDto } from './dto/publish-dataset-version.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { CurrentUser, JwtPayload } from '../common/decorators/current-user.decorator';
@@ -97,6 +98,22 @@ export class DatasetsController {
       id,
       status as DatasetAccessRequestStatus | undefined,
     );
+  }
+
+  @Public()
+  @Get(':id/versions')
+  listVersions(@Param('id') id: string) {
+    return this.datasetsService.listVersions(id);
+  }
+
+  @Roles('ADMIN')
+  @Post(':id/versions')
+  publishVersion(
+    @Param('id') id: string,
+    @Body() dto: PublishDatasetVersionDto,
+    @CurrentUser() actor: JwtPayload,
+  ) {
+    return this.datasetsService.publishVersion(id, dto, actor);
   }
 
   @Roles('ADMIN')

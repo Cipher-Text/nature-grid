@@ -152,6 +152,23 @@ enum EmissionUnit {
   OTHER
 }
 
+enum RestorationTargetMetric {
+  TREES_PLANTED
+  AREA_RESTORED_HA
+  SEEDLINGS_SURVIVED
+  SPECIES_REINTRODUCED
+  WATER_QUALITY_SCORE
+  CARBON_SEQUESTERED_T
+  VOLUNTEER_HOURS
+  OTHER
+}
+
+enum WaterLevelTrend {
+  RISING
+  FALLING
+  STEADY
+}
+
 enum AuditAction {
   USER_REGISTER
   USER_LOGIN
@@ -177,6 +194,10 @@ enum AuditAction {
   RESTORATION_PROJECT_CREATE
   RESTORATION_PROJECT_UPDATE
   RESTORATION_PROJECT_JOIN
+  RESTORATION_TARGET_ADD
+  RESTORATION_ACTIVITY_ADD
+  RESTORATION_METRIC_ADD
+  DATASET_VERSION_PUBLISH
   DATASET_ACCESS_DECISION
   PERMISSION_GRANT
   PERMISSION_REVOKE
@@ -348,6 +369,9 @@ model User {
   socialLinks                UserSocialLink[]
   pollutionSourcesCreated    PollutionSource[]
   emissionEntriesReported    EmissionEntry[]
+  recordedActivities         ProjectActivity[]
+  measuredMetrics            ProjectMetric[]
+  publishedDatasetVersions   DatasetVersion[]
   passwordResetTokens        PasswordResetToken[]
   emailVerificationTokens    EmailVerificationToken[]
 
@@ -524,6 +548,7 @@ model District {
   pcode      String?  @unique
   lat        Float?
   lng        Float?
+  geom       Unsupported("geography(Point, 4326)")? // PostGIS generated column — set by migration
   centerLat  Float?
   centerLng  Float?
   areaSqKm   Float?
@@ -687,10 +712,16 @@ model WaterLevelStation {
   latitude    Float
   longitude   Float
 
+  // Gauge thresholds (metres above datum). Null means threshold not yet configured.
+  dangerLevel  Float?
+  warningLevel Float?
+  normalLevel  Float?
+
   district    District? @relation(fields: [districtId], references: [id])
   upazila     Upazila?  @relation(fields: [upazilaId], references: [id])
   waterBodies           WaterBodyStation[]
   stationFloodForecasts StationFloodForecast[]
+  readings              WaterLevelReading[]
 
   @@unique([serial])
   @@index([riverName])
@@ -784,10 +815,18 @@ model Dataset {
   recordCount  Int?
   lastSyncedAt DateTime?
   isPublished  Boolean             @default(true)
+
+  // Metadata fields (Gap 5)
+  license       String?  // SPDX identifier or free text, e.g. "CC-BY-4.0", "ODbL-1.0"
+  refreshCron   String?  // cron expression for update cadence, e.g. "0 */15 * * * *"
+  version       String?  // current schema/data version, e.g. "1.0.0"
+  spatialExtent String?  // geographic coverage description, e.g. "All 64 Bangladesh districts"
+
   createdAt    DateTime            @default(now())
   updatedAt    DateTime            @updatedAt
 
   accessRequests DatasetAccessRequest[]
+  versions       DatasetVersion[]
 
   @@index([providerId])
   @@index([category])
@@ -810,6 +849,21 @@ model DatasetAccessRequest {
   @@unique([datasetId, userId])
 }
 
+// Immutable version history for a dataset — published when schema or data changes.
+model DatasetVersion {
+  id            String   @id @default(cuid())
+  datasetId     String
+  dataset       Dataset  @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+  version       String   // e.g. "1.2.0" — matches Dataset.version at time of publish
+  notes         String?  // changelog / what changed
+  publishedById String?
+  publishedBy   User?    @relation(fields: [publishedById], references: [id], onDelete: SetNull)
+  publishedAt   DateTime @default(now())
+
+  @@index([datasetId])
+  @@index([publishedAt])
+}
+
 // ─── Reports ──────────────────────────────────────────────────────────────────
 
 model CitizenReport {
@@ -829,6 +883,7 @@ model CitizenReport {
   union       Union?         @relation(fields: [unionId], references: [id])
   lat         Float?
   lng         Float?
+  geom        Unsupported("geography(Point, 4326)")? // PostGIS generated column — set by migration
   resolvedAt  DateTime?
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
@@ -903,6 +958,7 @@ model Observation {
   union       Union?                @relation(fields: [unionId], references: [id])
   lat         Float?
   lng         Float?
+  geom        Unsupported("geography(Point, 4326)")? // PostGIS generated column — set by migration
   species     String?
   observedAt  DateTime              @default(now())
   createdAt   DateTime              @default(now())
@@ -960,6 +1016,8 @@ model RestorationProject {
   updatedAt      DateTime            @updatedAt
 
   participants RestorationParticipant[]
+  targets      ProjectTarget[]
+  activities   ProjectActivity[]
 
   @@index([category])
   @@index([status])
@@ -978,6 +1036,56 @@ model RestorationParticipant {
 
   @@unique([projectId, userId])
   @@index([userId])
+}
+
+// Measurable goals set for a restoration project.
+model ProjectTarget {
+  id          String                  @id @default(cuid())
+  projectId   String
+  project     RestorationProject      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  metric      RestorationTargetMetric
+  targetValue Float
+  unit        String?
+  deadline    DateTime?
+  createdAt   DateTime                @default(now())
+
+  measurements ProjectMetric[]
+
+  @@index([projectId])
+}
+
+// Work log entries — what actually happened in the field.
+model ProjectActivity {
+  id              String             @id @default(cuid())
+  projectId       String
+  project         RestorationProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title           String
+  description     String
+  activityDate    DateTime
+  volunteersCount Int?
+  areaAffectedHa  Float?
+  recordedById    String?
+  recordedBy      User?              @relation(fields: [recordedById], references: [id], onDelete: SetNull)
+  createdAt       DateTime           @default(now())
+
+  @@index([projectId])
+  @@index([activityDate])
+}
+
+// Measured outcomes recorded against a specific target.
+model ProjectMetric {
+  id           String        @id @default(cuid())
+  targetId     String
+  target       ProjectTarget @relation(fields: [targetId], references: [id], onDelete: Cascade)
+  measuredAt   DateTime
+  value        Float
+  notes        String?
+  measuredById String?
+  measuredBy   User?         @relation(fields: [measuredById], references: [id], onDelete: SetNull)
+  createdAt    DateTime      @default(now())
+
+  @@index([targetId])
+  @@index([measuredAt])
 }
 
 // ─── Biodiversity (GBIF) ───────────────────────────────────────────────────────
@@ -1157,6 +1265,26 @@ model StationFloodForecast {
   @@unique([stationId, forecastDate])
   @@index([stationId])
   @@index([forecastDate])
+  @@index([ingestionJobId])
+}
+
+// Timestamped gauge readings from BWDB stations (observed water level).
+// Upserted per (stationId, readingAt) — same station can be updated in-place
+// if re-ingested with corrected values.
+model WaterLevelReading {
+  id             String            @id @default(cuid())
+  stationId      String
+  station        WaterLevelStation @relation(fields: [stationId], references: [id], onDelete: Cascade)
+  readingAt      DateTime          // UTC timestamp of the observation
+  waterLevel     Float             // metres above datum
+  discharge      Float?            // m³/s, if available from the source
+  trend          WaterLevelTrend   @default(STEADY)
+  ingestionJobId String?           // IngestionJob that last wrote this row
+  createdAt      DateTime          @default(now())
+
+  @@unique([stationId, readingAt])
+  @@index([stationId])
+  @@index([readingAt])
   @@index([ingestionJobId])
 }
 

@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException, OnModuleInit, Logger, ForbiddenException, ConflictException } from '@nestjs/common';
 import { DatasetCategory, DatasetAccessPolicy, DatasetAccessRequestStatus } from '@prisma/client';
+import { PublishDatasetVersionDto } from './dto/publish-dataset-version.dto';
 import { PrismaService } from '../database/prisma.service';
 import { WeatherService } from '../weather/weather.service';
 import { SEED_DATASETS } from './seed/catalog';
@@ -21,9 +22,21 @@ const DATASET_SELECT = {
   recordCount: true,
   lastSyncedAt: true,
   isPublished: true,
+  license: true,
+  refreshCron: true,
+  version: true,
+  spatialExtent: true,
   createdAt: true,
   updatedAt: true,
   provider: { select: { id: true, name: true, type: true } },
+} as const;
+
+const VERSION_SELECT = {
+  id: true,
+  version: true,
+  notes: true,
+  publishedAt: true,
+  publishedBy: { select: { id: true, displayName: true } },
 } as const;
 
 @Injectable()
@@ -107,6 +120,10 @@ export class DatasetsService implements OnModuleInit {
         ...(dto.accessPolicy !== undefined ? { accessPolicy: dto.accessPolicy } : {}),
         ...(dto.description !== undefined ? { description: dto.description } : {}),
         ...(dto.isPublished !== undefined ? { isPublished: dto.isPublished } : {}),
+        ...(dto.license !== undefined ? { license: dto.license } : {}),
+        ...(dto.refreshCron !== undefined ? { refreshCron: dto.refreshCron } : {}),
+        ...(dto.version !== undefined ? { version: dto.version } : {}),
+        ...(dto.spatialExtent !== undefined ? { spatialExtent: dto.spatialExtent } : {}),
       },
       select: DATASET_SELECT,
     });
@@ -136,6 +153,10 @@ export class DatasetsService implements OnModuleInit {
         source: dto.source,
         description: dto.description ?? null,
         providerId: dto.providerId ?? null,
+        license: dto.license ?? null,
+        refreshCron: dto.refreshCron ?? null,
+        version: dto.version ?? null,
+        spatialExtent: dto.spatialExtent ?? null,
       },
       select: DATASET_SELECT,
     });
@@ -309,6 +330,51 @@ export class DatasetsService implements OnModuleInit {
       },
     });
     return updated;
+  }
+
+  // ─── Version history ──────────────────────────────────────────────────────────
+
+  async publishVersion(id: string, dto: PublishDatasetVersionDto, actor: JwtPayload) {
+    await this.getById(id);
+    return this.prisma.$transaction(async (tx) => {
+      // Stamp the dataset's current version field.
+      await tx.dataset.update({
+        where: { id },
+        data: { version: dto.version },
+      });
+
+      const entry = await tx.datasetVersion.create({
+        data: {
+          datasetId: id,
+          version: dto.version,
+          notes: dto.notes,
+          publishedById: actor.sub,
+        },
+        select: VERSION_SELECT,
+      });
+
+      await tx.auditEvent.create({
+        data: {
+          action: 'DATASET_VERSION_PUBLISH',
+          userId: actor.sub,
+          entityType: 'DatasetVersion',
+          entityId: entry.id,
+          meta: { datasetId: id, version: dto.version },
+        },
+      });
+
+      return entry;
+    });
+  }
+
+  async listVersions(id: string) {
+    await this.getById(id);
+    const data = await this.prisma.datasetVersion.findMany({
+      where: { datasetId: id },
+      select: VERSION_SELECT,
+      orderBy: { publishedAt: 'desc' },
+    });
+    return { data, total: data.length };
   }
 
   async currentWeather() {
