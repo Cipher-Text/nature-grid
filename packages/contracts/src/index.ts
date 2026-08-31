@@ -863,8 +863,8 @@ export interface LoticDetails {
   hydrologicalOrigin: string | null;
   outfallTo: string | null;
   flowRegime: string | null;
-  divisionsTraversed: string[];
-  districtsTraversed: string[];
+  divisionsTraversed: string | null;
+  districtsTraversed: string | null;
   bwdbGaugingStations: string | null;
   banglapediaMatchName: string | null;
   banglapediaLengthKm: number | null;
@@ -907,7 +907,7 @@ export interface WaterBody {
   latitude: number | null;
   longitude: number | null;
   transboundaryFlag: boolean;
-  transboundaryCountries: string[];
+  transboundaryCountries: string | null;
   upazilas: Array<{
     upazila: { id: string; name: string; district: { id: string; name: string } };
   }>;

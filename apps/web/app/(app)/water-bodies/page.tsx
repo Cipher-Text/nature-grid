@@ -90,7 +90,7 @@ export default async function WaterBodiesPage({
               <span>
                 {wb.transboundaryFlag ? (
                   <span className="tag warning">
-                    {wb.transboundaryCountries.join(', ') || 'Yes'}
+                    {wb.transboundaryCountries ?? 'Yes'}
                   </span>
                 ) : (
                   '—'

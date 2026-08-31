@@ -93,26 +93,16 @@ export default async function WaterBodyDetailPage({ params }: { params: { id: st
             <DetailRow label="Flow regime" value={waterBody.loticDetails.flowRegime} />
             <DetailRow label="Hydrological origin" value={waterBody.loticDetails.hydrologicalOrigin} />
             <DetailRow label="Outfall to" value={waterBody.loticDetails.outfallTo} />
-            {waterBody.loticDetails.divisionsTraversed.length > 0 && (
-              <DetailRow
-                label="Divisions traversed"
-                value={waterBody.loticDetails.divisionsTraversed.join(', ')}
-              />
-            )}
-            {waterBody.loticDetails.districtsTraversed.length > 0 && (
-              <DetailRow
-                label="Districts traversed"
-                value={waterBody.loticDetails.districtsTraversed.join(', ')}
-              />
-            )}
+            <DetailRow label="Divisions traversed" value={waterBody.loticDetails.divisionsTraversed} />
+            <DetailRow label="Districts traversed" value={waterBody.loticDetails.districtsTraversed} />
             <DetailRow
               label="BWDB gauging stations"
               value={waterBody.loticDetails.bwdbGaugingStations}
             />
-            {waterBody.transboundaryFlag && waterBody.transboundaryCountries.length > 0 && (
+            {waterBody.transboundaryFlag && waterBody.transboundaryCountries && (
               <DetailRow
                 label="Transboundary countries"
-                value={waterBody.transboundaryCountries.join(', ')}
+                value={waterBody.transboundaryCountries}
               />
             )}
           </div>
@@ -149,10 +139,10 @@ export default async function WaterBodyDetailPage({ params }: { params: { id: st
               }
             />
             <DetailRow label="Seasonality" value={waterBody.lenticDetails.seasonality} />
-            {waterBody.transboundaryFlag && waterBody.transboundaryCountries.length > 0 && (
+            {waterBody.transboundaryFlag && waterBody.transboundaryCountries && (
               <DetailRow
                 label="Transboundary countries"
-                value={waterBody.transboundaryCountries.join(', ')}
+                value={waterBody.transboundaryCountries}
               />
             )}
           </div>
