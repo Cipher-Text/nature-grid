@@ -149,7 +149,8 @@ export const routes = {
 
   flood: {
     forecast: `${apiPrefix}/flood/forecast`,
-    forecastByDistrict: (districtId: string) => `${apiPrefix}/flood/forecast/${districtId}`,
+    forecastByStation: (stationId: string) => `${apiPrefix}/flood/forecast/station/${stationId}`,
+    forecastByDistrict: (districtId: string) => `${apiPrefix}/flood/forecast/district/${districtId}`,
   },
 
   radiation: {
@@ -691,9 +692,9 @@ export interface HourlyAirQualityReading {
   district?: { id: string; name: string };
 }
 
-export interface FloodForecast {
+export interface StationFloodForecast {
   id: string;
-  districtId: string;
+  stationId: string;
   lat: number;
   lng: number;
   forecastDate: string;
@@ -705,7 +706,16 @@ export interface FloodForecast {
   riverDischargeP25: number | null;
   riverDischargeP75: number | null;
   createdAt: string;
-  district?: { id: string; name: string };
+  station?: {
+    id: string;
+    serial: number;
+    stationCode: string;
+    name: string;
+    riverName: string | null;
+    tidalStatus: string | null;
+    districtId: string | null;
+    district?: { id: string; name: string } | null;
+  };
 }
 
 // ─── Notifications ────────────────────────────────────────────────────────────

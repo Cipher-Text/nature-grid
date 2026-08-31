@@ -1,9 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { District } from '@prisma/client';
+import type { WaterLevelStation } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { FloodOpenMeteoClient } from './flood-openmeteo.client';
-
-type DistrictWithCoords = District & { lat: number; lng: number };
 
 @Injectable()
 export class FloodService {
@@ -14,30 +12,28 @@ export class FloodService {
     private readonly client: FloodOpenMeteoClient,
   ) {}
 
-  getFetchableDistricts(): Promise<DistrictWithCoords[]> {
-    return this.prisma.district.findMany({
-      where: { lat: { not: null }, lng: { not: null } },
-    }) as Promise<DistrictWithCoords[]>;
+  getFetchableStations(): Promise<WaterLevelStation[]> {
+    return this.prisma.waterLevelStation.findMany({ orderBy: { serial: 'asc' } });
   }
 
   async hasForecasts(): Promise<boolean> {
-    return (await this.prisma.floodForecast.count()) > 0;
+    return (await this.prisma.stationFloodForecast.count()) > 0;
   }
 
-  async syncDistrict(district: DistrictWithCoords) {
-    const response = await this.client.fetch(district.lat, district.lng);
+  async syncStation(station: WaterLevelStation) {
+    const response = await this.client.fetch(station.latitude, station.longitude);
     const daily = response.daily;
     if (!daily?.time?.length) return;
 
-    const lat = response.latitude ?? district.lat;
-    const lng = response.longitude ?? district.lng;
+    const lat = response.latitude ?? station.latitude;
+    const lng = response.longitude ?? station.longitude;
 
     await this.prisma.$transaction(
       daily.time.map((dateStr, i) =>
-        this.prisma.floodForecast.upsert({
+        this.prisma.stationFloodForecast.upsert({
           where: {
-            districtId_forecastDate: {
-              districtId: district.id,
+            stationId_forecastDate: {
+              stationId: station.id,
               forecastDate: new Date(dateStr),
             },
           },
@@ -53,7 +49,7 @@ export class FloodService {
             riverDischargeP75: daily.river_discharge_p75?.[i],
           },
           create: {
-            districtId: district.id,
+            stationId: station.id,
             lat,
             lng,
             forecastDate: new Date(dateStr),
@@ -70,18 +66,69 @@ export class FloodService {
     );
   }
 
-  getLatestForAllDistricts() {
-    return this.prisma.floodForecast.findMany({
-      distinct: ['districtId'],
-      orderBy: [{ districtId: 'asc' }, { forecastDate: 'asc' }],
-      include: { district: { select: { id: true, name: true } } },
+  /** Latest forecast row per station, ordered by station serial. */
+  getLatestForAllStations() {
+    return this.prisma.stationFloodForecast.findMany({
+      distinct: ['stationId'],
+      orderBy: [{ stationId: 'asc' }, { forecastDate: 'asc' }],
+      include: {
+        station: {
+          select: {
+            id: true,
+            serial: true,
+            stationCode: true,
+            name: true,
+            riverName: true,
+            tidalStatus: true,
+            districtId: true,
+            district: { select: { id: true, name: true } },
+          },
+        },
+      },
     });
   }
 
-  getForecast(districtId: string, from: Date, to: Date) {
-    return this.prisma.floodForecast.findMany({
-      where: { districtId, forecastDate: { gte: from, lte: to } },
+  getForecastByStation(stationId: string, from: Date, to: Date) {
+    return this.prisma.stationFloodForecast.findMany({
+      where: { stationId, forecastDate: { gte: from, lte: to } },
       orderBy: { forecastDate: 'asc' },
+      include: {
+        station: {
+          select: {
+            id: true,
+            serial: true,
+            stationCode: true,
+            name: true,
+            riverName: true,
+            tidalStatus: true,
+            districtId: true,
+            district: { select: { id: true, name: true } },
+          },
+        },
+      },
+    });
+  }
+
+  /** All station forecasts for a district, grouped and ordered by station. */
+  getForecastByDistrict(districtId: string, from: Date, to: Date) {
+    return this.prisma.stationFloodForecast.findMany({
+      where: {
+        station: { districtId },
+        forecastDate: { gte: from, lte: to },
+      },
+      orderBy: [{ station: { serial: 'asc' } }, { forecastDate: 'asc' }],
+      include: {
+        station: {
+          select: {
+            id: true,
+            serial: true,
+            stationCode: true,
+            name: true,
+            riverName: true,
+            tidalStatus: true,
+          },
+        },
+      },
     });
   }
 }

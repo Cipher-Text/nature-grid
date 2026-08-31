@@ -472,7 +472,6 @@ model District {
   hourlyWeatherForecasts     HourlyWeatherForecast[]
   dailyWeatherForecasts      DailyWeatherForecast[]
   airQualityReadings         HourlyAirQuality[]
-  floodForecasts             FloodForecast[]
   satelliteRadiationReadings SatelliteRadiationReading[]
   marineForecasts            MarineForecast[]
   pollutionSources           PollutionSource[]
@@ -597,7 +596,8 @@ model WaterLevelStation {
 
   district    District? @relation(fields: [districtId], references: [id])
   upazila     Upazila?  @relation(fields: [upazilaId], references: [id])
-  waterBodies WaterBodyStation[]
+  waterBodies           WaterBodyStation[]
+  stationFloodForecasts StationFloodForecast[]
 
   @@unique([serial])
   @@index([riverName])
@@ -975,15 +975,17 @@ model IngestionJob {
 }
 
 // ─── Flood (OpenMeteo / GloFAS) ─────────────────────────────────────────────
-// Daily simulated river discharge for the nearest supported river/grid cell.
+// Daily simulated river discharge fetched at each BWDB water level station's
+// exact coordinates — more accurate than district centroids because GloFAS
+// snaps to the nearest river grid cell and stations are already on rivers.
 
-model FloodForecast {
-  id                   String   @id @default(cuid())
-  districtId           String
-  district             District @relation(fields: [districtId], references: [id])
+model StationFloodForecast {
+  id                   String            @id @default(cuid())
+  stationId            String
+  station              WaterLevelStation @relation(fields: [stationId], references: [id], onDelete: Cascade)
   lat                  Float
   lng                  Float
-  forecastDate         DateTime
+  forecastDate         DateTime          @db.Date
   riverDischarge       Float?
   riverDischargeMean   Float?
   riverDischargeMedian Float?
@@ -991,10 +993,10 @@ model FloodForecast {
   riverDischargeMin    Float?
   riverDischargeP25    Float?
   riverDischargeP75    Float?
-  createdAt            DateTime @default(now())
+  createdAt            DateTime          @default(now())
 
-  @@unique([districtId, forecastDate])
-  @@index([districtId])
+  @@unique([stationId, forecastDate])
+  @@index([stationId])
   @@index([forecastDate])
 }
 

@@ -22,19 +22,19 @@ export class FloodScheduler implements OnModuleInit {
     void this.syncFloodForecasts();
   }
 
-  @Cron('0 30 */6 * * *')
+  @Cron('0 0 3 * * *')
   syncFloodForecasts() {
     return withCronLock(this.prisma, this.logger, CRON_LOCK_KEYS.FLOOD, async () => {
       const providerId = await this.ingestionService.findProviderIdByName(OPENMETEO_PROVIDER_NAME);
       const jobId = providerId ? await this.ingestionService.startJob(providerId) : null;
       try {
-        const districts = await this.floodService.getFetchableDistricts();
-        this.logger.log(`Syncing flood forecasts for ${districts.length} districts`);
-        for (const district of districts) {
+        const stations = await this.floodService.getFetchableStations();
+        this.logger.log(`Syncing flood forecasts for ${stations.length} stations`);
+        for (const station of stations) {
           try {
-            await this.floodService.syncDistrict(district);
+            await this.floodService.syncStation(station);
           } catch (err) {
-            this.logger.error(`Flood forecast fetch failed for ${district.name}: ${String(err)}`);
+            this.logger.error(`Flood forecast fetch failed for station ${station.stationCode} (${station.name}): ${String(err)}`);
           }
         }
         if (jobId) await this.ingestionService.completeJob(jobId, ['WATER']);
