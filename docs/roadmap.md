@@ -88,12 +88,12 @@ Deliverables:
 
 - ~~Observations module (schema in place; service/controller needed)~~ Done (2026-08-17) — full CRUD + trust-level workflow (`RESEARCHER`/`ADMIN` promote `UNVERIFIED` → `RESEARCH_GRADE`/etc.), wired to a real `/observations` page with a working submission form. See `docs/progress.md` "Observations Module".
 - ~~Restoration projects module~~ Done (2026-08-19) — full CRUD, `ORGANIZATION_ADMIN`/`ADMIN`-gated creation, ownership-gated updates, idempotent citizen "join," wired to a real `/restoration` page. See `docs/progress.md` "Restoration Projects Module". (Not separately tracked as a Phase 3 deliverable before this — added here now that it's done.)
-- ~~Biodiversity records~~ Done (2026-08-19) — daily GBIF sync (self-contained in `apps/api/src/biodiversity/`, not the generic `ingestion` module, same design deviation as weather), public species/occurrence endpoints, wired to a real `/biodiversity` page with name search. IUCN conservation-status enrichment deliberately skipped for v1 (no per-species API call built yet). See `docs/progress.md` "Biodiversity + GBIF Module". Community sidebar nav link removed (2026-08-24) — `/community` page remains but is no longer reachable via navigation.
+- ~~Biodiversity records~~ Done (2026-08-19) — daily GBIF sync (self-contained in `apps/api/src/biodiversity/`, not the generic `ingestion` module, same design deviation as weather), public species/occurrence endpoints, wired to a real `/biodiversity` page with name search. IUCN conservation-status enrichment deliberately skipped for v1 (no per-species API call built yet). See `docs/progress.md` "Biodiversity + GBIF Module". Community sidebar nav link removed (2026-08-24) — `/community` page remained but was unreachable via navigation. Restored once the Community module shipped (2026-09-01).
 - ~~Media/evidence records~~ Done — `ReportComment` and `ReportMedia` schema + `POST/GET /reports/:id/comments` and `POST/GET /reports/:id/media` endpoints live (2026-08-22). File upload transport now handled by the `media` module (`POST /media/upload`, `POST /media/presign`) using S3/MinIO (2026-08-29). Nested comment replies deliberately deferred. See M8 in `implementation-plan.md`.
 - ~~Moderation queue~~ Done (2026-08-22) — admin console report moderation queue (`apps/admin`) with full 5-status workflow. See M12 in `implementation-plan.md`.
 - ~~Dataset download and access-request endpoints~~ Done (2026-08-24) — `GET /datasets/:id/download` with all 5 access policies enforced, `POST /datasets/:id/access-request`, admin approve/reject. Landed as part of Phase 4 work; see Phase 4 notes.
 - ~~Connect public web page to live API (replace static seed data)~~ Done (2026-08-19) — every homepage section now fetches live data with a fallback to static content if the API is unreachable: weather sidebar (2026-08-16), metrics cards (2026-08-19), dataset preview/reports/alerts previews/biodiversity+restoration highlights (2026-08-19); the community feed has no backend to wire to, so it shows an honest empty state instead (same treatment as the `/community` page). Nav is session-aware (real login state, 2026-08-16). See `docs/progress.md` "Homepage Preview Sections Wired" — a real honesty bug (treating an empty-but-successful response the same as an API failure) was caught and fixed during this pass.
-- ~~Auth refresh / logout with Redis token store~~ Done (2026-08-16) — Postgres-backed, not Redis (see Phase 2 note above). Frontend login/register/logout flow also wired (2026-08-16): httpOnly cookie sessions, middleware-based route protection + token refresh, new `/login`/`/register`/`/profile` routes. `/profile` rebuilt (2026-08-17) to match its mockup's sidebar app-shell design, with honest empty states instead of the mock's fabricated eco score/badges/activity feed — this also established a reusable sidebar shell (`AppSidebar`). ~~Build `/data`, `/observations`, `/reports`, `/alerts`, `/biodiversity`, `/restoration`, `/community` as real routes (Milestone 15).~~ Done (2026-08-17) — `/data`, `/reports`, `/alerts` wired to real backend data (see `docs/progress.md` "App-Shell Pages: Data, Reports, Alerts"), `/reports` also gained a real submission form (see "Report Submission Form"), and `/observations`, `/biodiversity`, `/restoration`, `/community` shipped with honest empty states since none of them had a backend yet (see "App-Shell Pages: Observations, Biodiversity, Restoration, Community"). `/observations`, `/restoration`, and `/biodiversity` have since been upgraded to real data as their backends shipped (M9 2026-08-17, M11 and M10 both 2026-08-19); only `/community` remains an honest empty state.
+- ~~Auth refresh / logout with Redis token store~~ Done (2026-08-16) — Postgres-backed, not Redis (see Phase 2 note above). Frontend login/register/logout flow also wired (2026-08-16): httpOnly cookie sessions, middleware-based route protection + token refresh, new `/login`/`/register`/`/profile` routes. `/profile` rebuilt (2026-08-17) to match its mockup's sidebar app-shell design, with honest empty states instead of the mock's fabricated eco score/badges/activity feed — this also established a reusable sidebar shell (`AppSidebar`). ~~Build `/data`, `/observations`, `/reports`, `/alerts`, `/biodiversity`, `/restoration`, `/community` as real routes (Milestone 15).~~ Done (2026-08-17) — `/data`, `/reports`, `/alerts` wired to real backend data (see `docs/progress.md` "App-Shell Pages: Data, Reports, Alerts"), `/reports` also gained a real submission form (see "Report Submission Form"), and `/observations`, `/biodiversity`, `/restoration`, `/community` shipped with honest empty states since none of them had a backend yet (see "App-Shell Pages: Observations, Biodiversity, Restoration, Community"). `/observations`, `/restoration`, and `/biodiversity` have since been upgraded to real data as their backends shipped (M9 2026-08-17, M11 and M10 both 2026-08-19); only `/community` remained an honest empty state (since replaced by the Community module, 2026-09-01).
 - ~~PostGIS geography fields~~ Partially done (2026-09-01) — point geometry on `District`. Polygon geometry still needed.
 
 Exit criteria:
@@ -105,28 +105,28 @@ Exit criteria:
 
 ## Phase 4: Data and Ingestion
 
-Status: Largely done — job lifecycle and dataset access both landed 2026-08-24; `ApiCallLog` and Python data-worker remain deferred.
+Status: **Done** (closed 2026-09-01) — all core deliverables complete. `ApiCallLog` provider response logging and Python data-worker deliberately deferred to Phase 7; the "data lineage" exit criterion carries with them.
 
 Goal: Bring real environmental data into the platform.
 
 Deliverables:
 
-- OpenMeteo ingestion job ✓ (2026-08-16 — weather + air quality, see `docs/progress.md` "Weather Ingestion"; scope was redesigned from the original ingestion-plan, notably without job lifecycle or response logging — see below)
-- ~~Ingestion job lifecycle (queue, track, retry, audit)~~ ✓ Done (2026-08-24) — `IngestionService` + `IngestionController` implemented; weather and GBIF schedulers write `IngestionJob` records per run; `Dataset.lastSyncedAt` updated on success. No retry queue (cron re-runs serve as retry). See `docs/progress.md` "Ingestion Module + Dataset Access".
-- Provider response logging — not done; deliberately skipped, no `ApiCallLog` model was built
-- Dataset version/distribution records
-- Weather and air quality summaries populated from ingestion ✓ (`GET /datasets/weather/current`, `GET /datasets/air-quality/current` now return live data)
-- Python data-worker baseline for GIS/scientific processing
+- ~~OpenMeteo ingestion job~~ ✓ Done (2026-08-16) — weather + air quality; scope redesigned from original ingestion-plan (no job lifecycle or response logging in this pass). See `docs/progress.md` "Weather Ingestion".
+- ~~Ingestion job lifecycle (queue, track, retry, audit)~~ ✓ Done (2026-08-24) — `IngestionService` + `IngestionController` implemented; weather and GBIF schedulers write `IngestionJob` records per run; `Dataset.lastSyncedAt` updated on success. No retry queue — cron re-runs serve as retry. See `docs/progress.md` "Ingestion Module + Dataset Access".
+- ~~Provider response logging~~ — Deliberately skipped; no `ApiCallLog` model built. Deferred to Phase 7 as an infrastructure item alongside the Python data-worker.
+- ~~Dataset version/distribution records~~ Done — `DatasetVersion` model (schema.prisma:853); `GET /datasets/:id/versions` and `POST /datasets/:id/versions` (admin, audited `DATASET_VERSION_PUBLISH`) both implemented.
+- ~~Weather and air quality summaries populated from ingestion~~ ✓ Done — `GET /datasets/weather/current` and `GET /datasets/air-quality/current` return live data.
+- ~~Python data-worker baseline for GIS/scientific processing~~ — Deliberately deferred; `apps/data-worker/` is a placeholder skeleton (pyproject.toml + empty main.py, no active jobs). Deferred to Phase 7.
 
 Exit criteria:
 
-- Ingestion jobs can be queued, tracked, retried, and audited. — **Partially met** (2026-08-24). Jobs are tracked (RUNNING → SUCCEEDED/FAILED) and auditable via `GET /ingestion/jobs`. No explicit retry queue — scheduled crons serve as periodic retry. `ApiCallLog` per-HTTP-call logging still not built.
-- Public dataset summaries use real backend records. ✓ — weather/AQ summaries are live; other dataset categories still static.
-- Data lineage is stored for imported/derived datasets. — Not yet; would need the response-logging deliverable above.
+- ~~Ingestion jobs can be queued, tracked, retried, and audited.~~ **Partially met** — jobs are tracked (RUNNING → SUCCEEDED/FAILED) and visible via `GET /ingestion/jobs`. No explicit retry queue (crons serve as periodic retry). `ApiCallLog` per-HTTP-call logging deferred to Phase 7.
+- ~~Public dataset summaries use real backend records.~~ Met — weather/AQ summaries live; flood, radiation, marine, and biodiversity dataset records also seeded and `lastSyncedAt` updated on each run.
+- Data lineage is stored for imported/derived datasets. — **Deferred to Phase 7** alongside `ApiCallLog`.
 
 ## Phase 5: Advanced Domains
 
-Status: Largely done — biodiversity, restoration, notifications, and role-scoped analytics all shipped. Community campaigns and environmental event/hazard history remain planned.
+Status: **Done** (closed 2026-09-01) — all deliverables complete.
 
 Goal: Add richer product areas after the core is stable.
 
@@ -134,16 +134,16 @@ Deliverables:
 
 - ~~Biodiversity taxonomy and occurrence model~~ Done (2026-08-19) — GBIF daily sync, species/occurrence endpoints, data hub preview.
 - ~~Restoration/project domain~~ Done (2026-08-19) — CRUD, ownership-gated updates, idempotent join workflow.
-- Community posts, comments, and polls — *Planned*. Schema: `CommunityPost` (title, body, author, optional districtId), `PostComment` (flat, no nesting), `Poll` (1:1 with post, optional endsAt), `PollOption`, `PollVote` (unique per user per poll). API: `GET/POST /community/posts`, `GET /community/posts/:id`, `DELETE /community/posts/:id`, `POST /community/posts/:id/comments`, `DELETE /community/posts/:id/comments/:commentId`, `POST /community/posts/:id/poll/vote`. Frontend: replaces the `/community` honest-empty-state with a real post list, create form (title + body + optional poll block), and post detail with inline comments and poll voting.
+- ~~Community posts, comments, and polls~~ Done (2026-09-01) — `CommunityPost`, `PostComment`, `Poll`, `PollOption`, `PollVote` models (5 new tables applied via psql); `CommunityModule` with controller + service + 3 DTOs; full CRUD (`GET/POST /community/posts`, `GET/DELETE /community/posts/:id`, `POST /community/posts/:id/comments`, `DELETE /community/posts/:id/comments/:commentId`, `POST /community/posts/:id/poll/vote`); `/community` page replaced from honest-empty-state to real post list + create form with optional poll block; `/community/:id` detail page with inline comments and poll voting (vote + change-vote); author/admin delete on posts and comments; 5 new `AuditAction` values.
 - ~~Notification subscriptions~~ Done (2026-08-22) — `AlertSubscription` + email delivery via Nodemailer.
-- Environmental event/hazard history — *Planned*.
+- ~~Environmental event/hazard history~~ — Removed from Phase 5. The historical record for discrete incidents is already covered by `CitizenReport` (FLOODING, WATER_POLLUTION, etc.), `Alert` lifecycle (EXPIRED/CANCELLED), and `WaterLevelReading` archives. The full feature — unified event lifecycle with onset/peak/recovery, multi-source correlation (reports + readings + forecasts + alerts), impact records, and recurrence history — is a cross-domain synthesis problem that belongs in Phase 9. See "Hazard Event History" entry there.
 - ~~Researcher and government role-scoped workflows~~ Done — analytics endpoints for government/researcher/orgadmin.
 - ~~Profile completeness scoring and badge system (gamification)~~ Done (2026-08-29) — `GET /gamification/me`; 10 completeness checks; 5 badge categories × 4 tiers (Bronze/Silver/Gold/Emerald); BullMQ `gamification` queue with dedup by userId; earned badges stored on `UserProfile`.
 
-Exit criteria:
+Exit criteria met:
 
-- Nature Grid can connect evidence, measurements, reports, alerts, projects, and outcomes.
-- Advanced domains remain modular and do not overload generic observations.
+- ~~Nature Grid can connect evidence, measurements, reports, alerts, projects, and outcomes.~~ **Met** — citizens submit reports/observations; restoration projects link participants; community posts attach to districts; all cross-referenced by user.
+- ~~Advanced domains remain modular and do not overload generic observations.~~ **Met** — `community`, `gamification`, `notifications`, `biodiversity`, `restoration`, `analytics` each own their schemas and endpoints.
 
 ## Phase 6: Production Hardening
 
@@ -220,6 +220,8 @@ Order is not fixed. Satellite ingestion is the most infrastructure-heavy and dep
 | **Research platform** | Publication records, authorship, citations, and institution linkage. Gives the `RESEARCHER` role a meaningful place to publish and cite findings from the platform's own data. | *Planned* |
 | **Structured surveys** | Solicited, structured data collection campaigns. Distinct from `CitizenReport` (unsolicited incident reporting) and `Observation` (point-in-time measurements) — surveys target specific questions with a defined form schema and response lifecycle. | *Planned* |
 | **Satellite / remote sensing** | Satellite imagery ingestion (NASA MODIS, Sentinel-2), change-detection analysis, and automated deforestation/flooding alerts. Fills the gap where `DEFORESTATION` and `FLOODING` report categories currently only have citizen-reported evidence. | *Planned* — requires PostGIS geometry fields, object storage, Python data-worker |
+| **Python data-worker** | GIS and scientific processing jobs — initially: spatial joins, land-cover analysis, change-detection, and ML pipeline scaffolding. `apps/data-worker/` is a placeholder skeleton today (pyproject.toml + empty main.py). Must be operational before satellite/remote sensing or climate forecasting can land. Deferred from Phase 4. | *Planned* — prerequisite for satellite ingestion and climate forecasting |
+| **Provider response logging (`ApiCallLog`)** | Per-HTTP-call log of every external API request — URL, provider, status code, latency, response size, error. Enables data lineage tracking for imported datasets and supports debugging of ingestion failures beyond what `IngestionJob` run-level tracking provides. No `ApiCallLog` model currently exists in the schema. Deferred from Phase 4. | *Planned* |
 
 Exit criteria:
 
@@ -299,11 +301,17 @@ Goal: Derive actionable environmental intelligence by connecting Nature Grid's e
 | **Agricultural Climate & Hazard Risk** | Seasonal risk summaries for agricultural areas combining existing weather forecasts, flood forecasts, and historical climate patterns with crop calendar context. Risk dimensions include flood, flash flood, waterlogging, drought, heat stress, cold stress, cyclone, storm surge, salinity, and high wind. Example: "Aman rice in Sylhet Division is approaching the tillering stage during a period with elevated river discharge and above-average rainfall forecast." Risk is presented as a probabilistic signal, not a certain crop-loss prediction. | *Future* — depends on crop calendar (Phase 8), AEZ, and existing flood/weather modules |
 | **Agricultural Incident Observations** | Extension of the existing Observation model with crop-specific incident categories: crop flood damage, waterlogging, drought stress, salinity impact, pest outbreak (where reliable public data exists), crop disease, storm damage, and irrigation shortage. Observations carry crop name, variety if known, growth stage, approximate affected area, and severity. Submitted through the existing observation workflow and reviewed by the same moderator queue — no separate farmer-reporting platform. Spatiotemporal clustering of verified agricultural incidents produces district-level agricultural stress signals. | *Future* — extends existing Observation and CitizenReport infrastructure; does not create a parallel reporting system |
 
+### Hazard Event History
+
+| Domain | What it adds | Status |
+| --- | --- | --- |
+| **Environmental Hazard Event Timeline** | A unified `HazardEvent` model that gives a named environmental event — a flood, cyclone, heatwave, drought, or pollution incident — a coherent record across its full lifecycle: onset date, peak date, recovery date, event type, severity progression, and geographic extent. Correlates existing data sources into a single event narrative: citizen reports filed during the event, alerts issued, water level readings at peak, weather and flood forecast accuracy. Impact records (estimated affected population, crop loss, infrastructure damage) stored as structured fields, not free text. Enables recurrence analysis ("3rd major flood in Sylhet in 5 years"), alert justification ("Alert X was issued because of Event Y"), and temporal queries ("what hazard events occurred in District X between 2022 and 2024?"). Does not replace `CitizenReport`, `Alert`, or sensor readings — synthesises them. | *Future* — depends on stable multi-year data across flood, weather, water level, and citizen report streams; benefits from PostGIS polygon geometry for event area delineation |
+
 ### Geographic Place Intelligence
 
 | Domain | What it adds | Status |
 | --- | --- | --- |
-| **Integrated Geographic Views** | District, upazila, and union detail pages evolve into full environmental system views of a place: climate summary, weather, water and flood conditions, forest and protected area proximity, land cover composition, biodiversity highlights, AEZ characteristics, crop calendar, crop distribution, crop suitability signals, pollution sources, citizen reports, restoration projects, and active alerts — integrated rather than siloed by dataset category. The goal is for Nature Grid to describe the environmental system of a place, not merely a list of data layers for that coordinate. | *Future* — depends on Phase 8 and Phase 9 cross-domain data being available for the same geographic units |
+| **Integrated Geographic Views** | District, upazila, and union detail pages evolve into full environmental system views of a place: climate summary, weather, water and flood conditions, forest and protected area proximity, land cover composition, biodiversity highlights, AEZ characteristics, crop calendar, crop distribution, crop suitability signals, pollution sources, citizen reports, restoration projects, active alerts, and hazard event history — integrated rather than siloed by dataset category. The goal is for Nature Grid to describe the environmental system of a place, not merely a list of data layers for that coordinate. | *Future* — depends on Phase 8 and Phase 9 cross-domain data being available for the same geographic units |
 
 Exit criteria:
 
@@ -313,6 +321,7 @@ Exit criteria:
 - Crop suitability scores exist for Bangladesh's 5 most agriculturally significant crops across all 30 AEZs, with stated methodology and limiting-factor explanations.
 - Agricultural climate risk context appears on district pages during the active crop calendar period, linked to the forecast source.
 - Agricultural incident observations flow through the existing moderation workflow and produce spatially clustered signals at district level.
+- Hazard event history covers at least 3 years of major flood and cyclone events for Bangladesh, with linked citizen reports, water level readings, and issued alerts per event.
 - District pages surface ≥5 distinct Phase 8/9 environmental domains in an integrated, non-siloed view.
 
 ---

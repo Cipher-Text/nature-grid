@@ -6,7 +6,7 @@ Global prefix is `/api/v1` (see `packages/contracts/src/index.ts` for the canoni
 
 Legend: ✓ Implemented | ~ Stub only | ✗ Not started
 
-Registered in `app.module.ts`: `database`, `auth`, `users`, `organizations`, `locations`, `locations/climate`, `providers`, `datasets`, `reports`, `alerts`, `biodiversity`, `observations`, `restoration`, `media`, `ingestion`, `weather`, `flood`, `marine`, `radiation`, `emissions`, `metrics`, `notifications`, `permissions`, `analytics`, `water-bodies`, `gamification`. `SeedService` is also registered directly in `AppModule` (not its own module) and seeds dev users + a seed organization on first boot.
+Registered in `app.module.ts`: `database`, `auth`, `users`, `organizations`, `locations`, `locations/climate`, `providers`, `datasets`, `reports`, `alerts`, `biodiversity`, `observations`, `restoration`, `media`, `ingestion`, `weather`, `flood`, `marine`, `radiation`, `emissions`, `metrics`, `notifications`, `permissions`, `analytics`, `water-bodies`, `gamification`, `community`. `SeedService` is also registered directly in `AppModule` (not its own module) and seeds dev users + a seed organization on first boot.
 
 ## database ✓
 
@@ -406,6 +406,22 @@ Owns profile completeness scoring and the badge system for citizen engagement in
 
 `GET /gamification/me` returns: completeness score (0–100), list of missing-field prompts, earned badges, contribution points, and current level. Profile completeness runs 10 weighted checks across `UserProfile`, `UserSocialLink`, `OrganizationMembership`, `CitizenReport`, and `Observation`. Levels: Newcomer (0) → Contributor (100) → Advocate (300) → Champion (600) → Environmental Leader (1200+). Badges: 5 categories × 4 tiers (Bronze 25 pts / Silver 75 pts / Gold 150 pts / Emerald 300 pts) — Civic Guardian (verified reports), Water Sentinel (water quality observations), Clean Air Defender (air quality contributions), Biodiversity Explorer (research-grade species), Restoration Pioneer (ecological restoration projects). Badge counts are computed via 6 parallel Prisma queries. `evaluateBadges()` enqueues a BullMQ `gamification` job deduped by `jobId: badge-eval:{userId}`; actual evaluation runs in `GamificationProcessor.performEvaluation()`. Earned badge IDs are stored in `UserProfile.earnedBadges` (String[]) and contribution points in `UserProfile.contributionPoints` (Int).
 
+## community ✓
+
+Owns community posts, comments, and polls — citizen-led discussion and structured polling.
+
+| Method | Path | Access |
+| --- | --- | --- |
+| GET | `/community/posts` | Public |
+| POST | `/community/posts` | Authenticated |
+| GET | `/community/posts/:id` | Public (guests see poll results; `userVotedOptionId` included for authenticated callers) |
+| DELETE | `/community/posts/:id` | Authenticated — author or ADMIN |
+| POST | `/community/posts/:id/comments` | Authenticated |
+| DELETE | `/community/posts/:id/comments/:commentId` | Authenticated — comment author or ADMIN |
+| POST | `/community/posts/:id/poll/vote` | Authenticated |
+
+`CommunityPost` carries `title`, `body` (TEXT), optional `districtId`, and an optional 1:1 `Poll`. `PostComment` is flat (no nested replies). `PollVote` has a `@@unique([pollId, userId])` constraint — voting again updates the existing row (upsert), enabling vote-changing. Poll `endsAt` is optional; closed polls still display results but reject new votes. Author and ADMIN can delete posts and comments; deletions are cascaded. Paginated post list ordered by `createdAt DESC`. Audit actions: `COMMUNITY_POST_CREATE`, `COMMUNITY_POST_DELETE`, `COMMUNITY_COMMENT_ADD`, `COMMUNITY_COMMENT_DELETE`, `COMMUNITY_POLL_VOTE`.
+
 ## audit (embedded)
 
 Audit events are written directly from services rather than via a separate injectable service. `AuditEvent` stores `action`, `userId`, `entityType`, `entityId`, `meta`, `ipAddress`, `createdAt`.
@@ -423,8 +439,9 @@ Services that write audit events:
 | `datasets` | `DATASET_ACCESS`, `DATASET_DOWNLOAD`, `DATASET_UPDATE`, `DATASET_VERSION_PUBLISH`, `DATASET_ACCESS_DECISION` |
 | `permissions` | `PERMISSION_GRANT`, `PERMISSION_REVOKE` |
 | `emissions` | `EMISSION_SOURCE_CREATE`, `EMISSION_ENTRY_CREATE` |
+| `community` | `COMMUNITY_POST_CREATE`, `COMMUNITY_POST_DELETE`, `COMMUNITY_COMMENT_ADD`, `COMMUNITY_COMMENT_DELETE`, `COMMUNITY_POLL_VOTE` |
 
-`AuditAction` declares 33 values. All are written by a service.
+`AuditAction` declares 38 values. All are written by a service.
 
 `auth` is the only service that populates `AuditEvent.ipAddress`, because it already captures request metadata for `RefreshToken` rows. The others leave it null.
 
@@ -440,4 +457,4 @@ These accounts exist only for local development and should not be created in pro
 
 ## Coverage note
 
-`app.module.ts` registers 26 modules: `database` plus 25 feature modules. All are fully implemented except `ingestion` (job tracking and read endpoints only — no retry queue, no manual trigger endpoint; recurring cron jobs serve as the retry mechanism). BullMQ queues (`email`, `gamification`) are wired via `BullModule.forRootAsync` in `AppModule`. Advanced domains not yet represented by a module — community posts/polls, structured surveys, carbon accounting, research publications, satellite/remote sensing ingestion, forest registry, industrial facility registry — are planned for Phase 5, Phase 7, or Phase 8. See `docs/roadmap.md` and `docs/architecture/feature-map.md`.
+`app.module.ts` registers 27 modules: `database` plus 26 feature modules. All are fully implemented except `ingestion` (job tracking and read endpoints only — no retry queue, no manual trigger endpoint; recurring cron jobs serve as the retry mechanism). BullMQ queues (`email`, `gamification`) are wired via `BullModule.forRootAsync` in `AppModule`. Advanced domains not yet represented by a module — structured surveys, carbon accounting, research publications, satellite/remote sensing ingestion, forest registry, industrial facility registry — are planned for Phase 7 or Phase 8. See `docs/roadmap.md` and `docs/architecture/feature-map.md`.

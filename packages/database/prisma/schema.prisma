@@ -208,6 +208,11 @@ enum AuditAction {
   PASSWORD_RESET
   EMAIL_VERIFICATION_SENT
   EMAIL_VERIFIED
+  COMMUNITY_POST_CREATE
+  COMMUNITY_POST_DELETE
+  COMMUNITY_COMMENT_ADD
+  COMMUNITY_COMMENT_DELETE
+  COMMUNITY_POLL_VOTE
 }
 
 enum DatasetAccessRequestStatus {
@@ -374,6 +379,9 @@ model User {
   publishedDatasetVersions   DatasetVersion[]
   passwordResetTokens        PasswordResetToken[]
   emailVerificationTokens    EmailVerificationToken[]
+  communityPosts             CommunityPost[]
+  postComments               PostComment[]
+  pollVotes                  PollVote[]
 
   @@index([email])
   @@index([role])
@@ -590,6 +598,7 @@ model District {
   marineForecasts            MarineForecast[]
   pollutionSources           PollutionSource[]
   waterLevelStations         WaterLevelStation[]
+  communityPosts             CommunityPost[]
 
   @@unique([name, divisionId])
   @@index([divisionId])
@@ -1531,4 +1540,77 @@ model AuditEvent {
   @@index([userId])
   @@index([action])
   @@index([entityType, entityId])
+}
+
+// ─── Community ────────────────────────────────────────────────────────────────
+
+model CommunityPost {
+  id         String    @id @default(cuid())
+  title      String
+  body       String    @db.Text
+  authorId   String
+  author     User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  districtId String?
+  district   District? @relation(fields: [districtId], references: [id])
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  comments PostComment[]
+  poll     Poll?
+
+  @@index([authorId])
+  @@index([districtId])
+  @@index([createdAt])
+}
+
+model PostComment {
+  id        String        @id @default(cuid())
+  body      String        @db.Text
+  authorId  String
+  author    User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  postId    String
+  post      CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  createdAt DateTime      @default(now())
+
+  @@index([postId])
+  @@index([authorId])
+}
+
+model Poll {
+  id        String        @id @default(cuid())
+  postId    String        @unique
+  post      CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  question  String
+  endsAt    DateTime?
+  createdAt DateTime      @default(now())
+
+  options PollOption[]
+  votes   PollVote[]
+}
+
+model PollOption {
+  id     String @id @default(cuid())
+  pollId String
+  poll   Poll   @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  text   String
+  order  Int
+
+  votes PollVote[]
+
+  @@index([pollId])
+}
+
+model PollVote {
+  id       String     @id @default(cuid())
+  pollId   String
+  poll     Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  optionId String
+  option   PollOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([pollId, userId])
+  @@index([pollId])
+  @@index([optionId])
+  @@index([userId])
 }

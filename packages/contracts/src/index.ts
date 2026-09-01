@@ -130,7 +130,15 @@ export const routes = {
   },
 
   community: {
-    feed: `${apiPrefix}/community/feed`,
+    posts:         `${apiPrefix}/community/posts`,
+    post:          (id: string) => `${apiPrefix}/community/posts/${id}`,
+    createPost:    `${apiPrefix}/community/posts`,
+    deletePost:    (id: string) => `${apiPrefix}/community/posts/${id}`,
+    comments:      (postId: string) => `${apiPrefix}/community/posts/${postId}/comments`,
+    addComment:    (postId: string) => `${apiPrefix}/community/posts/${postId}/comments`,
+    deleteComment: (postId: string, commentId: string) =>
+      `${apiPrefix}/community/posts/${postId}/comments/${commentId}`,
+    vote:          (postId: string) => `${apiPrefix}/community/posts/${postId}/poll/vote`,
   },
 
   providers: {
@@ -946,3 +954,45 @@ export interface WaterLevelStationPagedResponse {
   totalPages: number;
 }
 
+
+// ─── Community ────────────────────────────────────────────────────────────────
+
+export interface CommunityPostSummary {
+  id: string;
+  title: string;
+  body: string;
+  createdAt: string;
+  updatedAt: string;
+  author: { id: string; displayName: string };
+  district: { id: string; name: string } | null;
+  _count: { comments: number };
+  poll: { id: string; question: string; endsAt: string | null } | null;
+}
+
+export interface PollOptionWithCount {
+  id: string;
+  text: string;
+  order: number;
+  _count: { votes: number };
+}
+
+export interface PollDetail {
+  id: string;
+  question: string;
+  endsAt: string | null;
+  createdAt: string;
+  options: PollOptionWithCount[];
+  userVotedOptionId: string | null;
+}
+
+export interface PostCommentItem {
+  id: string;
+  body: string;
+  createdAt: string;
+  author: { id: string; displayName: string };
+}
+
+export interface CommunityPostDetail extends CommunityPostSummary {
+  comments: PostCommentItem[];
+  poll: PollDetail | null;
+}

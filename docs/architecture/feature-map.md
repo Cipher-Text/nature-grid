@@ -60,7 +60,7 @@ Legend: **Done** | **Partial** | *Planned* | ~~Deferred~~
 | Restoration project creation, tracking, and joining | `restoration` | **Done** |
 | Restoration targets, activity logs, and metric readings | `restoration` | **Done** — `ProjectTarget`, `ProjectActivity`, `ProjectMetric`; `RestorationTargetMetric` enum |
 | Structured survey campaigns | — | *Planned* (Phase 7) |
-| Community posts, comments, and polls | `community` | *Planned* — `CommunityPost`, `PostComment`, `Poll`, `PollOption`, `PollVote` models; `/community/posts` CRUD + `/poll/vote`; updates `/community` page |
+| Community posts, comments, and polls | `community` | **Done** (2026-09-01) — `CommunityPost`, `PostComment`, `Poll`, `PollOption`, `PollVote` models; full CRUD + `/poll/vote` with upsert (change-vote); author/admin delete; `/community` list + create form; `/community/:id` detail with comments and poll |
 | Profile completeness scoring and badge system | `gamification` | **Done** (2026-08-29) — `GET /gamification/me`; 10 completeness checks; 5 badge categories × 4 tiers (Bronze / Silver / Gold / Emerald); BullMQ `gamification` queue with deduped evaluation |
 
 ---
@@ -143,6 +143,7 @@ Legend: **Done** | **Partial** | *Planned* | ~~Deferred~~
 | `/biodiversity/species/:id` | `GET /biodiversity/species/:id`, `/occurrences?speciesId` | **Done** — taxonomy, per-species occurrences |
 | `/restoration` | `GET /restoration/projects` | **Done** — creation form, join action; title links to detail |
 | `/restoration/:id` | `GET /restoration/projects/:id` | **Done** — description, details grid, join form |
-| `/community` | — | *Planned* — honest empty state; no API module |
+| `/community` | `GET /community/posts` | **Done** — post list table with poll tag, create form, optional district filter |
+| `/community/:id` | `GET /community/posts/:id` | **Done** — post body, poll with vote bars + vote form, flat comment list, add/delete comment |
 | `/profile` | `GET /auth/profile`, `GET /reports/mine`, `GET /observations/mine`, `GET /notifications/subscriptions` | **Done** — live report + observation history; alert subscription management |
 | `/login`, `/register` | `POST /auth/login`, `POST /auth/register` | **Done** |
