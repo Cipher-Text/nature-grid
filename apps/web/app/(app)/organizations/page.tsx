@@ -1,8 +1,7 @@
-import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { getCurrentUser } from '../../../lib/current-user';
-import { apiGetAuthed } from '../../../lib/api';
+import { apiGet, apiGetAuthed } from '../../../lib/api';
 import { ACCESS_TOKEN_COOKIE } from '../../../lib/session-constants';
 
 type Organization = {
@@ -44,18 +43,16 @@ export default async function OrganizationsPage({
   searchParams: { type?: string; page?: string };
 }) {
   const user = await getCurrentUser();
-  if (!user) redirect('/login');
 
   const accessToken = cookies().get(ACCESS_TOKEN_COOKIE)?.value ?? '';
   const activeType = searchParams.type ?? '';
   const typeFilter = activeType ? `&type=${activeType}` : '';
   const page = searchParams.page ?? '1';
-  const result = await apiGetAuthed<OrgListResponse>(
-    `/api/v1/organizations?page=${page}&pageSize=20${typeFilter}`,
-    accessToken,
-  );
+  const result = await (user
+    ? apiGetAuthed<OrgListResponse>(`/api/v1/organizations?page=${page}&pageSize=20${typeFilter}`, accessToken)
+    : apiGet<OrgListResponse>(`/api/v1/organizations?page=${page}&pageSize=20${typeFilter}`));
 
-  const myOrgIds = new Set(user.organizations.map((o) => o.id));
+  const myOrgIds = new Set(user?.organizations.map((o) => o.id) ?? []);
 
   return (
     <div className="page-stack">

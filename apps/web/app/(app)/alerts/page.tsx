@@ -25,17 +25,21 @@ const ISSUER_ROLES = new Set(['GOVERNMENT', 'MODERATOR', 'ADMIN']);
 export default async function AlertsPage({
   searchParams,
 }: {
-  searchParams: { severity?: string };
+  searchParams: { severity?: string; alertType?: string; districtId?: string };
 }) {
   const severity = searchParams.severity;
-  const activePath = severity
-    ? `${routes.alerts.list}?severity=${severity}`
-    : routes.alerts.list;
+  const { alertType, districtId } = searchParams;
+  const alertParams = new URLSearchParams();
+  if (severity) alertParams.set('severity', severity);
+  if (alertType) alertParams.set('alertType', alertType);
+  if (districtId) alertParams.set('districtId', districtId);
+  const activePath = alertParams.toString() ? `${routes.alerts.list}?${alertParams}` : routes.alerts.list;
 
-  const [activeRes, historyRes, user] = await Promise.all([
+  const [activeRes, historyRes, user, districts] = await Promise.all([
     apiGet<PaginatedEnvelope<Alert>>(activePath),
     apiGet<PaginatedEnvelope<Alert>>(`${routes.alerts.list}?status=EXPIRED`),
     getCurrentUser(),
+    apiGet<{ id: string; name: string }[]>(routes.locations.districts),
   ]);
 
   const emergency = activeRes.data.find((a) => a.severity === 'EMERGENCY');
@@ -75,6 +79,19 @@ export default async function AlertsPage({
           </Link>
         ))}
       </div>
+
+      <form className="toolbar" method="get" aria-label="Alert filters">
+        {severity && <input type="hidden" name="severity" value={severity} />}
+        <label htmlFor="alertType">Hazard</label>
+        <select id="alertType" name="alertType" className="select-field" defaultValue={alertType ?? ''}>
+          <option value="">All hazards</option>{['FLOOD','FLASH_FLOOD','CYCLONE','STORM_SURGE','HEATWAVE','AIR_QUALITY','WATER_POLLUTION','LANDSLIDE','DROUGHT','WILDFIRE','OTHER'].map((v) => <option key={v} value={v}>{titleCase(v)}</option>)}
+        </select>
+        <label htmlFor="alertDistrict">District</label>
+        <select id="alertDistrict" name="districtId" className="select-field" defaultValue={districtId ?? ''}>
+          <option value="">All districts</option>{districts.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+        </select>
+        <button type="submit" className="button">Apply</button>
+      </form>
 
       <div className="alert-grid">
         {activeRes.data.map((a) => (

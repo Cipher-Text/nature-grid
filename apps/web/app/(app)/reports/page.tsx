@@ -27,12 +27,15 @@ type DistrictOption = DistrictWithDivision;
 export default async function ReportsPage({
   searchParams,
 }: {
-  searchParams: { category?: string; submitted?: string; error?: string };
+  searchParams: { category?: string; status?: string; districtId?: string; submitted?: string; error?: string };
 }) {
   const category = searchParams.category;
-  const reportsPath = category
-    ? `${routes.reports.list}?category=${category}`
-    : routes.reports.list;
+  const { status, districtId } = searchParams;
+  const reportParams = new URLSearchParams();
+  if (category) reportParams.set('category', category);
+  if (status) reportParams.set('status', status);
+  if (districtId) reportParams.set('districtId', districtId);
+  const reportsPath = reportParams.toString() ? `${routes.reports.list}?${reportParams}` : routes.reports.list;
 
   const [reportsRes, verifiedRes, resolvedRes, user] = await Promise.all([
     apiGet<PaginatedEnvelope<CitizenReport>>(reportsPath),
@@ -41,9 +44,7 @@ export default async function ReportsPage({
     getCurrentUser(),
   ]);
 
-  const districts = user
-    ? await apiGet<DistrictOption[]>(routes.locations.districts)
-    : [];
+  const districts = await apiGet<DistrictOption[]>(routes.locations.districts).catch(() => []);
 
   return (
     <>
@@ -79,6 +80,19 @@ export default async function ReportsPage({
           </Link>
         ))}
       </div>
+
+      <form className="toolbar" method="get" aria-label="Report filters">
+        {category && <input type="hidden" name="category" value={category} />}
+        <label htmlFor="reportStatus">Status</label>
+        <select id="reportStatus" name="status" className="select-field" defaultValue={status ?? ''}>
+          <option value="">Verified or resolved</option><option value="VERIFIED">Verified</option><option value="RESOLVED">Resolved</option>
+        </select>
+        <label htmlFor="reportDistrict">District</label>
+        <select id="reportDistrict" name="districtId" className="select-field" defaultValue={districtId ?? ''}>
+          <option value="">All districts</option>{districts.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+        </select>
+        <button type="submit" className="button">Apply</button>
+      </form>
 
       <div className="table" role="table" aria-label="Citizen reports">
         <div className="table-row table-head" role="row">

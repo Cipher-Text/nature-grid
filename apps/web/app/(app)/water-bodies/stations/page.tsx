@@ -5,31 +5,35 @@ import { routes, type WaterLevelStationPagedResponse, type DistrictSummary, type
 export default async function WaterLevelStationsPage({
   searchParams,
 }: {
-  searchParams: { districtId?: string; waterBodyId?: string; tidalStatus?: string; page?: string };
+  searchParams: { districtId?: string; upazilaId?: string; waterBodyId?: string; tidalStatus?: string; page?: string };
 }) {
-  const { districtId, waterBodyId, tidalStatus } = searchParams;
+  const { districtId, upazilaId, waterBodyId, tidalStatus } = searchParams;
   const page = searchParams.page ? parseInt(searchParams.page, 10) : 1;
 
   let path = `${routes.waterBodies.stations}?limit=30&page=${page}`;
   if (districtId) path += `&districtId=${districtId}`;
+  if (upazilaId) path += `&upazilaId=${upazilaId}`;
   if (waterBodyId) path += `&waterBodyId=${waterBodyId}`;
   if (tidalStatus) path += `&tidalStatus=${encodeURIComponent(tidalStatus)}`;
 
-  const [res, districts, waterBodies] = await Promise.all([
+  const [res, districts, upazilas, waterBodies] = await Promise.all([
     apiGet<WaterLevelStationPagedResponse>(path, 300),
     apiGet<DistrictSummary[]>(routes.locations.districts, 3600),
+    apiGet<{ id: string; name: string }[]>(`${routes.locations.upazilas}${districtId ? `?districtId=${districtId}` : ''}`, 3600).catch(() => []),
     apiGet<WaterBodyPagedResponse>(`${routes.waterBodies.list}?limit=100&page=1`, 3600),
   ]);
 
   const TIDAL_OPTIONS = ['Tidal', 'Non-Tidal'];
 
-  function buildHref(overrides: { districtId?: string; waterBodyId?: string; tidalStatus?: string; page?: number }) {
+  function buildHref(overrides: { districtId?: string; upazilaId?: string; waterBodyId?: string; tidalStatus?: string; page?: number }) {
     const d = overrides.districtId ?? districtId ?? '';
+    const u = overrides.upazilaId ?? upazilaId ?? '';
     const w = overrides.waterBodyId ?? waterBodyId ?? '';
     const t = overrides.tidalStatus ?? tidalStatus ?? '';
     const p = overrides.page ?? 1;
     const params = new URLSearchParams();
     if (d) params.set('districtId', d);
+    if (u) params.set('upazilaId', u);
     if (w) params.set('waterBodyId', w);
     if (t) params.set('tidalStatus', t);
     if (p > 1) params.set('page', String(p));
@@ -74,6 +78,10 @@ export default async function WaterLevelStationsPage({
         <select id="districtId" name="districtId" className="select-field" defaultValue={districtId ?? ''}>
           <option value="">All districts</option>
           {districts.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+        </select>
+        <label htmlFor="upazilaId">Upazila</label>
+        <select id="upazilaId" name="upazilaId" className="select-field" defaultValue={upazilaId ?? ''}>
+          <option value="">All upazilas</option>{upazilas.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
         </select>
         <label htmlFor="waterBodyId">Water body</label>
         <select id="waterBodyId" name="waterBodyId" className="select-field" defaultValue={waterBodyId ?? ''}>

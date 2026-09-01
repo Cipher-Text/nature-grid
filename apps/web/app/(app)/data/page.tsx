@@ -24,12 +24,14 @@ const ACCESS_LABEL: Record<string, { label: string; variant: string }> = {
 export default async function DataPage({
   searchParams,
 }: {
-  searchParams: { category?: string };
+  searchParams: { category?: string; accessPolicy?: string };
 }) {
   const category = searchParams.category;
-  const datasetsPath = category
-    ? `${routes.datasets.list}?category=${category}`
-    : routes.datasets.list;
+  const accessPolicy = searchParams.accessPolicy;
+  const params = new URLSearchParams();
+  if (category) params.set('category', category);
+  if (accessPolicy) params.set('accessPolicy', accessPolicy);
+  const datasetsPath = params.toString() ? `${routes.datasets.list}?${params}` : routes.datasets.list;
 
   const [datasetsRes, providersRes] = await Promise.all([
     apiGet<PaginatedEnvelope<Dataset>>(datasetsPath),
@@ -59,6 +61,16 @@ export default async function DataPage({
           </Link>
         ))}
       </div>
+
+      <form className="toolbar" method="get" aria-label="Dataset access filter">
+        {category && <input type="hidden" name="category" value={category} />}
+        <label htmlFor="accessPolicy">Access</label>
+        <select id="accessPolicy" name="accessPolicy" className="select-field" defaultValue={accessPolicy ?? ''}>
+          <option value="">All access levels</option>
+          {Object.keys(ACCESS_LABEL).map((value) => <option key={value} value={value}>{ACCESS_LABEL[value].label}</option>)}
+        </select>
+        <button type="submit" className="button">Apply</button>
+      </form>
 
       <div className="table" role="table" aria-label="Dataset catalog">
         <div className="table-row table-head" role="row">

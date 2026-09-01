@@ -6,17 +6,19 @@ import { relativeTime } from '../../../lib/format';
 export default async function BiodiversityPage({
   searchParams,
 }: {
-  searchParams: { search?: string };
+  searchParams: { search?: string; districtId?: string };
 }) {
   const search = searchParams.search;
+  const districtId = searchParams.districtId;
   const speciesPath = search
     ? `${routes.biodiversity.species}?search=${encodeURIComponent(search)}`
     : routes.biodiversity.species;
 
   const [speciesRes, occurrencesRes] = await Promise.all([
     apiGet<PaginatedEnvelope<Species>>(speciesPath),
-    apiGet<PaginatedEnvelope<Occurrence>>(`${routes.biodiversity.occurrences}?pageSize=10`),
+    apiGet<PaginatedEnvelope<Occurrence>>(`${routes.biodiversity.occurrences}?pageSize=10${districtId ? `&districtId=${districtId}` : ''}`),
   ]);
+  const districts = await apiGet<{ id: string; name: string }[]>(routes.locations.districts, 3600).catch(() => []);
 
   return (
     <>
@@ -83,6 +85,14 @@ export default async function BiodiversityPage({
             <p>Latest synced sightings</p>
           </div>
         </div>
+        <form className="toolbar" method="get" aria-label="Occurrence filters">
+          {search && <input type="hidden" name="search" value={search} />}
+          <label htmlFor="occurrenceDistrict">District</label>
+          <select id="occurrenceDistrict" name="districtId" className="select-field" defaultValue={districtId ?? ''}>
+            <option value="">All Bangladesh</option>{districts.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+          </select>
+          <button className="button" type="submit">Apply</button>
+        </form>
         <div className="table" role="table" aria-label="Occurrence records">
           <div className="table-row table-head" role="row">
             <span>Species</span>

@@ -48,7 +48,7 @@ function initials(displayName: string): string {
   return (first + last).toUpperCase();
 }
 
-export default function AppSidebar({ user }: { user: CurrentUser }) {
+export default function AppSidebar({ user }: { user: CurrentUser | null }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
@@ -109,7 +109,7 @@ export default function AppSidebar({ user }: { user: CurrentUser }) {
 
         {/* Nav links */}
         <nav aria-label="App navigation">
-          {DASHBOARD_ROLES.has(user.role) && (
+          {user && DASHBOARD_ROLES.has(user.role) && (
             <div>
               <span className="nav-label">Analytics</span>
               <Link
@@ -140,7 +140,7 @@ export default function AppSidebar({ user }: { user: CurrentUser }) {
 
         {/* User footer */}
         <div className="sidebar-footer">
-          <Link className="sidebar-user sidebar-profile-link" href="/profile" onClick={close}>
+          {user ? <Link className="sidebar-user sidebar-profile-link" href="/profile" onClick={close}>
             <div className="sidebar-avatar" aria-hidden="true">
               {initials(user.displayName)}
             </div>
@@ -148,12 +148,10 @@ export default function AppSidebar({ user }: { user: CurrentUser }) {
               <strong>{user.displayName}</strong>
               <span>{ROLE_SHORT[user.role] ?? user.role}</span>
             </div>
-          </Link>
-          <form action={logoutAction}>
-            <button className="sidebar-logout-btn" type="submit">
-              Sign out
-            </button>
-          </form>
+          </Link> : <Link className="sidebar-user sidebar-profile-link" href="/login" onClick={close}>Sign in to contribute</Link>}
+          {user && <form action={logoutAction}>
+            <button className="sidebar-logout-btn" type="submit">Sign out</button>
+          </form>}
         </div>
       </aside>
     </>

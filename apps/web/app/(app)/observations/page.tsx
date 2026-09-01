@@ -26,21 +26,22 @@ type DistrictOption = DistrictWithDivision;
 export default async function ObservationsPage({
   searchParams,
 }: {
-  searchParams: { category?: string; submitted?: string; error?: string };
+  searchParams: { category?: string; trustLevel?: string; districtId?: string; submitted?: string; error?: string };
 }) {
   const category = searchParams.category;
-  const observationsPath = category
-    ? `${routes.observations.list}?category=${category}`
-    : routes.observations.list;
+  const { trustLevel, districtId } = searchParams;
+  const observationParams = new URLSearchParams();
+  if (category) observationParams.set('category', category);
+  if (trustLevel) observationParams.set('trustLevel', trustLevel);
+  if (districtId) observationParams.set('districtId', districtId);
+  const observationsPath = observationParams.toString() ? `${routes.observations.list}?${observationParams}` : routes.observations.list;
 
   const [observationsRes, user] = await Promise.all([
     apiGet<PaginatedEnvelope<Observation>>(observationsPath),
     getCurrentUser(),
   ]);
 
-  const districts = user
-    ? await apiGet<DistrictOption[]>(routes.locations.districts)
-    : [];
+  const districts = await apiGet<DistrictOption[]>(routes.locations.districts).catch(() => []);
 
   return (
     <>
@@ -65,6 +66,19 @@ export default async function ObservationsPage({
           </Link>
         ))}
       </div>
+
+      <form className="toolbar" method="get" aria-label="Observation filters">
+        {category && <input type="hidden" name="category" value={category} />}
+        <label htmlFor="trustLevel">Trust</label>
+        <select id="trustLevel" name="trustLevel" className="select-field" defaultValue={trustLevel ?? ''}>
+          <option value="">All public records</option><option value="RESEARCH_GRADE">Research grade</option><option value="COMMUNITY">Community</option><option value="UNVERIFIED">Unverified</option>
+        </select>
+        <label htmlFor="observationDistrict">District</label>
+        <select id="observationDistrict" name="districtId" className="select-field" defaultValue={districtId ?? ''}>
+          <option value="">All districts</option>{districts.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+        </select>
+        <button type="submit" className="button">Apply</button>
+      </form>
 
       <div className="table" role="table" aria-label="Observations">
         <div className="table-row table-head" role="row">

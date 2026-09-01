@@ -36,12 +36,15 @@ interface OrganizationOption {
 export default async function RestorationPage({
   searchParams,
 }: {
-  searchParams: { category?: string; created?: string; joined?: string; error?: string };
+  searchParams: { category?: string; status?: string; districtId?: string; created?: string; joined?: string; error?: string };
 }) {
   const category = searchParams.category;
-  const projectsPath = category
-    ? `${routes.restoration.projects}?category=${category}`
-    : routes.restoration.projects;
+  const { status, districtId } = searchParams;
+  const projectParams = new URLSearchParams();
+  if (category) projectParams.set('category', category);
+  if (status) projectParams.set('status', status);
+  if (districtId) projectParams.set('districtId', districtId);
+  const projectsPath = projectParams.toString() ? `${routes.restoration.projects}?${projectParams}` : routes.restoration.projects;
 
   const [projectsRes, user] = await Promise.all([
     apiGet<PaginatedEnvelope<RestorationProject>>(projectsPath),
@@ -51,14 +54,12 @@ export default async function RestorationPage({
   const canCreate = user !== null && CREATOR_ROLES.has(user.role);
   const accessToken = cookies().get(ACCESS_TOKEN_COOKIE)?.value ?? '';
 
-  const [districts, organizations] = canCreate
-    ? await Promise.all([
-        apiGet<DistrictOption[]>(routes.locations.districts),
-        apiGetAuthed<PaginatedEnvelope<OrganizationOption>>(`${routes.organizations.list}?pageSize=100`, accessToken).then(
-          (res) => res.data,
-        ),
-      ])
-    : [[], []];
+  const [districts, organizations] = await Promise.all([
+        apiGet<DistrictOption[]>(routes.locations.districts).catch(() => []),
+        canCreate
+          ? apiGetAuthed<PaginatedEnvelope<OrganizationOption>>(`${routes.organizations.list}?pageSize=100`, accessToken).then((res) => res.data).catch(() => [])
+          : Promise.resolve([]),
+      ]);
 
   return (
     <>
@@ -87,6 +88,19 @@ export default async function RestorationPage({
           </Link>
         ))}
       </div>
+
+      <form className="toolbar" method="get" aria-label="Restoration filters">
+        {category && <input type="hidden" name="category" value={category} />}
+        <label htmlFor="projectStatus">Status</label>
+        <select id="projectStatus" name="status" className="select-field" defaultValue={status ?? ''}>
+          <option value="">All statuses</option><option value="PLANNED">Planned</option><option value="ACTIVE">Active</option><option value="PAUSED">Paused</option><option value="COMPLETED">Completed</option>
+        </select>
+        <label htmlFor="projectDistrict">District</label>
+        <select id="projectDistrict" name="districtId" className="select-field" defaultValue={districtId ?? ''}>
+          <option value="">All districts</option>{districts.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+        </select>
+        <button type="submit" className="button">Apply</button>
+      </form>
 
       <div className="table restoration-table" role="table" aria-label="Restoration projects">
         <div className="table-row table-head" role="row">

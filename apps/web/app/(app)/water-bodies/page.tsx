@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { apiGet } from '../../../lib/api';
-import { routes, type WaterBodyPagedResponse, type DistrictSummary, type WaterBodyType } from '@nature-grid/contracts';
+import { routes, type WaterBodyPagedResponse, type DistrictSummary, type WaterBodyType, type HydrologicalClass } from '@nature-grid/contracts';
 import { titleCase } from '../../../lib/format';
 
 const TYPE_TAG: Record<string, string> = {
@@ -14,27 +14,36 @@ const WATER_BODY_TYPES: WaterBodyType[] = ['RIVER', 'WETLAND', 'LAKE'];
 export default async function WaterBodiesPage({
   searchParams,
 }: {
-  searchParams: { waterBodyType?: string; districtId?: string; page?: string };
+  searchParams: { waterBodyType?: string; hydrologicalClass?: string; districtId?: string; upazilaId?: string; page?: string };
 }) {
   const waterBodyType = searchParams.waterBodyType as WaterBodyType | undefined;
+  const hydrologicalClass = searchParams.hydrologicalClass as HydrologicalClass | undefined;
   const districtId = searchParams.districtId;
+  const upazilaId = searchParams.upazilaId;
   const page = searchParams.page ? parseInt(searchParams.page, 10) : 1;
 
   const params = new URLSearchParams({ limit: '30', page: String(page) });
   if (waterBodyType) params.set('waterBodyType', waterBodyType);
+  if (hydrologicalClass) params.set('class', hydrologicalClass);
   if (districtId) params.set('districtId', districtId);
+  if (upazilaId) params.set('upazilaId', upazilaId);
 
-  const [res, districts] = await Promise.all([
+  const [res, districts, upazilas] = await Promise.all([
     apiGet<WaterBodyPagedResponse>(`${routes.waterBodies.list}?${params.toString()}`, 300),
     apiGet<DistrictSummary[]>(routes.locations.districts, 3600),
+    apiGet<{ id: string; name: string }[]>(`${routes.locations.upazilas}${districtId ? `?districtId=${districtId}` : ''}`, 3600).catch(() => []),
   ]);
 
-  function filterHref(overrides: { waterBodyType?: string; districtId?: string }) {
+  function filterHref(overrides: { waterBodyType?: string; hydrologicalClass?: string; districtId?: string; upazilaId?: string }) {
     const next = new URLSearchParams();
     const type = overrides.waterBodyType ?? waterBodyType ?? '';
     const district = overrides.districtId ?? districtId ?? '';
+    const cls = overrides.hydrologicalClass ?? hydrologicalClass ?? '';
+    const upazila = overrides.upazilaId ?? upazilaId ?? '';
     if (type) next.set('waterBodyType', type);
+    if (cls) next.set('class', cls);
     if (district) next.set('districtId', district);
+    if (upazila) next.set('upazilaId', upazila);
     const query = next.toString();
     return `/water-bodies${query ? `?${query}` : ''}`;
   }
@@ -57,6 +66,10 @@ export default async function WaterBodiesPage({
       </div>
 
       <form className="toolbar" method="get" aria-label="Water body filters">
+        <label htmlFor="hydrologicalClass">Class</label>
+        <select id="hydrologicalClass" name="class" className="select-field" defaultValue={hydrologicalClass ?? ''}>
+          <option value="">All classes</option><option value="LOTIC">Rivers (lotic)</option><option value="LENTIC">Wetlands and lakes (lentic)</option>
+        </select>
         <label htmlFor="waterBodyType">Type</label>
         <select id="waterBodyType" name="waterBodyType" className="select-field" defaultValue={waterBodyType ?? ''}>
           <option value="">All types</option>
@@ -67,8 +80,12 @@ export default async function WaterBodiesPage({
           <option value="">All districts</option>
           {districts.map((district) => <option key={district.id} value={district.id}>{district.name}</option>)}
         </select>
+        <label htmlFor="upazilaId">Upazila</label>
+        <select id="upazilaId" name="upazilaId" className="select-field" defaultValue={upazilaId ?? ''}>
+          <option value="">All upazilas</option>{upazilas.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+        </select>
         <button type="submit" className="button">Apply</button>
-        {(waterBodyType || districtId) && <Link className="button ghost" href={filterHref({ waterBodyType: '', districtId: '' })}>Reset</Link>}
+        {(waterBodyType || hydrologicalClass || districtId || upazilaId) && <Link className="button ghost" href={filterHref({ waterBodyType: '', hydrologicalClass: '', districtId: '', upazilaId: '' })}>Reset</Link>}
       </form>
 
       <div className="table" role="table" aria-label="Water bodies">

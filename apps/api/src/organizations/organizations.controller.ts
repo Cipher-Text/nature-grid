@@ -25,7 +25,8 @@ export class OrganizationsController {
     return this.organizationsService.count(this.parseType(type));
   }
 
-  /** Authenticated: full paginated list. */
+  /** Public directory; membership details remain authenticated elsewhere. */
+  @Public()
   @Get()
   list(@Query('type') type?: string, @Query('page') page?: string, @Query('pageSize') pageSize?: string) {
     return this.organizationsService.list(
