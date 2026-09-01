@@ -1,6 +1,6 @@
 # Progress
 
-Last updated: 2026-09-01 (PostGIS point geometry on District; Water Bodies module; flood module refactored to station-based; observation measurements; restoration sub-resources; AlertType enum + AlertArea; DatasetVersion; water level readings. Previously: 2026-08-29 BullMQ, Media module; 2026-08-28 OpenMeteo audit, Radiation, Marine, Emissions.)
+Last updated: 2026-09-01 (PostGIS point geometry on District; Water Bodies module; flood module refactored to station-based; observation measurements; restoration sub-resources; AlertType enum + AlertArea; DatasetVersion; water level readings; docs revised to add gamification module entry, notifications module entry, and correct module count. Previously: 2026-08-29 BullMQ, Gamification module, Media module; 2026-08-28 OpenMeteo audit, Radiation, Marine, Emissions.)
 
 ## Status Legend
 
@@ -49,6 +49,7 @@ Last updated: 2026-09-01 (PostGIS point geometry on District; Water Bodies modul
 | Restoration sub-resources | Done | 2026-09-01 — `ProjectTarget`, `ProjectActivity`, `ProjectMetric`; `RestorationTargetMetric` enum; full target/activity/metric CRUD endpoints |
 | Alert types + geographic areas | Done | 2026-09-01 — `AlertType` enum (11 disaster types); `AlertArea` model for multi-location alerts |
 | Dataset versioning | Done | 2026-09-01 — `DatasetVersion` model; `GET/POST /datasets/:id/versions`; audited `DATASET_VERSION_PUBLISH` |
+| Gamification module | Done | 2026-08-29 — `GET /gamification/me`; profile completeness (10 checks, 0–100 score); 5 badge categories × 4 tiers (Bronze/Silver/Gold/Emerald); 5 levels (Newcomer → Environmental Leader); earned badges stored in `UserProfile.earnedBadges`; BullMQ `gamification` queue deduped by userId. |
 | BullMQ queues | Done | `email` queue in NotificationsModule (`EmailProcessor` — password-reset, email-verification, alert-notification, 4-attempt exponential backoff); `gamification` queue in GamificationModule (`GamificationProcessor` — badge evaluation, deduped by `jobId: badge-eval:{userId}`). `BullModule.forRootAsync` in AppModule parses `REDIS_URL`. |
 | District GeoJSON boundaries | Done | All 64 districts now have GeoJSON boundaries. The 8 previously missing (Brahmanbaria, Chattogram, Bogura, Chapainawabganj, Jashore, Jhalakathi, Moulvibazar, Netrokona) are now included in `bangladesh.ts`. `administrative.json`, `districts.geojson`, and `scripts/gen-bangladesh-seed.py` deleted — `bangladesh.ts` is the sole source of truth. |
 | Weather ingestion (OpenMeteo) | Done | Live `weather` module — see "Weather ingestion" below |

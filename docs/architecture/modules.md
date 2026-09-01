@@ -382,6 +382,30 @@ Owns the water body registry — rivers, haors, beels, canals, lakes, ponds, res
 
 Seeded from CSV via `WaterBodiesService.onModuleInit`. Water level readings are served via the `flood` module endpoints (`GET /flood/stations/:stationId/readings`, `GET /flood/stations/:stationId/latest`). Gauge thresholds (`dangerLevel`, `warningLevel`, `normalLevel`) on each station determine alert threshold status at a given reading.
 
+## notifications ✓
+
+Owns alert subscription management and email notification delivery.
+
+All three endpoints are authenticated — `JwtAuthGuard` applies globally.
+
+| Method | Path | Access |
+| --- | --- | --- |
+| POST | `/notifications/subscriptions` | Authenticated |
+| GET | `/notifications/subscriptions` | Authenticated |
+| DELETE | `/notifications/subscriptions/:id` | Authenticated |
+
+`AlertSubscription` stores a per-user subscription with optional `districtId` (null = nationwide), `minSeverity` threshold, and `channel` (EMAIL only for v1). `NotificationsService.dispatchForAlert()` is called by `AlertsService` on every ACTIVE transition — it creates PENDING `NotificationDelivery` records and enqueues one BullMQ `email` job per matched subscriber with 4-attempt exponential backoff. `EmailProcessor` handles `password-reset`, `email-verification`, and `alert-notification` job types. `EmailService` wraps Nodemailer SMTP; email delivery degrades gracefully when `SMTP_*` env vars are absent (one-time startup warn, sends silently skipped). `AuthService` forgot-password and email-verification flows also enqueue `email` queue jobs here instead of calling SMTP directly.
+
+## gamification ✓
+
+Owns profile completeness scoring and the badge system for citizen engagement incentives.
+
+| Method | Path | Access |
+| --- | --- | --- |
+| GET | `/gamification/me` | Authenticated |
+
+`GET /gamification/me` returns: completeness score (0–100), list of missing-field prompts, earned badges, contribution points, and current level. Profile completeness runs 10 weighted checks across `UserProfile`, `UserSocialLink`, `OrganizationMembership`, `CitizenReport`, and `Observation`. Levels: Newcomer (0) → Contributor (100) → Advocate (300) → Champion (600) → Environmental Leader (1200+). Badges: 5 categories × 4 tiers (Bronze 25 pts / Silver 75 pts / Gold 150 pts / Emerald 300 pts) — Civic Guardian (verified reports), Water Sentinel (water quality observations), Clean Air Defender (air quality contributions), Biodiversity Explorer (research-grade species), Restoration Pioneer (ecological restoration projects). Badge counts are computed via 6 parallel Prisma queries. `evaluateBadges()` enqueues a BullMQ `gamification` job deduped by `jobId: badge-eval:{userId}`; actual evaluation runs in `GamificationProcessor.performEvaluation()`. Earned badge IDs are stored in `UserProfile.earnedBadges` (String[]) and contribution points in `UserProfile.contributionPoints` (Int).
+
 ## audit (embedded)
 
 Audit events are written directly from services rather than via a separate injectable service. `AuditEvent` stores `action`, `userId`, `entityType`, `entityId`, `meta`, `ipAddress`, `createdAt`.
@@ -416,4 +440,4 @@ These accounts exist only for local development and should not be created in pro
 
 ## Coverage note
 
-`app.module.ts` registers 24 modules: `database` plus 23 feature modules (including `locations/climate`, `flood`, `notifications`, `permissions`, `analytics`, `water-bodies`, and `gamification`). All are fully implemented. BullMQ queues (`email`, `gamification`) are wired via `BullModule.forRootAsync` in `AppModule`. Advanced domains not yet represented by a module — satellite ingestion, long-range climate projections, carbon accounting, research publications, structured surveys — are planned for Phase 7. See `docs/roadmap.md` and `docs/architecture/feature-map.md`.
+`app.module.ts` registers 26 modules: `database` plus 25 feature modules. All are fully implemented except `ingestion` (job tracking and read endpoints only — no retry queue, no manual trigger endpoint; recurring cron jobs serve as the retry mechanism). BullMQ queues (`email`, `gamification`) are wired via `BullModule.forRootAsync` in `AppModule`. Advanced domains not yet represented by a module — community posts/polls, structured surveys, carbon accounting, research publications, satellite/remote sensing ingestion, forest registry, industrial facility registry — are planned for Phase 5, Phase 7, or Phase 8. See `docs/roadmap.md` and `docs/architecture/feature-map.md`.

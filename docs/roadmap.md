@@ -80,7 +80,7 @@ Remaining gaps (carry into Phase 3):
 
 ## Phase 3: Environmental Core
 
-Status: In Progress — auth refresh/logout done (backend + frontend); citizen report and observation submission both now work end to end; all 7 app-shell pages built (Milestone 15 complete, 2026-08-17); Observations (M9), Restoration Projects (M11), and Biodiversity + GBIF (M10) modules all done (2026-08-17 through 2026-08-19) — 6 of 7 app-shell pages now show real data, only `/community` remains an honest empty state; Milestone 13 (Frontend Data Integration) is now fully complete (2026-08-19) — every homepage section is either live or an honest empty state; Report enrichment (M5/M8) done (2026-08-22) — `ReportComment` + `ReportMedia` schema and 4 new API endpoints; Admin Console (M12) done (2026-08-22) — full `apps/admin` console with report moderation, user management, alert management, dataset management
+Status: **Done** (closed 2026-09-01) — all deliverables complete. Dataset download and access-request endpoints landed 2026-08-24 as part of Phase 4; PostGIS point geometry on `District` landed 2026-09-01. Polygon geometry (boundaries, alert zones) carries into Phase 7 as a geospatial infrastructure item rather than a Phase 3 blocker.
 
 Goal: Add the primary environmental workflows and connect the frontend to real backend data.
 
@@ -91,7 +91,7 @@ Deliverables:
 - ~~Biodiversity records~~ Done (2026-08-19) — daily GBIF sync (self-contained in `apps/api/src/biodiversity/`, not the generic `ingestion` module, same design deviation as weather), public species/occurrence endpoints, wired to a real `/biodiversity` page with name search. IUCN conservation-status enrichment deliberately skipped for v1 (no per-species API call built yet). See `docs/progress.md` "Biodiversity + GBIF Module". Community sidebar nav link removed (2026-08-24) — `/community` page remains but is no longer reachable via navigation.
 - ~~Media/evidence records~~ Done — `ReportComment` and `ReportMedia` schema + `POST/GET /reports/:id/comments` and `POST/GET /reports/:id/media` endpoints live (2026-08-22). File upload transport now handled by the `media` module (`POST /media/upload`, `POST /media/presign`) using S3/MinIO (2026-08-29). Nested comment replies deliberately deferred. See M8 in `implementation-plan.md`.
 - ~~Moderation queue~~ Done (2026-08-22) — admin console report moderation queue (`apps/admin`) with full 5-status workflow. See M12 in `implementation-plan.md`.
-- Dataset download and access-request endpoints
+- ~~Dataset download and access-request endpoints~~ Done (2026-08-24) — `GET /datasets/:id/download` with all 5 access policies enforced, `POST /datasets/:id/access-request`, admin approve/reject. Landed as part of Phase 4 work; see Phase 4 notes.
 - ~~Connect public web page to live API (replace static seed data)~~ Done (2026-08-19) — every homepage section now fetches live data with a fallback to static content if the API is unreachable: weather sidebar (2026-08-16), metrics cards (2026-08-19), dataset preview/reports/alerts previews/biodiversity+restoration highlights (2026-08-19); the community feed has no backend to wire to, so it shows an honest empty state instead (same treatment as the `/community` page). Nav is session-aware (real login state, 2026-08-16). See `docs/progress.md` "Homepage Preview Sections Wired" — a real honesty bug (treating an empty-but-successful response the same as an API failure) was caught and fixed during this pass.
 - ~~Auth refresh / logout with Redis token store~~ Done (2026-08-16) — Postgres-backed, not Redis (see Phase 2 note above). Frontend login/register/logout flow also wired (2026-08-16): httpOnly cookie sessions, middleware-based route protection + token refresh, new `/login`/`/register`/`/profile` routes. `/profile` rebuilt (2026-08-17) to match its mockup's sidebar app-shell design, with honest empty states instead of the mock's fabricated eco score/badges/activity feed — this also established a reusable sidebar shell (`AppSidebar`). ~~Build `/data`, `/observations`, `/reports`, `/alerts`, `/biodiversity`, `/restoration`, `/community` as real routes (Milestone 15).~~ Done (2026-08-17) — `/data`, `/reports`, `/alerts` wired to real backend data (see `docs/progress.md` "App-Shell Pages: Data, Reports, Alerts"), `/reports` also gained a real submission form (see "Report Submission Form"), and `/observations`, `/biodiversity`, `/restoration`, `/community` shipped with honest empty states since none of them had a backend yet (see "App-Shell Pages: Observations, Biodiversity, Restoration, Community"). `/observations`, `/restoration`, and `/biodiversity` have since been upgraded to real data as their backends shipped (M9 2026-08-17, M11 and M10 both 2026-08-19); only `/community` remains an honest empty state.
 - ~~PostGIS geography fields~~ Partially done (2026-09-01) — point geometry on `District`. Polygon geometry still needed.
@@ -99,9 +99,9 @@ Deliverables:
 Exit criteria:
 
 - ~~Citizens can submit reports and observations after login.~~ Done (2026-08-17) — both `POST /reports` (via `/reports`) and `POST /observations` (via `/observations`) work end to end, verified live with real submissions.
-- Public users see only verified/publishable data from the live API.
-- Moderators/admins can review and update status. — Also **not actually true** until 2026-08-17 for the same RBAC casing bug (see Phase 2 note); confirmed genuinely working now via `PATCH /reports/:id/status` and `PATCH /alerts/:id`.
-- Advanced dataset access is gated correctly.
+- ~~Public users see only verified/publishable data from the live API.~~ Met — public list endpoints filter by status (`VERIFIED`/`RESOLVED` for reports; `ACTIVE` for alerts; `RESEARCH_GRADE`/`COMMUNITY` for observations, excluding `FLAGGED`).
+- ~~Moderators/admins can review and update status.~~ Met — confirmed working via `PATCH /reports/:id/status` and `PATCH /alerts/:id`. Was **not** true until 2026-08-17 due to the RBAC casing bug; see Phase 2 notes.
+- ~~Advanced dataset access is gated correctly.~~ Met (2026-08-24) — all 5 access policies (`PUBLIC`, `LOGIN_REQUIRED`, `RESEARCHER`, `APPROVED`, `GOVERNMENT`) enforced on `GET /datasets/:id/download`.
 
 ## Phase 4: Data and Ingestion
 
@@ -138,6 +138,7 @@ Deliverables:
 - ~~Notification subscriptions~~ Done (2026-08-22) — `AlertSubscription` + email delivery via Nodemailer.
 - Environmental event/hazard history — *Planned*.
 - ~~Researcher and government role-scoped workflows~~ Done — analytics endpoints for government/researcher/orgadmin.
+- ~~Profile completeness scoring and badge system (gamification)~~ Done (2026-08-29) — `GET /gamification/me`; 10 completeness checks; 5 badge categories × 4 tiers (Bronze/Silver/Gold/Emerald); BullMQ `gamification` queue with dedup by userId; earned badges stored on `UserProfile`.
 
 Exit criteria:
 

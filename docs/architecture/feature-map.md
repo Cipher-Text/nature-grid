@@ -61,6 +61,7 @@ Legend: **Done** | **Partial** | *Planned* | ~~Deferred~~
 | Restoration targets, activity logs, and metric readings | `restoration` | **Done** — `ProjectTarget`, `ProjectActivity`, `ProjectMetric`; `RestorationTargetMetric` enum |
 | Structured survey campaigns | — | *Planned* (Phase 7) |
 | Community posts, comments, and polls | `community` | *Planned* — `CommunityPost`, `PostComment`, `Poll`, `PollOption`, `PollVote` models; `/community/posts` CRUD + `/poll/vote`; updates `/community` page |
+| Profile completeness scoring and badge system | `gamification` | **Done** (2026-08-29) — `GET /gamification/me`; 10 completeness checks; 5 badge categories × 4 tiers (Bronze / Silver / Gold / Emerald); BullMQ `gamification` queue with deduped evaluation |
 
 ---
 
