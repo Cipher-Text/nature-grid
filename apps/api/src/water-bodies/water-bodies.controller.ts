@@ -1,5 +1,5 @@
 import { Controller, Get, NotFoundException, Param, Query } from '@nestjs/common';
-import { HydrologicalClass } from '@prisma/client';
+import { HydrologicalClass, WaterBodyType } from '@prisma/client';
 import { Public } from '../common/decorators/roles.decorator';
 import { WaterBodiesService } from './water-bodies.service';
 
@@ -11,6 +11,7 @@ export class WaterBodiesController {
   @Get()
   list(
     @Query('class') hydrologicalClass?: HydrologicalClass,
+    @Query('waterBodyType') waterBodyType?: WaterBodyType,
     @Query('upazilaId') upazilaId?: string,
     @Query('districtId') districtId?: string,
     @Query('page') page?: string,
@@ -18,6 +19,7 @@ export class WaterBodiesController {
   ) {
     return this.service.list({
       hydrologicalClass,
+      waterBodyType,
       upazilaId,
       districtId,
       page: page ? parseInt(page, 10) : 1,

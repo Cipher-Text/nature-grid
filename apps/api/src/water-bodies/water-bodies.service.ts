@@ -286,6 +286,7 @@ export class WaterBodiesService implements OnModuleInit {
 
   async list(query: {
     hydrologicalClass?: HydrologicalClass;
+    waterBodyType?: WaterBodyType;
     upazilaId?: string;
     districtId?: string;
     page: number;
@@ -293,6 +294,7 @@ export class WaterBodiesService implements OnModuleInit {
   }) {
     const where: Prisma.WaterBodyWhereInput = {
       hydrologicalClass: query.hydrologicalClass,
+      waterBodyType: query.waterBodyType,
       upazilas: query.upazilaId
         ? { some: { upazilaId: query.upazilaId } }
         : query.districtId
