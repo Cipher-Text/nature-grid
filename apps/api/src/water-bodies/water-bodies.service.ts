@@ -333,11 +333,12 @@ export class WaterBodiesService implements OnModuleInit {
     });
   }
 
-  async listStations(query: { districtId?: string; upazilaId?: string; tidalStatus?: string; page: number; limit: number }) {
+  async listStations(query: { districtId?: string; upazilaId?: string; waterBodyId?: string; tidalStatus?: string; page: number; limit: number }) {
     const where: Prisma.WaterLevelStationWhereInput = {
       districtId: query.districtId,
       upazilaId: query.upazilaId,
       tidalStatus: query.tidalStatus,
+      waterBodies: query.waterBodyId ? { some: { waterBodyId: query.waterBodyId } } : undefined,
     };
     const skip = (query.page - 1) * query.limit;
 

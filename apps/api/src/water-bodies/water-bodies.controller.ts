@@ -31,6 +31,7 @@ export class WaterBodiesController {
   listStations(
     @Query('districtId') districtId?: string,
     @Query('upazilaId') upazilaId?: string,
+    @Query('waterBodyId') waterBodyId?: string,
     @Query('tidalStatus') tidalStatus?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
@@ -38,6 +39,7 @@ export class WaterBodiesController {
     return this.service.listStations({
       districtId,
       upazilaId,
+      waterBodyId,
       tidalStatus,
       page: page ? parseInt(page, 10) : 1,
       limit: limit ? Math.min(parseInt(limit, 10), 100) : 20,

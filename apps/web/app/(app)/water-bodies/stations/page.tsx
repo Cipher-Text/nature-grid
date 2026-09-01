@@ -1,32 +1,36 @@
 import Link from 'next/link';
 import { apiGet } from '../../../../lib/api';
-import { routes, type WaterLevelStationPagedResponse, type DistrictSummary } from '@nature-grid/contracts';
+import { routes, type WaterLevelStationPagedResponse, type DistrictSummary, type WaterBodyPagedResponse } from '@nature-grid/contracts';
 
 export default async function WaterLevelStationsPage({
   searchParams,
 }: {
-  searchParams: { districtId?: string; tidalStatus?: string; page?: string };
+  searchParams: { districtId?: string; waterBodyId?: string; tidalStatus?: string; page?: string };
 }) {
-  const { districtId, tidalStatus } = searchParams;
+  const { districtId, waterBodyId, tidalStatus } = searchParams;
   const page = searchParams.page ? parseInt(searchParams.page, 10) : 1;
 
   let path = `${routes.waterBodies.stations}?limit=30&page=${page}`;
   if (districtId) path += `&districtId=${districtId}`;
+  if (waterBodyId) path += `&waterBodyId=${waterBodyId}`;
   if (tidalStatus) path += `&tidalStatus=${encodeURIComponent(tidalStatus)}`;
 
-  const [res, districts] = await Promise.all([
+  const [res, districts, waterBodies] = await Promise.all([
     apiGet<WaterLevelStationPagedResponse>(path, 300),
     apiGet<DistrictSummary[]>(routes.locations.districts, 3600),
+    apiGet<WaterBodyPagedResponse>(`${routes.waterBodies.list}?limit=100&page=1`, 3600),
   ]);
 
   const TIDAL_OPTIONS = ['Tidal', 'Non-Tidal'];
 
-  function buildHref(overrides: { districtId?: string; tidalStatus?: string; page?: number }) {
+  function buildHref(overrides: { districtId?: string; waterBodyId?: string; tidalStatus?: string; page?: number }) {
     const d = overrides.districtId ?? districtId ?? '';
+    const w = overrides.waterBodyId ?? waterBodyId ?? '';
     const t = overrides.tidalStatus ?? tidalStatus ?? '';
     const p = overrides.page ?? 1;
     const params = new URLSearchParams();
     if (d) params.set('districtId', d);
+    if (w) params.set('waterBodyId', w);
     if (t) params.set('tidalStatus', t);
     if (p > 1) params.set('page', String(p));
     const qs = params.toString();
@@ -64,26 +68,23 @@ export default async function WaterLevelStationsPage({
         ))}
       </div>
 
-      {/* District quick-filter */}
-      <details className="panel" style={{ marginBottom: '1rem' }}>
-        <summary style={{ cursor: 'pointer', padding: '0.75rem 1rem', fontWeight: 500 }}>
-          Filter by district {districtId ? `(${districts.find((d) => d.id === districtId)?.name ?? districtId})` : ''}
-        </summary>
-        <div style={{ padding: '0.75rem 1rem', display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-          <Link className={`chip${!districtId ? ' active' : ''}`} href={buildHref({ districtId: '', page: 1 })}>
-            All districts
-          </Link>
-          {districts.map((d) => (
-            <Link
-              key={d.id}
-              className={`chip${districtId === d.id ? ' active' : ''}`}
-              href={buildHref({ districtId: d.id, page: 1 })}
-            >
-              {d.name}
-            </Link>
-          ))}
-        </div>
-      </details>
+      <form className="toolbar" method="get" aria-label="Station filters">
+        {tidalStatus && <input type="hidden" name="tidalStatus" value={tidalStatus} />}
+        <label htmlFor="districtId">District</label>
+        <select id="districtId" name="districtId" className="select-field" defaultValue={districtId ?? ''}>
+          <option value="">All districts</option>
+          {districts.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+        </select>
+        <label htmlFor="waterBodyId">Water body</label>
+        <select id="waterBodyId" name="waterBodyId" className="select-field" defaultValue={waterBodyId ?? ''}>
+          <option value="">All water bodies</option>
+          {waterBodies.data.map((waterBody) => <option key={waterBody.id} value={waterBody.id}>{waterBody.nameEn}</option>)}
+        </select>
+        <button type="submit" className="button">Apply</button>
+        {(districtId || waterBodyId) && (
+          <Link className="button ghost" href={buildHref({ districtId: '', waterBodyId: '', page: 1 })}>Reset</Link>
+        )}
+      </form>
 
       <div className="table" role="table" aria-label="Water level stations">
         <div className="table-row table-head" role="row">
