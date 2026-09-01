@@ -15,11 +15,11 @@ export default async function HeroSection() {
   return (
     <section className="public-hero" aria-label="Platform overview">
       <p className="eyebrow">Public Environmental Intelligence · Bangladesh</p>
-      <h1>Real-time environmental signals, open to everyone.</h1>
+      <h1>Understand Bangladesh’s environment, place by place.</h1>
       <p>
-        Live weather, air quality, flood risk, citizen reports, GBIF biodiversity
-        records, and NGO restoration projects — across 8 divisions and 64 districts.
-        No login required.
+        See what is happening now through live observations, forecasts, rolling climate
+        summaries, verified reports, and biodiversity records — across 8 divisions and
+        64 districts. No login required.
       </p>
 
       {metrics && (
@@ -48,15 +48,15 @@ export default async function HeroSection() {
 
       <div className="button-row">
         <Link className="button" href="#map">
-          Explore live map
+        Explore live map
         </Link>
-        <Link className="button ghost" href="/login">
-          Sign in to contribute
+        <Link className="button ghost" href="/alerts">
+          View alerts
         </Link>
       </div>
 
       <p className="hero-open-note">
-        Open data for researchers, NGOs, journalists, and citizens.{' '}
+        Independent public platform — not a government service. Data sources and update times are shown with each view.{' '}
         <Link href="/data">Browse datasets →</Link>
       </p>
     </section>

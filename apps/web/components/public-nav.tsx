@@ -1,12 +1,9 @@
 import Link from 'next/link';
-import { getCurrentUser } from '../lib/current-user';
-import { logoutAction } from '../lib/auth-actions';
-
 const NAV_LINKS = [
   { href: '/#dashboard', label: 'Overview' },
   { href: '/#map', label: 'Map' },
   { href: '/#data', label: 'Data' },
-  { href: '/#reports', label: 'Reports & Alerts' },
+  { href: '/#civic', label: 'Reports & Alerts' },
   { href: '/#biodiversity', label: 'Biodiversity' },
 ] as const;
 

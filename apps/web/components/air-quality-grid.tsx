@@ -15,57 +15,46 @@ function aqiClass(pm25: number): {
   return               { label: 'Hazardous',         css: 'aqi-hazardous', advice: 'Stay indoors' };
 }
 
-// Trend arrow: compare today's 30d avg to itself is meaningless, so we compute
-// a simple visual indicator based on absolute level for now.
-// When UnionDailyClimate history is exposed via API this can become a real delta.
-function trendHint(pm25: number): string {
-  if (pm25 > 100) return '↑ High';
-  if (pm25 > 55)  return '↑ Elevated';
-  return '';
-}
-
 export default async function AirQualityGrid() {
   let districts: DistrictWithClimate[] = [];
+  let isLive = true;
   try {
     districts = await apiGet<DistrictWithClimate[]>(routes.locations.districts);
   } catch {
-    return null;
+    isLive = false;
   }
 
   const withAqi = districts
     .filter((d): d is DistrictWithClimate & { avgPm25_30d: number } => d.avgPm25_30d != null)
-    .sort((a, b) => b.avgPm25_30d - a.avgPm25_30d)
-    .slice(0, 12);
+    .sort((a, b) => b.avgPm25_30d - a.avgPm25_30d);
 
-  if (withAqi.length === 0) return null;
+  const median = withAqi.length === 0 ? null : withAqi.length % 2 === 1
+    ? withAqi[Math.floor(withAqi.length / 2)].avgPm25_30d
+    : (withAqi[withAqi.length / 2 - 1].avgPm25_30d + withAqi[withAqi.length / 2].avgPm25_30d) / 2;
 
-  const nationalAvg =
-    withAqi.reduce((sum, d) => sum + d.avgPm25_30d, 0) / withAqi.length;
-
+  const topDistricts = withAqi.slice(0, 12);
   const unhealthyCount = withAqi.filter((d) => d.avgPm25_30d > 55.4).length;
 
   return (
     <section className="aqi-section public-section" aria-label="Air quality ranking by district">
       <div className="aqi-section-header">
         <div>
-          <p className="eyebrow">30-Day Average PM2.5 · Top Districts</p>
-          <h2>Air Quality Index</h2>
-          <p className="aqi-summary">
-            National avg {nationalAvg.toFixed(0)} µg/m³
+          <p className="eyebrow">30-Day average PM2.5 · {withAqi.length} districts with data</p>
+          <h2>District air quality</h2>
+          <p className="aqi-summary">{!isLive ? 'Air-quality data is temporarily unavailable.' : median === null ? 'No district air-quality summaries are available yet.' : <>Median district concentration {median.toFixed(0)} µg/m³
             {unhealthyCount > 0 && (
               <span className="danger">
-                {' '}· {unhealthyCount} district{unhealthyCount > 1 ? 's' : ''} in Unhealthy range
+                {' '}· {unhealthyCount} district{unhealthyCount > 1 ? 's' : ''} above 55.4 µg/m³
               </span>
-            )}
-          </p>
+            )}</>}</p>
         </div>
         <p className="aqi-legend-note">
           * Unhealthy for sensitive groups (children, elderly, respiratory conditions)
         </p>
       </div>
 
-      <div className="aqi-ranking">
-        {withAqi.map((d, i) => {
+      {withAqi.length > 0 && <div className="aqi-ranking">
+          {topDistricts.map((d, i) => {
           const aqi = aqiClass(d.avgPm25_30d);
           const barWidth = Math.min(100, (d.avgPm25_30d / 200) * 100);
           return (
@@ -78,9 +67,6 @@ export default async function AirQualityGrid() {
                     <span className="aqi-division">{d.division.name}</span>
                   )}
                   <span className={`aqi-badge ${aqi.css}`}>{aqi.label}</span>
-                  {trendHint(d.avgPm25_30d) && (
-                    <span className="aqi-trend danger">{trendHint(d.avgPm25_30d)}</span>
-                  )}
                 </div>
                 <div className="aqi-bar-track" title={aqi.advice}>
                   <div
@@ -93,7 +79,8 @@ export default async function AirQualityGrid() {
             </div>
           );
         })}
-      </div>
+      </div>}
+      {withAqi.length === 0 && <div className="empty-state" role="status">{isLive ? 'No district PM2.5 summaries are available yet.' : 'Air-quality data is temporarily unavailable.'}</div>}
 
       <div className="aqi-footer">
         <div className="aqi-legend">

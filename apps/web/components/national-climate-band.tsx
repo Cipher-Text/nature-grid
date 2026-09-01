@@ -21,14 +21,14 @@ function precipIcon(mm: number | null): string {
 
 export default async function NationalClimateBand() {
   let divisions: DivisionWithClimate[] = [];
+  let isLive = true;
   try {
     divisions = await apiGet<DivisionWithClimate[]>(routes.locations.divisions);
   } catch {
-    return null;
+    isLive = false;
   }
 
   const hasClimateData = divisions.some((d) => d.avgTemp30d !== null || d.avgPm25_30d !== null);
-  if (!hasClimateData) return null;
 
   return (
     <section className="climate-band public-section" aria-label="National climate overview by division">
@@ -37,12 +37,14 @@ export default async function NationalClimateBand() {
           <p className="eyebrow">30-Day Rolling Average · All 8 Divisions</p>
           <h2>National Environmental Conditions</h2>
         </div>
-        <p className="climate-band-note">
-          Updated nightly from OpenMeteo. Click a division for district-level detail.
-        </p>
+        <p className="climate-band-note">{isLive ? 'Updated nightly from OpenMeteo. Rolling summaries, not live conditions.' : 'The division climate service is temporarily unavailable.'}</p>
       </div>
 
-      <div className="division-grid">
+      {!isLive || !hasClimateData ? (
+        <div className="empty-state" role="status">
+          {isLive ? 'No 30-day division climate summaries are available yet.' : 'Division climate data is temporarily unavailable.'}
+        </div>
+      ) : <div className="division-grid">
         {divisions.map((div) => {
           const aqi = aqiClass(div.avgPm25_30d);
           const temp = div.avgTemp30d != null ? `${div.avgTemp30d.toFixed(1)}°C` : '—';
@@ -82,7 +84,7 @@ export default async function NationalClimateBand() {
             </article>
           );
         })}
-      </div>
+      </div>}
     </section>
   );
 }

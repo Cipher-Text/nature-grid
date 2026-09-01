@@ -73,11 +73,11 @@ export default async function FloodRiskStrip() {
         <div>
           <strong className="flood-strip-title">
             {highCount > 0
-              ? `${highCount} district${highCount > 1 ? 's' : ''} at HIGH flood risk`
+              ? `${highCount} district${highCount > 1 ? 's' : ''} showing a high river-discharge signal`
               : `${atRisk.length} district${atRisk.length > 1 ? 's' : ''} showing elevated river discharge`}
           </strong>
           <span className="flood-strip-note">
-            {' '}— River discharge vs. historical mean. Source: OpenMeteo GloFAS.
+            {' '}— Station forecast compared with historical discharge. This is not a flood-impact assessment. Source: OpenMeteo GloFAS.
           </span>
         </div>
       </div>

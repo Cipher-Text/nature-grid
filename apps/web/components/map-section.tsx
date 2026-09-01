@@ -128,6 +128,7 @@ async function loadMapData(): Promise<{
   districts: MapDistrict[];
   alerts: MapAlert[];
   reports: MapReport[];
+  isLive: boolean;
 }> {
   try {
     const [districtRows, alertRes, reportRes] = await Promise.all([
@@ -168,16 +169,16 @@ async function loadMapData(): Promise<{
         };
       });
 
-    return { districts, alerts, reports };
+    return { districts, alerts, reports, isLive: true };
   } catch {
-    return { districts: [], alerts: [], reports: [] };
+    return { districts: [], alerts: [], reports: [], isLive: false };
   }
 }
 
 // ── Component ──
 
 export default async function MapSection() {
-  const [conditions, { districts, alerts, reports }] = await Promise.all([
+  const [conditions, { districts, alerts, reports, isLive: mapIsLive }] = await Promise.all([
     loadConditions(),
     loadMapData(),
   ]);
@@ -206,7 +207,7 @@ export default async function MapSection() {
         </div>
 
         <div className="map-canvas" style={{ padding: 0, overflow: 'hidden' }}>
-          <MapClient districts={districts} alerts={alerts} reports={reports} />
+          <MapClient districts={districts} alerts={alerts} reports={reports} isLive={mapIsLive} />
         </div>
 
         <div className="button-row" style={{ marginTop: '14px' }}>

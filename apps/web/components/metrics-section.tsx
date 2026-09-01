@@ -15,25 +15,18 @@ async function loadMetrics(): Promise<{ metrics: Metric[]; isLive: boolean }> {
 
     return { isLive: true, metrics: [
       {
-        label: 'Active alerts',
-        value: String(m.activeAlerts),
-        note: `${m.emergencyAlerts} emergency severity`,
-        noteVariant: m.emergencyAlerts > 0 ? 'warning' : 'success',
-        highlight: true,
-      },
-      {
         label: 'Verified reports',
-        value: String(m.verifiedReports),
+        value: m.verifiedReports.toLocaleString(),
         note: 'Reviewed records only',
       },
       {
         label: 'Public datasets',
-        value: String(m.publicDatasets),
-        note: 'Downloads require sign in',
+        value: m.publicDatasets.toLocaleString(),
+        note: 'Catalog records with public preview',
       },
       {
         label: 'Research-grade observations',
-        value: String(m.researchGradeObservations),
+        value: m.researchGradeObservations.toLocaleString(),
         note: `Across ${m.districtsWithResearchGradeObservations} districts`,
       },
     ] };
@@ -48,9 +41,15 @@ export default async function MetricsSection() {
   return (
     <section
       id="dashboard"
-      className="metric-grid public-section"
-      aria-label="Platform overview metrics"
+      className="metrics-section public-section"
+      aria-label="Platform coverage"
     >
+      <div className="section-intro">
+        <p className="eyebrow">About the public record</p>
+        <h2>Platform coverage</h2>
+        <p>These counts describe what Nature Grid contains, not Bangladesh’s environmental condition.</p>
+      </div>
+      <div className="metric-grid">
       {!isLive && (
         <div className="metric metric-unavailable" role="status">
           <span>Platform snapshot</span>
@@ -65,6 +64,7 @@ export default async function MetricsSection() {
           <small className={m.noteVariant ?? ''}>{m.note}</small>
         </article>
       ))}
+      </div>
     </section>
   );
 }

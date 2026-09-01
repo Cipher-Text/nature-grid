@@ -8,10 +8,12 @@ import CivicScienceSection from '../../components/civic-science-section';
 import AirQualityGrid from '../../components/air-quality-grid';
 import DatasetPreview from '../../components/dataset-preview';
 import PersonaFooter from '../../components/persona-footer';
+import PublicNav from '../../components/public-nav';
 
 export default function HomePage() {
   return (
     <main>
+      <PublicNav />
       {/* ── TIER 1: Safety-first header band ───────────────────────────────────
           Emergency banner + flood strip both render conditionally (null when
           no active alerts / no at-risk districts). Hero always renders and

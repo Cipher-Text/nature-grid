@@ -55,13 +55,14 @@ interface Props {
   districts: MapDistrict[];
   alerts: MapAlert[];
   reports: MapReport[];
+  isLive: boolean;
 }
 
 function titleCase(str: string) {
   return str.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-export default function MapClient({ districts, alerts, reports }: Props) {
+export default function MapClient({ districts, alerts, reports, isLive }: Props) {
   const districtById = new Map(districts.map((d) => [d.id, d]));
   const [visibleLayers, setVisibleLayers] = useState({
     districts: true,
@@ -212,6 +213,18 @@ export default function MapClient({ districts, alerts, reports }: Props) {
         </CircleMarker>
       ))}
       </MapContainer>
+      {!isLive && (
+        <div className="map-data-state" role="status">
+          <strong>Map data is temporarily unavailable.</strong>
+          <span>We could not retrieve district, alert, or report locations.</span>
+        </div>
+      )}
+      {isLive && districts.length === 0 && alerts.length === 0 && reports.length === 0 && (
+        <div className="map-data-state" role="status">
+          <strong>No mapped records right now.</strong>
+          <span>Verified reports and active alerts appear here when they have a mapped location.</span>
+        </div>
+      )}
       <p className="map-mobile-hint">Use the +/− controls to zoom. Turn layers off to reduce overlap.</p>
     </div>
   );
