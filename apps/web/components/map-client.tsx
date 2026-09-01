@@ -32,6 +32,7 @@ export interface MapDistrict {
   name: string;
   lat: number;
   lng: number;
+  division?: string;
 }
 
 export interface MapAlert {
@@ -56,7 +57,10 @@ interface Props {
   alerts: MapAlert[];
   reports: MapReport[];
   isLive: boolean;
+  compact?: boolean;
 }
+
+export type MapLayer = 'alerts' | 'flood' | 'weather' | 'air-quality' | 'reports' | 'water-bodies' | 'stations';
 
 function titleCase(str: string) {
   return str.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
