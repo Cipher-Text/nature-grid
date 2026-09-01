@@ -225,3 +225,118 @@ Exit criteria:
 - Each domain has a schema, at least one public read endpoint, and one write endpoint before the phase closes.
 - Satellite ingestion has a running proof-of-concept change-detection job on at least one district.
 - Research publications are searchable and linkable to dataset records and observations.
+
+---
+
+## Phase 8: Land, Forest & Agricultural Intelligence
+
+Status: *Planned* — forest registry and crop catalog can begin as standalone data modules independent of other Phase 7 work; crop suitability, land-cover analysis, and satellite forest monitoring are Phase 9 concerns that depend on PostGIS polygon geometry, object storage, and the Python data-worker.
+
+Goal: Establish structured environmental data layers for Bangladesh's forests, land cover, and agricultural geography. The product boundary is explicit: this phase captures how environment, climate, land, water, and soil shape agricultural areas of Bangladesh — it does not build farm-management software, farmer ERP, or any commercial agricultural tooling. Nature Grid describes the environmental system; it does not manage the farmer's response to it.
+
+### Forest & Protected Areas
+
+| Domain | What it adds | Status |
+| --- | --- | --- |
+| **Forest Registry** | Structured records for Bangladesh's named forest areas: English and Bangla names, ecosystem type, geographic extent (linked to existing division/district/upazila/union records), total area, managing authority, conservation status, dominant vegetation, biodiversity significance, known environmental threats, and source provenance. Each forest record links to existing biodiversity observations, citizen deforestation reports, restoration projects, and any active alerts covering that geographic area. Boundary geometry stored via PostGIS when polygon data is available; lat/lng centroid used as fallback. | *Planned* |
+| **Forest Classification** | Ecological type system for Bangladesh's forest cover: mangrove, hill forest, Sal (*Shorea robusta*), freshwater swamp forest, coastal plantation, plantation/afforestation, homestead/village forest, and other relevant ecosystem classes. Ecosystem type is an attribute of a forest record — distinct from its legal protection status. | *Planned* |
+| **Protected Areas Registry** | Legal and conservation designation records — national park, wildlife sanctuary, reserved forest, protected forest, eco-park, Ramsar wetland site, UNESCO World Heritage site, and other nationally or internationally designated areas. Separate concept from forest ecosystem type: the Sundarbans is both a mangrove ecosystem and a UNESCO World Heritage Site; a Sal forest may or may not carry any legal designation. | *Planned* |
+
+### Land Cover
+
+| Domain | What it adds | Status |
+| --- | --- | --- |
+| **Land Cover Reference Datasets** | National land cover classification datasets by year — forest, cropland, wetland, water, urban/built-up, grassland, bare land, mangrove, plantation, and other classes. Sourced from publicly available national surveys or international remote sensing products (SERVIR-Mekong, Global Forest Watch, or equivalent). District- and upazila-level summaries in the Data Hub, with explicit source and year provenance. PostGIS polygon geometry is the eventual geospatial basis for spatial intersection queries; administrative-unit aggregations are available before polygon geometry lands. | *Planned* — requires a sourced national or international land cover dataset |
+
+### Agricultural Environment
+
+| Domain | What it adds | Status |
+| --- | --- | --- |
+| **Crop Catalog** | Reference records for Bangladesh's agricultural crops: name, Bangla name, scientific name where applicable, category (cereal, pulse, oilseed, vegetable, fruit, spice, fiber, cash crop, plantation, fodder, other), growing season, typical growth duration, and environmental requirements — water, temperature, rainfall, soil type and pH preference, salinity tolerance, flood tolerance, drought tolerance. Records carry source and provenance; no suitability claim is made without supporting evidence. | *Planned* |
+| **Crop Geography** | District- and upazila-level crop distribution sourced from Bangladesh Bureau of Statistics (BBS) agricultural census data or DAE seasonal crop reports. Supports geographic questions such as "what crops are cultivated in this upazila?" and "where is boro rice production concentrated?" Versioned by source and year; the platform does not invent crop geography. | *Planned* |
+| **Agro-Ecological Zones (AEZ)** | Bangladesh's 30 agro-ecological zone boundaries as a named geographic layer — characterised by soil type, drainage class, flood regime, elevation band, and climatic conditions. Each AEZ links to its intersecting districts and upazilas, typical crop associations, and agricultural limitations. Provides a scientific basis for crop suitability analysis beyond administrative-boundary heuristics. Source: BARC/FAO AEZ classification for Bangladesh. | *Planned* |
+| **Agricultural Production Statistics** | Crop production data in the Data Hub: cultivated area, harvested area, total production, and yield per crop, season, year, and administrative unit (division, district, upazila where data exists). Sources: BBS Agricultural Sample Survey, DAE seasonal reports. Stored with explicit source, methodology, and reference period. Enables production trend analysis and region-level comparisons; does not project future output. | *Planned* |
+| **Soil Reference Data** | District- and upazila-level soil characterisation layer — texture class, drainage class, pH range, salinity class, and organic matter content — sourced from SRDI (Soil Resource Development Institute of Bangladesh). Stored as a reference layer, not a farm-level soil test or fertilizer prescription tool. Feeds into crop suitability analysis and AEZ descriptions. | *Planned* — requires sourced SRDI data |
+| **Crop Calendar** | Regional and AEZ-level crop calendars for Bangladesh's major crops (Boro, Aus, Aman, wheat, jute, potato, mustard, and others) covering land preparation, sowing, growing, and harvesting stages with approximate date ranges by region. Connects to Nature Grid's existing weather and flood data for seasonal environmental context. | *Planned* |
+
+Exit criteria:
+
+- The forest registry covers Bangladesh's major forest areas — Sundarbans, Chittagong Hill Tracts forests, Madhupur Sal forest, Ratargul swamp forest — and principal protected areas, with verified source records for each.
+- The crop catalog covers Bangladesh's 30+ most agriculturally significant crops, including all major seasonal crops (Boro, Aman, Aus, jute, wheat, potato, mustard), with environmental attribute coverage and source provenance.
+- All 30 AEZs are ingested, linked to their intersecting districts and upazilas, and publicly accessible.
+- Agricultural production statistics for at least 3 reference years are in the Data Hub for major crops, with source and year clearly displayed.
+- Soil reference characterisation is available at district level for all 64 districts.
+- Crop calendars exist for Boro, Aman, Aus, and wheat across the major AEZ groups.
+- All records carry explicit source provenance — no data is presented without attribution.
+
+---
+
+## Phase 9: Cross-Domain Environmental Intelligence
+
+Status: *Future* — depends on Phase 8 (forest registry, AEZ, crop catalog, soil reference, land cover datasets), Phase 7 satellite/remote sensing foundation, PostGIS polygon geometry, Python data-worker, and a stable Phase 6 production environment.
+
+Goal: Derive actionable environmental intelligence by connecting Nature Grid's existing domains — climate, weather, flood, water, biodiversity, citizen reports, restoration — with the land, forest, soil, and agricultural layers from Phase 8. This phase shifts from data accumulation to cross-domain synthesis. Outputs remain environmental intelligence with stated methodology and confidence; they do not become guaranteed farming advice or automated regulatory decisions.
+
+### Forest Intelligence
+
+| Domain | What it adds | Status |
+| --- | --- | --- |
+| **Forest Condition Indicators** | Periodic structured indicators per forest registry record: estimated cover, canopy condition, encroachment and clearing reports (drawn from the existing citizen deforestation report workflow), fire incident records, and restoration activity within the forest's geographic boundary. Sourced from national forest assessments, citizen data, and MODIS-derived annual products where available. Not real-time satellite analysis — that belongs to the satellite-derived monitoring entry below. | *Future* |
+| **Satellite-derived Forest Monitoring** | Forest-change detection layered onto the forest registry using MODIS or Sentinel-2 derived products — identifying anomalous tree-cover loss within a monitoring window at district or forest-area level. Triggers an alert linked to the relevant forest record and any citizen deforestation reports in that area when a defined change threshold is crossed. Builds on Phase 7's satellite/remote sensing infrastructure and change-detection proof-of-concept; does not duplicate or replace it. | *Future* — depends on Phase 7 satellite/remote sensing, PostGIS polygon geometry, Python data-worker |
+
+### Land Cover Intelligence
+
+| Domain | What it adds | Status |
+| --- | --- | --- |
+| **Land Cover Change Detection** | Year-on-year land cover transition analysis — forest-to-cropland conversion, cropland-to-urban conversion, wetland loss, mangrove area change, and agricultural land loss — exposed as district-level trend summaries and Data Hub dataset downloads. Requires at least two comparison years of land cover datasets from Phase 8 and PostGIS polygon geometry for spatial intersection. | *Future* — depends on ≥2 years of Phase 8 land cover datasets and PostGIS polygon geometry |
+
+### Agricultural Environmental Intelligence
+
+| Domain | What it adds | Status |
+| --- | --- | --- |
+| **Crop Suitability Analysis** | Evidence-based environmental suitability assessment combining crop requirements (crop catalog) with AEZ classification, soil reference data, 30-day climate averages, and flood risk from the existing flood module. Outputs a suitability signal (very high / high / moderate / low / unsuitable) per crop × AEZ × season, with limiting factors explained and methodology stated. Presented as environmental intelligence, not guaranteed agricultural advice; confidence level is always disclosed. | *Future* — depends on AEZ, soil reference, and crop catalog from Phase 8; flood and climate data are already available |
+| **Agricultural Climate & Hazard Risk** | Seasonal risk summaries for agricultural areas combining existing weather forecasts, flood forecasts, and historical climate patterns with crop calendar context. Risk dimensions include flood, flash flood, waterlogging, drought, heat stress, cold stress, cyclone, storm surge, salinity, and high wind. Example: "Aman rice in Sylhet Division is approaching the tillering stage during a period with elevated river discharge and above-average rainfall forecast." Risk is presented as a probabilistic signal, not a certain crop-loss prediction. | *Future* — depends on crop calendar (Phase 8), AEZ, and existing flood/weather modules |
+| **Agricultural Incident Observations** | Extension of the existing Observation model with crop-specific incident categories: crop flood damage, waterlogging, drought stress, salinity impact, pest outbreak (where reliable public data exists), crop disease, storm damage, and irrigation shortage. Observations carry crop name, variety if known, growth stage, approximate affected area, and severity. Submitted through the existing observation workflow and reviewed by the same moderator queue — no separate farmer-reporting platform. Spatiotemporal clustering of verified agricultural incidents produces district-level agricultural stress signals. | *Future* — extends existing Observation and CitizenReport infrastructure; does not create a parallel reporting system |
+
+### Geographic Place Intelligence
+
+| Domain | What it adds | Status |
+| --- | --- | --- |
+| **Integrated Geographic Views** | District, upazila, and union detail pages evolve into full environmental system views of a place: climate summary, weather, water and flood conditions, forest and protected area proximity, land cover composition, biodiversity highlights, AEZ characteristics, crop calendar, crop distribution, crop suitability signals, pollution sources, citizen reports, restoration projects, and active alerts — integrated rather than siloed by dataset category. The goal is for Nature Grid to describe the environmental system of a place, not merely a list of data layers for that coordinate. | *Future* — depends on Phase 8 and Phase 9 cross-domain data being available for the same geographic units |
+
+Exit criteria:
+
+- Forest condition indicators update at least quarterly and reflect current citizen-report data from the deforestation report category for monitored forest areas.
+- Satellite-derived forest monitoring produces at least one end-to-end monitored forest area with working threshold alerting.
+- Land cover change is computable across ≥2 comparison years for all 64 districts.
+- Crop suitability scores exist for Bangladesh's 5 most agriculturally significant crops across all 30 AEZs, with stated methodology and limiting-factor explanations.
+- Agricultural climate risk context appears on district pages during the active crop calendar period, linked to the forecast source.
+- Agricultural incident observations flow through the existing moderation workflow and produce spatially clustered signals at district level.
+- District pages surface ≥5 distinct Phase 8/9 environmental domains in an integrated, non-siloed view.
+
+---
+
+## Long-term Intelligence Direction
+
+Not a committed roadmap phase. These represent the aspirational horizon — directional signals that should inform architectural decisions without being treated as near-term deliverables. Each requires validated data foundations, specialist domain partnerships, or independent scientific methodology review before any public-facing claim is made.
+
+- **Explainable environmental risk models** — Decision-support outputs that explain, step by step, why a crop area, forest, or watershed is at environmental risk, drawing on multiple Nature Grid data streams with transparent methodology. Requires scientific validation partnerships before deployment.
+- **Forecast-driven agricultural advisories** — Seasonal advisories connecting weather and flood forecasts to crop calendar stage and crop environmental requirements for specific regions. Requires validated agricultural science partnerships and clear disclaimers before moving beyond informational context.
+- **Forest and ecosystem health composite indicators** — Per-forest-area health signals derived from canopy cover trends, encroachment and fire signals, biodiversity observation density, restoration activity, and alert history — synthesised into a readable condition summary rather than a raw data list.
+- **Satellite and citizen-report cross-validation** — Comparing citizen deforestation and encroachment reports against satellite-derived change signals to identify probable confirmations and reduce false positives in both data streams.
+- **Historical agricultural and environmental correlation analysis** — Multi-year analysis connecting flood exposure, precipitation trends, temperature change, land-cover shifts, and AEZ characteristics with production statistics. Intended as a research-grade tool with explicit methodology disclosure, not a yield forecast product.
+- **Cross-domain geographic intelligence** — A district or union view that narrows to a specific season and synthesises all Nature Grid data streams into a coherent environmental narrative of that place at that time, readable without domain expertise.
+
+None of these should be built before the Phase 8 data foundations and Phase 9 cross-domain infrastructure are stable and independently validated.
+
+---
+
+## Platform Scope Boundaries
+
+Nature Grid is an environmental and geographic intelligence platform. The following are explicitly outside scope — building them would shift Nature Grid into a different product category and dilute its core identity as a civic environmental intelligence layer.
+
+**Agricultural and farm operations** — Nature Grid describes how the environment shapes agriculture; it does not manage what farmers do about it. Out of scope: farm accounting, crop planning software, precision agriculture advisory, fertilizer or seed recommendations without validated scientific methodology, agricultural input procurement, seed or fertilizer ecommerce, crop commodity trading, farmer loan origination or credit scoring, machinery rental, warehouse management, agricultural logistics, and farm-level workforce management. These could be built as separate products consuming Nature Grid's public environmental APIs and open datasets.
+
+**Industrial operations** — The `emissions` module tracks pollutant measurements from industrial sources as environmental monitoring data. It is not an industrial ERP, a regulatory compliance filing system, a production management tool, or a B2B industrial services directory.
+
+**Commercial platforms** — Nature Grid does not provide a marketplace, a transactional layer, a commercial subscription product for businesses, or a payment rail of any kind.
