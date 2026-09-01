@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { apiGet } from '../../../lib/api';
 import { routes, type Dataset, type Provider, type PaginatedEnvelope } from '@nature-grid/contracts';
 import { titleCase } from '../../../lib/format';
+import ListPagination from '../../../components/list-pagination';
+import ListResultToolbar from '../../../components/list-result-toolbar';
 
 const CATEGORIES = [
   'WEATHER',
@@ -24,13 +26,16 @@ const ACCESS_LABEL: Record<string, { label: string; variant: string }> = {
 export default async function DataPage({
   searchParams,
 }: {
-  searchParams: { category?: string; accessPolicy?: string };
+  searchParams: { category?: string; accessPolicy?: string; page?: string };
 }) {
   const category = searchParams.category;
   const accessPolicy = searchParams.accessPolicy;
+  const page = Math.max(1, Number(searchParams.page ?? 1) || 1);
   const params = new URLSearchParams();
   if (category) params.set('category', category);
   if (accessPolicy) params.set('accessPolicy', accessPolicy);
+  params.set('page', String(page));
+  params.set('pageSize', '20');
   const datasetsPath = params.toString() ? `${routes.datasets.list}?${params}` : routes.datasets.list;
 
   const [datasetsRes, providersRes] = await Promise.all([
@@ -48,19 +53,21 @@ export default async function DataPage({
       </div>
 
       <div className="toolbar" aria-label="Category filter">
-        <Link className={`chip${!category ? ' active' : ''}`} href="/data">
+        <Link className={`chip${!category ? ' active' : ''}`} href={`/data${accessPolicy ? `?accessPolicy=${encodeURIComponent(accessPolicy)}` : ''}`}>
           All
         </Link>
         {CATEGORIES.map((c) => (
           <Link
             key={c}
             className={`chip${category === c ? ' active' : ''}`}
-            href={`/data?category=${c}`}
+            href={`/data?${new URLSearchParams({ category: c, ...(accessPolicy ? { accessPolicy } : {}) }).toString()}`}
           >
             {titleCase(c)}
           </Link>
         ))}
       </div>
+
+      <ListResultToolbar total={datasetsRes.total} label="datasets" />
 
       <form className="toolbar" method="get" aria-label="Dataset access filter">
         {category && <input type="hidden" name="category" value={category} />}
@@ -96,6 +103,7 @@ export default async function DataPage({
           <div className="empty-state">No datasets match this category yet.</div>
         )}
       </div>
+      <ListPagination pathname="/data" page={datasetsRes.page} pageSize={datasetsRes.pageSize} total={datasetsRes.total} query={{ category, accessPolicy }} />
 
       <article className="panel">
         <div className="panel-header">

@@ -5,16 +5,19 @@ import { createPostAction } from '../../../lib/community-actions';
 import { routes, type CommunityPostSummary, type PaginatedEnvelope } from '@nature-grid/contracts';
 import { relativeTime } from '../../../lib/format';
 import DistrictSelect, { type DistrictWithDivision } from '../../../components/district-select';
+import ListPagination from '../../../components/list-pagination';
+import ListResultToolbar from '../../../components/list-result-toolbar';
 
 export default async function CommunityPage({
   searchParams,
 }: {
-  searchParams: { districtId?: string; created?: string; deleted?: string; error?: string };
+  searchParams: { districtId?: string; page?: string; created?: string; deleted?: string; error?: string };
 }) {
   const districtId = searchParams.districtId;
+  const page = Math.max(1, Number(searchParams.page ?? 1) || 1);
   const postsPath = districtId
-    ? `${routes.community.posts}?districtId=${districtId}`
-    : routes.community.posts;
+    ? `${routes.community.posts}?districtId=${districtId}&page=${page}&pageSize=20`
+    : `${routes.community.posts}?page=${page}&pageSize=20`;
 
   const [postsRes, user] = await Promise.all([
     apiGet<PaginatedEnvelope<CommunityPostSummary>>(postsPath, 0).catch(
@@ -39,6 +42,8 @@ export default async function CommunityPage({
       {searchParams.created && <p className="form-success">Post created.</p>}
       {searchParams.deleted && <p className="form-success">Post deleted.</p>}
       {searchParams.error && <p className="form-error">{decodeURIComponent(searchParams.error)}</p>}
+
+      <ListResultToolbar total={postsRes.total} label="community posts" />
 
       <div className="table" role="table" aria-label="Community posts">
         <div className="table-row table-head" role="row">
@@ -75,6 +80,7 @@ export default async function CommunityPage({
           <div className="empty-state">No posts yet. Be the first to post!</div>
         )}
       </div>
+      <ListPagination pathname="/community" page={postsRes.page} pageSize={postsRes.pageSize} total={postsRes.total} query={{ districtId }} />
 
       {user ? (
         <article className="panel">

@@ -5,6 +5,8 @@ import { submitReportAction } from '../../../lib/report-actions';
 import { routes, type CitizenReport, type PaginatedEnvelope } from '@nature-grid/contracts';
 import { titleCase, relativeTime } from '../../../lib/format';
 import DistrictSelect, { type DistrictWithDivision } from '../../../components/district-select';
+import ListPagination from '../../../components/list-pagination';
+import ListResultToolbar from '../../../components/list-result-toolbar';
 
 const CATEGORIES = [
   'WATER_POLLUTION',
@@ -27,14 +29,17 @@ type DistrictOption = DistrictWithDivision;
 export default async function ReportsPage({
   searchParams,
 }: {
-  searchParams: { category?: string; status?: string; districtId?: string; submitted?: string; error?: string };
+  searchParams: { category?: string; status?: string; districtId?: string; page?: string; submitted?: string; error?: string };
 }) {
   const category = searchParams.category;
   const { status, districtId } = searchParams;
+  const page = Math.max(1, Number(searchParams.page ?? 1) || 1);
   const reportParams = new URLSearchParams();
   if (category) reportParams.set('category', category);
   if (status) reportParams.set('status', status);
   if (districtId) reportParams.set('districtId', districtId);
+  reportParams.set('page', String(page));
+  reportParams.set('pageSize', '20');
   const reportsPath = reportParams.toString() ? `${routes.reports.list}?${reportParams}` : routes.reports.list;
 
   const [reportsRes, verifiedRes, resolvedRes, user] = await Promise.all([
@@ -67,19 +72,21 @@ export default async function ReportsPage({
       </div>
 
       <div className="toolbar" aria-label="Category filter">
-        <Link className={`chip${!category ? ' active' : ''}`} href="/reports">
+        <Link className={`chip${!category ? ' active' : ''}`} href={`/reports${status || districtId ? `?${new URLSearchParams({ ...(status ? { status } : {}), ...(districtId ? { districtId } : {}) }).toString()}` : ''}`}>
           All
         </Link>
         {CATEGORIES.map((c) => (
           <Link
             key={c}
             className={`chip${category === c ? ' active' : ''}`}
-            href={`/reports?category=${c}`}
+            href={`/reports?${new URLSearchParams({ category: c, ...(status ? { status } : {}), ...(districtId ? { districtId } : {}) }).toString()}`}
           >
             {titleCase(c)}
           </Link>
         ))}
       </div>
+
+      <ListResultToolbar total={reportsRes.total} label="verified reports" />
 
       <form className="toolbar" method="get" aria-label="Report filters">
         {category && <input type="hidden" name="category" value={category} />}
@@ -115,6 +122,7 @@ export default async function ReportsPage({
           <div className="empty-state">No reports match this category yet.</div>
         )}
       </div>
+      <ListPagination pathname="/reports" page={reportsRes.page} pageSize={reportsRes.pageSize} total={reportsRes.total} query={{ category, status, districtId }} />
 
       <article className="panel">
         <div className="panel-header">

@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { getCurrentUser } from '../../../lib/current-user';
 import { apiGet, apiGetAuthed } from '../../../lib/api';
 import { ACCESS_TOKEN_COOKIE } from '../../../lib/session-constants';
+import ListPagination from '../../../components/list-pagination';
+import ListResultToolbar from '../../../components/list-result-toolbar';
 
 type Organization = {
   id: string;
@@ -46,7 +48,7 @@ export default async function OrganizationsPage({
 
   const accessToken = cookies().get(ACCESS_TOKEN_COOKIE)?.value ?? '';
   const activeType = searchParams.type ?? '';
-  const typeFilter = activeType ? `&type=${activeType}` : '';
+  const typeFilter = activeType ? `&type=${encodeURIComponent(activeType)}` : '';
   const page = searchParams.page ?? '1';
   const result = await (user
     ? apiGetAuthed<OrgListResponse>(`/api/v1/organizations?page=${page}&pageSize=20${typeFilter}`, accessToken)
@@ -73,6 +75,8 @@ export default async function OrganizationsPage({
           </Link>
         ))}
       </nav>
+
+      <ListResultToolbar total={result.total} label="organizations" />
 
       {result.data.length === 0 ? (
         <section className="empty-state">
@@ -106,17 +110,7 @@ export default async function OrganizationsPage({
         </div>
       )}
 
-      {result.total > result.pageSize && (
-        <nav className="pagination" style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
-          {result.page > 1 && (
-            <Link href={`/organizations?page=${result.page - 1}${typeFilter}`} className="text-link">Previous</Link>
-          )}
-          <span>Page {result.page} of {Math.ceil(result.total / result.pageSize)}</span>
-          {result.page * result.pageSize < result.total && (
-            <Link href={`/organizations?page=${result.page + 1}${typeFilter}`} className="text-link">Next</Link>
-          )}
-        </nav>
-      )}
+      <ListPagination pathname="/organizations" page={result.page} pageSize={result.pageSize} total={result.total} query={{ type: activeType }} />
     </div>
   );
 }

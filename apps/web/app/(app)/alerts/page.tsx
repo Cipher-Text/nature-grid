@@ -3,6 +3,8 @@ import { apiGet } from '../../../lib/api';
 import { getCurrentUser } from '../../../lib/current-user';
 import { routes, type Alert, type PaginatedEnvelope } from '@nature-grid/contracts';
 import { titleCase } from '../../../lib/format';
+import ListPagination from '../../../components/list-pagination';
+import ListResultToolbar from '../../../components/list-result-toolbar';
 
 const SEVERITIES = ['EMERGENCY', 'WARNING', 'WATCH', 'INFO'] as const;
 
@@ -25,14 +27,17 @@ const ISSUER_ROLES = new Set(['GOVERNMENT', 'MODERATOR', 'ADMIN']);
 export default async function AlertsPage({
   searchParams,
 }: {
-  searchParams: { severity?: string; alertType?: string; districtId?: string };
+  searchParams: { severity?: string; alertType?: string; districtId?: string; page?: string };
 }) {
   const severity = searchParams.severity;
   const { alertType, districtId } = searchParams;
+  const page = Math.max(1, Number(searchParams.page ?? 1) || 1);
   const alertParams = new URLSearchParams();
   if (severity) alertParams.set('severity', severity);
   if (alertType) alertParams.set('alertType', alertType);
   if (districtId) alertParams.set('districtId', districtId);
+  alertParams.set('page', String(page));
+  alertParams.set('pageSize', '20');
   const activePath = alertParams.toString() ? `${routes.alerts.list}?${alertParams}` : routes.alerts.list;
 
   const [activeRes, historyRes, user, districts] = await Promise.all([
@@ -66,19 +71,21 @@ export default async function AlertsPage({
       )}
 
       <div className="toolbar" aria-label="Severity filter">
-        <Link className={`chip${!severity ? ' active' : ''}`} href="/alerts">
+        <Link className={`chip${!severity ? ' active' : ''}`} href={`/alerts${alertType || districtId ? `?${new URLSearchParams({ ...(alertType ? { alertType } : {}), ...(districtId ? { districtId } : {}) }).toString()}` : ''}`}>
           All
         </Link>
         {SEVERITIES.map((s) => (
           <Link
             key={s}
             className={`chip${severity === s ? ' active' : ''}`}
-            href={`/alerts?severity=${s}`}
+            href={`/alerts?${new URLSearchParams({ severity: s, ...(alertType ? { alertType } : {}), ...(districtId ? { districtId } : {}) }).toString()}`}
           >
             {titleCase(s)}
           </Link>
         ))}
       </div>
+
+      <ListResultToolbar total={activeRes.total} label="active alerts" />
 
       <form className="toolbar" method="get" aria-label="Alert filters">
         {severity && <input type="hidden" name="severity" value={severity} />}
@@ -116,6 +123,7 @@ export default async function AlertsPage({
           <div className="empty-state">No active alerts at this severity.</div>
         )}
       </div>
+      <ListPagination pathname="/alerts" page={activeRes.page} pageSize={activeRes.pageSize} total={activeRes.total} query={{ severity, alertType, districtId }} />
 
       <article className="panel">
         <div className="panel-header">

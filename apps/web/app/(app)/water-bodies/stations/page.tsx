@@ -89,8 +89,8 @@ export default async function WaterLevelStationsPage({
           {waterBodies.data.map((waterBody) => <option key={waterBody.id} value={waterBody.id}>{waterBody.nameEn}</option>)}
         </select>
         <button type="submit" className="button">Apply</button>
-        {(districtId || waterBodyId) && (
-          <Link className="button ghost" href={buildHref({ districtId: '', waterBodyId: '', page: 1 })}>Reset</Link>
+        {(districtId || upazilaId || waterBodyId || tidalStatus) && (
+          <Link className="button ghost" href="/water-bodies/stations">Reset</Link>
         )}
       </form>
 

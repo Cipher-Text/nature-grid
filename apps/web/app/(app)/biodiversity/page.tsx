@@ -2,21 +2,25 @@ import Link from 'next/link';
 import { apiGet } from '../../../lib/api';
 import { routes, type Species, type Occurrence, type PaginatedEnvelope } from '@nature-grid/contracts';
 import { relativeTime } from '../../../lib/format';
+import ListPagination from '../../../components/list-pagination';
+import ListResultToolbar from '../../../components/list-result-toolbar';
 
 export default async function BiodiversityPage({
   searchParams,
 }: {
-  searchParams: { search?: string; districtId?: string };
+  searchParams: { search?: string; districtId?: string; speciesPage?: string; occurrencePage?: string };
 }) {
   const search = searchParams.search;
   const districtId = searchParams.districtId;
+  const speciesPage = Math.max(1, Number(searchParams.speciesPage ?? 1) || 1);
+  const occurrencePage = Math.max(1, Number(searchParams.occurrencePage ?? 1) || 1);
   const speciesPath = search
-    ? `${routes.biodiversity.species}?search=${encodeURIComponent(search)}`
-    : routes.biodiversity.species;
+    ? `${routes.biodiversity.species}?search=${encodeURIComponent(search)}&page=${speciesPage}&pageSize=20`
+    : `${routes.biodiversity.species}?page=${speciesPage}&pageSize=20`;
 
   const [speciesRes, occurrencesRes] = await Promise.all([
     apiGet<PaginatedEnvelope<Species>>(speciesPath),
-    apiGet<PaginatedEnvelope<Occurrence>>(`${routes.biodiversity.occurrences}?pageSize=10${districtId ? `&districtId=${districtId}` : ''}`),
+    apiGet<PaginatedEnvelope<Occurrence>>(`${routes.biodiversity.occurrences}?page=${occurrencePage}&pageSize=10${districtId ? `&districtId=${districtId}` : ''}`),
   ]);
   const districts = await apiGet<{ id: string; name: string }[]>(routes.locations.districts, 3600).catch(() => []);
 
@@ -27,6 +31,7 @@ export default async function BiodiversityPage({
           <h1>Biodiversity</h1>
           <p>Species and occurrence records synced daily from GBIF.</p>
         </div>
+        <ListResultToolbar total={speciesRes.total} label="species" />
       </div>
 
       <div className="metric-grid">
@@ -76,6 +81,7 @@ export default async function BiodiversityPage({
             <div className="empty-state">No species match this search yet.</div>
           )}
         </div>
+        <ListPagination pathname="/biodiversity" page={speciesRes.page} pageSize={speciesRes.pageSize} total={speciesRes.total} query={{ search, districtId, occurrencePage: String(occurrencePage) }} pageParam="speciesPage" />
       </article>
 
       <article className="panel">
@@ -85,6 +91,7 @@ export default async function BiodiversityPage({
             <p>Latest synced sightings</p>
           </div>
         </div>
+        <ListResultToolbar total={occurrencesRes.total} label="occurrence records" />
         <form className="toolbar" method="get" aria-label="Occurrence filters">
           {search && <input type="hidden" name="search" value={search} />}
           <label htmlFor="occurrenceDistrict">District</label>
@@ -114,6 +121,7 @@ export default async function BiodiversityPage({
             </div>
           )}
         </div>
+        <ListPagination pathname="/biodiversity" page={occurrencesRes.page} pageSize={occurrencesRes.pageSize} total={occurrencesRes.total} query={{ search, districtId, speciesPage: String(speciesPage) }} pageParam="occurrencePage" />
       </article>
     </>
   );

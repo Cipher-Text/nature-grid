@@ -67,7 +67,7 @@ export default async function WaterBodiesPage({
 
       <form className="toolbar" method="get" aria-label="Water body filters">
         <label htmlFor="hydrologicalClass">Class</label>
-        <select id="hydrologicalClass" name="class" className="select-field" defaultValue={hydrologicalClass ?? ''}>
+        <select id="hydrologicalClass" name="hydrologicalClass" className="select-field" defaultValue={hydrologicalClass ?? ''}>
           <option value="">All classes</option><option value="LOTIC">Rivers (lotic)</option><option value="LENTIC">Wetlands and lakes (lentic)</option>
         </select>
         <label htmlFor="waterBodyType">Type</label>

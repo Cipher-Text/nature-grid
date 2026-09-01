@@ -5,6 +5,8 @@ import { submitObservationAction } from '../../../lib/observation-actions';
 import { routes, type Observation, type PaginatedEnvelope } from '@nature-grid/contracts';
 import { titleCase, relativeTime } from '../../../lib/format';
 import DistrictSelect, { type DistrictWithDivision } from '../../../components/district-select';
+import ListPagination from '../../../components/list-pagination';
+import ListResultToolbar from '../../../components/list-result-toolbar';
 
 const CATEGORIES = [
   'BIODIVERSITY',
@@ -26,14 +28,17 @@ type DistrictOption = DistrictWithDivision;
 export default async function ObservationsPage({
   searchParams,
 }: {
-  searchParams: { category?: string; trustLevel?: string; districtId?: string; submitted?: string; error?: string };
+  searchParams: { category?: string; trustLevel?: string; districtId?: string; page?: string; submitted?: string; error?: string };
 }) {
   const category = searchParams.category;
   const { trustLevel, districtId } = searchParams;
+  const page = Math.max(1, Number(searchParams.page ?? 1) || 1);
   const observationParams = new URLSearchParams();
   if (category) observationParams.set('category', category);
   if (trustLevel) observationParams.set('trustLevel', trustLevel);
   if (districtId) observationParams.set('districtId', districtId);
+  observationParams.set('page', String(page));
+  observationParams.set('pageSize', '20');
   const observationsPath = observationParams.toString() ? `${routes.observations.list}?${observationParams}` : routes.observations.list;
 
   const [observationsRes, user] = await Promise.all([
@@ -53,19 +58,21 @@ export default async function ObservationsPage({
       </div>
 
       <div className="toolbar" aria-label="Category filter">
-        <Link className={`chip${!category ? ' active' : ''}`} href="/observations">
+        <Link className={`chip${!category ? ' active' : ''}`} href={`/observations${trustLevel || districtId ? `?${new URLSearchParams({ ...(trustLevel ? { trustLevel } : {}), ...(districtId ? { districtId } : {}) }).toString()}` : ''}`}>
           All
         </Link>
         {CATEGORIES.map((c) => (
           <Link
             key={c}
             className={`chip${category === c ? ' active' : ''}`}
-            href={`/observations?category=${c}`}
+            href={`/observations?${new URLSearchParams({ category: c, ...(trustLevel ? { trustLevel } : {}), ...(districtId ? { districtId } : {}) }).toString()}`}
           >
             {titleCase(c)}
           </Link>
         ))}
       </div>
+
+      <ListResultToolbar total={observationsRes.total} label="observations" />
 
       <form className="toolbar" method="get" aria-label="Observation filters">
         {category && <input type="hidden" name="category" value={category} />}
@@ -101,6 +108,7 @@ export default async function ObservationsPage({
           <div className="empty-state">No observations match this category yet.</div>
         )}
       </div>
+      <ListPagination pathname="/observations" page={observationsRes.page} pageSize={observationsRes.pageSize} total={observationsRes.total} query={{ category, trustLevel, districtId }} />
 
       <article className="panel">
         <div className="panel-header">

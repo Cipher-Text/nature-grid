@@ -7,6 +7,8 @@ import { routes, type RestorationProject, type PaginatedEnvelope } from '@nature
 import { titleCase } from '../../../lib/format';
 import DistrictSelect, { type DistrictWithDivision } from '../../../components/district-select';
 import { ACCESS_TOKEN_COOKIE } from '../../../lib/session-constants';
+import ListPagination from '../../../components/list-pagination';
+import ListResultToolbar from '../../../components/list-result-toolbar';
 
 const CATEGORIES = [
   'TREE_PLANTING',
@@ -36,14 +38,17 @@ interface OrganizationOption {
 export default async function RestorationPage({
   searchParams,
 }: {
-  searchParams: { category?: string; status?: string; districtId?: string; created?: string; joined?: string; error?: string };
+  searchParams: { category?: string; status?: string; districtId?: string; page?: string; created?: string; joined?: string; error?: string };
 }) {
   const category = searchParams.category;
   const { status, districtId } = searchParams;
+  const page = Math.max(1, Number(searchParams.page ?? 1) || 1);
   const projectParams = new URLSearchParams();
   if (category) projectParams.set('category', category);
   if (status) projectParams.set('status', status);
   if (districtId) projectParams.set('districtId', districtId);
+  projectParams.set('page', String(page));
+  projectParams.set('pageSize', '20');
   const projectsPath = projectParams.toString() ? `${routes.restoration.projects}?${projectParams}` : routes.restoration.projects;
 
   const [projectsRes, user] = await Promise.all([
@@ -75,19 +80,21 @@ export default async function RestorationPage({
       {searchParams.error && <p className="form-error">{searchParams.error}</p>}
 
       <div className="toolbar" aria-label="Category filter">
-        <Link className={`chip${!category ? ' active' : ''}`} href="/restoration">
+        <Link className={`chip${!category ? ' active' : ''}`} href={`/restoration${status || districtId ? `?${new URLSearchParams({ ...(status ? { status } : {}), ...(districtId ? { districtId } : {}) }).toString()}` : ''}`}>
           All
         </Link>
         {CATEGORIES.map((c) => (
           <Link
             key={c}
             className={`chip${category === c ? ' active' : ''}`}
-            href={`/restoration?category=${c}`}
+            href={`/restoration?${new URLSearchParams({ category: c, ...(status ? { status } : {}), ...(districtId ? { districtId } : {}) }).toString()}`}
           >
             {titleCase(c)}
           </Link>
         ))}
       </div>
+
+      <ListResultToolbar total={projectsRes.total} label="restoration projects" />
 
       <form className="toolbar" method="get" aria-label="Restoration filters">
         {category && <input type="hidden" name="category" value={category} />}
@@ -134,6 +141,7 @@ export default async function RestorationPage({
           <div className="empty-state">No restoration projects match this category yet.</div>
         )}
       </div>
+      <ListPagination pathname="/restoration" page={projectsRes.page} pageSize={projectsRes.pageSize} total={projectsRes.total} query={{ category, status, districtId }} />
 
       {canCreate && (
         <article className="panel">
