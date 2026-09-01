@@ -1,12 +1,19 @@
 import { routes, type PlatformMetrics } from '@nature-grid/contracts';
 import { apiGet } from '../lib/api';
-import { METRICS as FALLBACK_METRICS, type Metric } from '../lib/static-data';
 
-async function loadMetrics(): Promise<Metric[]> {
+interface Metric {
+  label: string;
+  value: string;
+  note: string;
+  noteVariant?: 'warning' | 'danger' | 'success';
+  highlight?: boolean;
+}
+
+async function loadMetrics(): Promise<{ metrics: Metric[]; isLive: boolean }> {
   try {
     const m = await apiGet<PlatformMetrics>(routes.metrics.platform);
 
-    return [
+    return { isLive: true, metrics: [
       {
         label: 'Active alerts',
         value: String(m.activeAlerts),
@@ -29,14 +36,14 @@ async function loadMetrics(): Promise<Metric[]> {
         value: String(m.researchGradeObservations),
         note: `Across ${m.districtsWithResearchGradeObservations} districts`,
       },
-    ];
+    ] };
   } catch {
-    return FALLBACK_METRICS;
+    return { isLive: false, metrics: [] };
   }
 }
 
 export default async function MetricsSection() {
-  const metrics = await loadMetrics();
+  const { metrics, isLive } = await loadMetrics();
 
   return (
     <section
@@ -44,6 +51,13 @@ export default async function MetricsSection() {
       className="metric-grid public-section"
       aria-label="Platform overview metrics"
     >
+      {!isLive && (
+        <div className="metric metric-unavailable" role="status">
+          <span>Platform snapshot</span>
+          <strong>Temporarily unavailable</strong>
+          <small>Live platform totals could not be retrieved. Please try again shortly.</small>
+        </div>
+      )}
       {metrics.map((m) => (
         <article key={m.label} className={`metric${m.highlight ? ' highlight-metric' : ''}`}>
           <span>{m.label}</span>

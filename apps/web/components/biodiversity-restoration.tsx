@@ -7,7 +7,6 @@ import {
   type PaginatedEnvelope,
 } from '@nature-grid/contracts';
 import { apiGet } from '../lib/api';
-import { RESTORATION_PROJECTS as FALLBACK_PROJECTS } from '../lib/static-data';
 
 interface ProjectPreview {
   title: string;
@@ -37,7 +36,7 @@ async function loadRestorationProjects(): Promise<{ items: ProjectPreview[]; isL
       })),
     };
   } catch {
-    return { isLive: false, items: FALLBACK_PROJECTS };
+    return { isLive: false, items: [] };
   }
 }
 
@@ -102,6 +101,7 @@ export default async function BiodiversityRestoration() {
         </div>
 
         <div className="record-list">
+          {!restoration.isLive && <div className="empty-state" role="status">Restoration projects are temporarily unavailable.</div>}
           {noProjects && <div className="empty-state">No restoration projects registered yet.</div>}
           {restoration.items.map((p) => (
             <div key={p.title} className="record-item">

@@ -111,6 +111,9 @@ export default function CivicScienceTabs({ reports, alerts, biodiversity, restor
           {reports.isLive && reports.items.length === 0 && (
             <div className="empty-state">No verified reports yet.</div>
           )}
+          {!reports.isLive && (
+            <div className="empty-state" role="status">Verified reports are temporarily unavailable.</div>
+          )}
           {reports.items.map((r) => (
             <div key={r.id} className="civic-record-item">
               <div className="civic-record-top">
@@ -143,6 +146,9 @@ export default function CivicScienceTabs({ reports, alerts, biodiversity, restor
         <div className="civic-record-list">
           {alerts.isLive && alerts.items.length === 0 && (
             <div className="empty-state">No active alerts right now.</div>
+          )}
+          {!alerts.isLive && (
+            <div className="empty-state" role="status">Alert data is temporarily unavailable.</div>
           )}
           {alerts.items.map((a) => (
             <div key={a.id} className="civic-record-item">
@@ -197,8 +203,8 @@ export default function CivicScienceTabs({ reports, alerts, biodiversity, restor
               </>
             ) : (
               <p className="civic-bio-note">
-                Mangrove records, Sundarbans wetland sightings, and freshwater species signals
-                across Bangladesh — synced daily from GBIF.
+                Biodiversity totals are temporarily unavailable. Browse the biodiversity area
+                for the latest records and source details.
               </p>
             )}
             <div className="button-row">
@@ -223,6 +229,9 @@ export default function CivicScienceTabs({ reports, alerts, biodiversity, restor
         <div className="civic-record-list">
           {restoration.isLive && restoration.items.length === 0 && (
             <div className="empty-state">No restoration projects registered yet.</div>
+          )}
+          {!restoration.isLive && (
+            <div className="empty-state" role="status">Restoration projects are temporarily unavailable.</div>
           )}
           {restoration.items.map((p) => (
             <div key={p.id} className="civic-record-item">

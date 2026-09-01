@@ -2,7 +2,6 @@ import Link from 'next/link';
 import { routes, type CitizenReport, type Alert, type PaginatedEnvelope } from '@nature-grid/contracts';
 import { apiGet } from '../lib/api';
 import { titleCase, relativeTime } from '../lib/format';
-import { REPORTS as FALLBACK_REPORTS, ALERTS as FALLBACK_ALERTS } from '../lib/static-data';
 
 const SEVERITY_CLASS: Record<string, string> = {
   EMERGENCY: 'danger',
@@ -18,10 +17,8 @@ interface PreviewItem {
 }
 
 /**
- * `isLive: false` only means the API itself was unreachable — falls back to
- * illustrative static content in that case. A real empty list (API reachable,
- * genuinely zero rows) stays `isLive: true` with an empty array, so the caller
- * renders an honest "none yet" state instead of silently swapping in fake data.
+ * `isLive: false` means the API itself was unreachable. The caller keeps this
+ * distinct from a real empty list so an outage is never presented as "none yet".
  */
 async function loadReports(): Promise<{ items: PreviewItem[]; isLive: boolean }> {
   try {
@@ -34,7 +31,7 @@ async function loadReports(): Promise<{ items: PreviewItem[]; isLive: boolean }>
       })),
     };
   } catch {
-    return { isLive: false, items: FALLBACK_REPORTS };
+    return { isLive: false, items: [] };
   }
 }
 
@@ -50,7 +47,7 @@ async function loadAlerts(): Promise<{ items: PreviewItem[]; isLive: boolean }> 
       })),
     };
   } catch {
-    return { isLive: false, items: FALLBACK_ALERTS.map((a) => ({ ...a, severityClass: SEVERITY_CLASS[a.severity] })) };
+    return { isLive: false, items: [] };
   }
 }
 
@@ -78,6 +75,7 @@ export default async function ReportsAlertsSection() {
         </div>
 
         <div className="record-list">
+          {!reports.isLive && <div className="empty-state" role="status">Verified reports are temporarily unavailable.</div>}
           {noReports && <div className="empty-state">No verified reports yet.</div>}
           {reports.items.map((r) => (
             <div key={r.title} className="record-item">
@@ -105,6 +103,7 @@ export default async function ReportsAlertsSection() {
         </div>
 
         <div className="record-list">
+          {!alerts.isLive && <div className="empty-state" role="status">Alert data is temporarily unavailable.</div>}
           {noAlerts && <div className="empty-state">No active alerts right now.</div>}
           {alerts.items.map((a) => (
             <div key={a.title} className="record-item">

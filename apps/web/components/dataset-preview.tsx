@@ -2,7 +2,6 @@ import Link from 'next/link';
 import { routes, type Dataset, type PaginatedEnvelope } from '@nature-grid/contracts';
 import { apiGet } from '../lib/api';
 import { titleCase } from '../lib/format';
-import { DATASETS as FALLBACK_DATASETS, type DatasetRow } from '../lib/static-data';
 
 const ACCESS_LABEL: Record<string, { label: string; variant: string }> = {
   PUBLIC: { label: 'Public', variant: 'success' },
@@ -20,11 +19,8 @@ interface PreviewRow {
 }
 
 /**
- * `isLive: false` only means the API itself was unreachable — falls back to
- * illustrative static content in that case. A real empty catalog (API
- * reachable, genuinely zero datasets) stays `isLive: true` with an empty
- * array, so the caller renders an honest "none yet" state instead of
- * silently swapping in fake data.
+ * `isLive: false` means the API itself was unreachable. The caller keeps this
+ * distinct from a real empty catalog so an outage is never presented as "none yet".
  */
 async function loadDatasets(): Promise<{ rows: PreviewRow[]; isLive: boolean }> {
   try {
@@ -44,12 +40,7 @@ async function loadDatasets(): Promise<{ rows: PreviewRow[]; isLive: boolean }> 
   } catch {
     return {
       isLive: false,
-      rows: FALLBACK_DATASETS.map((ds: DatasetRow) => ({
-        name: ds.name,
-        category: ds.category,
-        accessLabel: ds.advancedAccess === 'sign-in' ? 'Sign in' : ds.advancedAccess === 'request' ? 'Request' : 'Restricted',
-        accessVariant: ds.advancedAccess === 'restricted' ? 'danger' : 'warning',
-      })),
+      rows: [],
     };
   }
 }
@@ -85,6 +76,7 @@ export default async function DatasetPreview() {
           <span role="columnheader">Advanced</span>
         </div>
 
+        {!isLive && <div className="empty-state" role="status">The dataset catalog is temporarily unavailable.</div>}
         {noDatasets && <div className="empty-state">No datasets published yet.</div>}
         {rows.map((row) => (
           <div key={row.name} className="data-table-row" role="row">

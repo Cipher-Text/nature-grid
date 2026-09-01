@@ -2,6 +2,7 @@
 
 import 'leaflet/dist/leaflet.css';
 import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet';
+import { useState } from 'react';
 
 // Bangladesh bounding box — ensures the map always opens showing the full country
 const BD_BOUNDS: [[number, number], [number, number]] = [
@@ -62,22 +63,51 @@ function titleCase(str: string) {
 
 export default function MapClient({ districts, alerts, reports }: Props) {
   const districtById = new Map(districts.map((d) => [d.id, d]));
+  const [visibleLayers, setVisibleLayers] = useState({
+    districts: true,
+    alerts: true,
+    reports: true,
+  });
+
+  function toggleLayer(layer: keyof typeof visibleLayers) {
+    setVisibleLayers((current) => ({ ...current, [layer]: !current[layer] }));
+  }
 
   return (
-    <MapContainer
-      bounds={BD_BOUNDS}
-      boundsOptions={{ padding: [8, 8] }}
-      style={{ height: '100%', width: '100%', minHeight: 400, borderRadius: 8 }}
-      scrollWheelZoom={false}
-      attributionControl={true}
-    >
-      <TileLayer
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-      />
+    <div className="map-client">
+      <div className="map-layer-controls" aria-label="Map layers">
+        <span className="map-layer-label">Show on map</span>
+        {([
+          ['districts', 'Districts'],
+          ['alerts', 'Active alerts'],
+          ['reports', 'Verified reports'],
+        ] as const).map(([layer, label]) => (
+          <button
+            key={layer}
+            type="button"
+            className={`map-layer-toggle${visibleLayers[layer] ? ' is-active' : ''}`}
+            aria-pressed={visibleLayers[layer]}
+            onClick={() => toggleLayer(layer)}
+          >
+            <span aria-hidden="true" className="map-layer-toggle-dot" />
+            {label}
+          </button>
+        ))}
+      </div>
 
-      {/* District reference dots */}
-      {districts.map((d) => (
+      <MapContainer
+        bounds={BD_BOUNDS}
+        boundsOptions={{ padding: [8, 8] }}
+        style={{ height: '100%', width: '100%', minHeight: '100%', borderRadius: 8 }}
+        scrollWheelZoom={false}
+        attributionControl={true}
+      >
+        <TileLayer
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        />
+
+      {visibleLayers.districts && districts.map((d) => (
         <CircleMarker
           key={d.id}
           center={[d.lat, d.lng]}
@@ -90,8 +120,7 @@ export default function MapClient({ districts, alerts, reports }: Props) {
         </CircleMarker>
       ))}
 
-      {/* Active alert pins */}
-      {alerts.map((alert) => {
+      {visibleLayers.alerts && alerts.map((alert) => {
         const district = alert.districtId ? districtById.get(alert.districtId) : null;
         const center: [number, number] = district
           ? [district.lat, district.lng]
@@ -135,14 +164,16 @@ export default function MapClient({ districts, alerts, reports }: Props) {
                     Nationwide
                   </div>
                 )}
+                <a href={`/alerts/${alert.id}`} style={{ display: 'inline-block', marginTop: 8, color, fontWeight: 700 }}>
+                  View alert details →
+                </a>
               </div>
             </Popup>
           </CircleMarker>
         );
       })}
 
-      {/* Verified report pins */}
-      {reports.map((report) => (
+      {visibleLayers.reports && reports.map((report) => (
         <CircleMarker
           key={report.id}
           center={[report.lat, report.lng]}
@@ -173,10 +204,15 @@ export default function MapClient({ districts, alerts, reports }: Props) {
                   {report.districtName}
                 </div>
               )}
+              <a href={`/reports/${report.id}`} style={{ display: 'inline-block', marginTop: 8, color: '#2f7d5c', fontWeight: 700 }}>
+                View report details →
+              </a>
             </div>
           </Popup>
         </CircleMarker>
       ))}
-    </MapContainer>
+      </MapContainer>
+      <p className="map-mobile-hint">Use the +/− controls to zoom. Turn layers off to reduce overlap.</p>
+    </div>
   );
 }

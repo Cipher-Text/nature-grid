@@ -18,11 +18,6 @@ import {
 } from '@nature-grid/contracts';
 import { apiGet } from '../lib/api';
 import { titleCase, relativeTime } from '../lib/format';
-import {
-  REPORTS as FALLBACK_REPORTS,
-  ALERTS as FALLBACK_ALERTS,
-  RESTORATION_PROJECTS as FALLBACK_PROJECTS,
-} from '../lib/static-data';
 import CivicScienceTabs, {
   type ReportItem,
   type AlertItem,
@@ -56,14 +51,7 @@ async function loadReports(): Promise<{ items: ReportItem[]; isLive: boolean }> 
   } catch {
     return {
       isLive: false,
-      items: FALLBACK_REPORTS.map((r, i) => ({
-        id: String(i),
-        title: r.title,
-        district: '',
-        category: '',
-        status: '',
-        updatedAt: r.meta,
-      })),
+      items: [],
     };
   }
 }
@@ -87,14 +75,7 @@ async function loadAlerts(): Promise<{ items: AlertItem[]; isLive: boolean }> {
   } catch {
     return {
       isLive: false,
-      items: FALLBACK_ALERTS.map((a, i) => ({
-        id: String(i),
-        title: a.title,
-        severity: titleCase(a.severity),
-        severityClass: SEVERITY_CLASS[a.severity] ?? '',
-        district: 'Nationwide',
-        issuedAt: a.meta,
-      })),
+      items: [],
     };
   }
 }
@@ -132,13 +113,7 @@ async function loadRestoration(): Promise<{ items: ProjectItem[]; isLive: boolea
   } catch {
     return {
       isLive: false,
-      items: FALLBACK_PROJECTS.map((p, i) => ({
-        id: String(i),
-        title: p.title,
-        org: '',
-        district: '',
-        summary: p.meta,
-      })),
+      items: [],
     };
   }
 }

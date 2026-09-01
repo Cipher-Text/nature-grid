@@ -2,8 +2,13 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { routes, type Alert, type CitizenReport, type CurrentWeatherReading, type HourlyAirQualityReading } from '@nature-grid/contracts';
 import { apiGet } from '../lib/api';
-import { CONDITIONS as FALLBACK_CONDITIONS, type Condition } from '../lib/static-data';
 import type { MapDistrict, MapAlert, MapReport } from './map-client';
+
+interface Condition {
+  label: string;
+  value: string;
+  variant?: 'danger' | 'warning' | 'success' | 'info';
+}
 
 // Leaflet requires browser APIs — must load with ssr: false
 const MapClient = dynamic(() => import('./map-client'), {
@@ -107,7 +112,13 @@ async function loadConditions(): Promise<Condition[]> {
       },
     ];
   } catch {
-    return FALLBACK_CONDITIONS;
+    return [
+      { label: 'Dhaka PM2.5', value: 'Unavailable', variant: 'warning' },
+      { label: 'Sylhet precipitation', value: 'Unavailable', variant: 'warning' },
+      { label: 'Khulna humidity', value: 'Unavailable', variant: 'warning' },
+      { label: "Cox's Bazar wind", value: 'Unavailable', variant: 'warning' },
+      { label: 'OpenMeteo sync', value: 'Unavailable', variant: 'warning' },
+    ];
   }
 }
 
@@ -183,7 +194,7 @@ export default async function MapSection() {
           <div>
             <h2>Environmental map</h2>
             <p>
-              Active alerts, verified reports, and district coverage across Bangladesh
+              Active alerts, verified reports, and district coverage across Bangladesh. Select a marker for details.
             </p>
           </div>
           <div className="map-legend" aria-label="Map legend">
