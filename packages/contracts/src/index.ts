@@ -15,6 +15,8 @@ import type {
   OrganizationMemberRole,
   Permission,
   PlatformMetrics,
+  WaterLevelTrend,
+  WaterLevelThresholdStatus,
 } from '@nature-grid/shared';
 
 // Re-export shared types that callers expect to find here
@@ -35,6 +37,8 @@ export type {
   OrganizationMemberRole,
   Permission,
   PlatformMetrics,
+  WaterLevelTrend,
+  WaterLevelThresholdStatus,
 } from '@nature-grid/shared';
 
 // ─── API Prefix ───────────────────────────────────────────────────────────────
@@ -159,6 +163,7 @@ export const routes = {
     forecast: `${apiPrefix}/flood/forecast`,
     forecastByStation: (stationId: string) => `${apiPrefix}/flood/forecast/station/${stationId}`,
     forecastByDistrict: (districtId: string) => `${apiPrefix}/flood/forecast/district/${districtId}`,
+    stationLatest: (stationId: string) => `${apiPrefix}/flood/stations/${stationId}/latest`,
   },
 
   radiation: {
@@ -914,7 +919,27 @@ export interface WaterLevelStation {
   upazilaId: string | null;
   latitude: number | null;
   longitude: number | null;
+  dangerLevel: number | null;
+  warningLevel: number | null;
+  normalLevel: number | null;
+  district?: { id: string; name: string } | null;
   waterBodies?: Array<{ waterBody: { id: string; code: string; nameEn: string } }>;
+}
+
+export interface WaterLevelReading {
+  id: string;
+  stationId: string;
+  readingAt: string;
+  waterLevel: number;
+  discharge: number | null;
+  trend: WaterLevelTrend | null;
+  createdAt: string;
+}
+
+export interface StationLatestReadingResponse {
+  station: WaterLevelStation;
+  latestReading: WaterLevelReading | null;
+  thresholdStatus: WaterLevelThresholdStatus | null;
 }
 
 export interface WaterBody {

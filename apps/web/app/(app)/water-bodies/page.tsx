@@ -34,7 +34,7 @@ export default async function WaterBodiesPage({
           <h1>Water Bodies</h1>
           <p>Rivers, wetlands, and lakes of Bangladesh.</p>
         </div>
-        <Link href={routes.waterBodies.stations} className="button ghost">
+        <Link href="/water-bodies/stations" className="button ghost">
           Water Level Stations
         </Link>
       </div>

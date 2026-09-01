@@ -99,7 +99,9 @@ export default async function WaterLevelStationsPage({
             <span className="text-muted" style={{ fontSize: '0.85em' }}>
               {station.serial}
             </span>
-            <span>{station.name}</span>
+            <span>
+              <Link href={`/water-bodies/stations/${station.id}`}>{station.name}</Link>
+            </span>
             <span className="tag muted">{station.stationCode}</span>
             <span>{station.riverName ?? '—'}</span>
             <span>{station.tidalStatus ?? '—'}</span>
