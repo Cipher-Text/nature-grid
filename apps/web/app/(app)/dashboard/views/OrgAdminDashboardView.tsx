@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type { OrgAdminDashboard } from '@nature-grid/contracts';
 import type { CurrentUser } from '../../../../lib/current-user';
-import { StatCard, BarChart, SectionHeader } from '../components/DashboardPrimitives';
+import { DashboardHeader, StatCard, BarChart, SectionHeader } from '../components/DashboardPrimitives';
 
 const STATUS_VARIANT: Record<string, string> = {
   ACTIVE: 'success',
@@ -22,12 +22,7 @@ export default function OrgAdminDashboardView({
 
   return (
     <>
-      <div className="panel-header">
-        <div>
-          <h1>Restoration Portfolio</h1>
-          <p>Project status, community engagement, and impact overview</p>
-        </div>
-      </div>
+      <DashboardHeader title="Restoration Portfolio" subtitle="Project status, community engagement, and impact overview" eyebrow="Organization workspace" />
 
       {/* KPI strip */}
       <div className="stat-grid">

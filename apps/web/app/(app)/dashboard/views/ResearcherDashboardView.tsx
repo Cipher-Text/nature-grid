@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type { ResearcherDashboard } from '@nature-grid/contracts';
 import type { CurrentUser } from '../../../../lib/current-user';
-import { StatCard, BarChart, TrendChart, SectionHeader } from '../components/DashboardPrimitives';
+import { DashboardHeader, StatCard, BarChart, TrendChart, SectionHeader } from '../components/DashboardPrimitives';
 
 const TRUST_VARIANT: Record<string, string> = {
   RESEARCH_GRADE: 'success',
@@ -21,12 +21,7 @@ export default function ResearcherDashboardView({
 
   return (
     <>
-      <div className="panel-header">
-        <div>
-          <h1>Biodiversity Intelligence</h1>
-          <p>Species occurrences, observation quality, and field data trends</p>
-        </div>
-      </div>
+      <DashboardHeader title="Biodiversity Intelligence" subtitle="Species occurrences, observation quality, and field data trends" eyebrow="Research workspace" />
 
       {/* KPI strip */}
       <div className="stat-grid">

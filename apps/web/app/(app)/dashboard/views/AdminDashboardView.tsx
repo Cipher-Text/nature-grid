@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type { AdminDashboard } from '@nature-grid/contracts';
 import type { CurrentUser } from '../../../../lib/current-user';
-import { StatCard, BarChart, SectionHeader } from '../components/DashboardPrimitives';
+import { DashboardHeader, StatCard, BarChart, SectionHeader } from '../components/DashboardPrimitives';
 
 const SEVERITY_VARIANT: Record<string, string> = {
   EMERGENCY: 'danger',
@@ -30,12 +30,7 @@ export default function AdminDashboardView({
 
   return (
     <>
-      <div className="panel-header">
-        <div>
-          <h1>Platform Overview</h1>
-          <p>Real-time snapshot of the Nature Grid platform</p>
-        </div>
-      </div>
+      <DashboardHeader title="Platform Overview" subtitle="Real-time snapshot of the Nature Grid platform" />
 
       {/* KPI strip */}
       <div className="stat-grid">

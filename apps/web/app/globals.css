@@ -2190,6 +2190,34 @@ a {
 
 /* ── Dashboard ── */
 
+.dashboard-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.dashboard-eyebrow {
+  margin-bottom: 7px;
+  color: var(--primary);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.dashboard-header h1 {
+  font-size: clamp(1.65rem, 3vw, 2.5rem);
+  line-height: 1.1;
+}
+
+.dashboard-subtitle {
+  margin-top: 7px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
 /* Two-column panel layout (stacks on narrow viewports) */
 .dashboard-two-col {
   display: grid;
@@ -2212,12 +2240,28 @@ a {
 }
 
 .stat-card {
+  min-height: 108px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 16px;
   transition: border-color 0.15s;
 }
+
+.stat-card::after {
+  content: '';
+  display: block;
+  width: 28px;
+  height: 3px;
+  margin-top: 14px;
+  border-radius: 99px;
+  background: var(--primary-soft);
+}
+
+.stat-card-success::after { background: var(--success); }
+.stat-card-warning::after { background: var(--warning); }
+.stat-card-danger::after { background: var(--danger); }
+.stat-card-info::after { background: var(--data); }
 
 .stat-card-link {
   text-decoration: none;
@@ -2261,6 +2305,12 @@ a {
   align-items: center;
   gap: 10px;
   font-size: 0.82rem;
+}
+
+.bar-item:hover .bar-track { background: var(--border-strong); }
+
+.bar-track {
+  min-height: 10px;
 }
 
 .bar-label {
@@ -2583,6 +2633,21 @@ a {
 /* Section header (inside panel, above chart/table) */
 .section-header {
   margin-bottom: 14px;
+}
+
+.dashboard-two-col > .panel,
+.dashboard-page > .panel {
+  min-width: 0;
+}
+
+@media (max-width: 560px) {
+  .dashboard-header { margin-bottom: 18px; }
+  .dashboard-header h1 { font-size: 1.55rem; }
+  .dashboard-subtitle { font-size: 0.84rem; }
+  .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .stat-card { min-height: 92px; padding: 12px; }
+  .stat-card-value { font-size: 1.45rem; }
+  .stat-card-label { font-size: 0.72rem; }
 }
 
 .section-header h2 {

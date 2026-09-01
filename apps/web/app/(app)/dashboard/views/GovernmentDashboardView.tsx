@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type { GovernmentDashboard } from '@nature-grid/contracts';
 import type { CurrentUser } from '../../../../lib/current-user';
-import { StatCard, BarChart, SectionHeader } from '../components/DashboardPrimitives';
+import { DashboardHeader, StatCard, BarChart, SectionHeader } from '../components/DashboardPrimitives';
 import { titleCase } from '../../../../lib/format';
 
 type StatVariant = 'default' | 'success' | 'warning' | 'danger' | 'info';
@@ -32,12 +32,7 @@ export default function GovernmentDashboardView({
 
   return (
     <>
-      <div className="panel-header">
-        <div>
-          <h1>Environmental Intelligence</h1>
-          <p>Bangladesh-wide alerts, reports, and climate indicators</p>
-        </div>
-      </div>
+      <DashboardHeader title="Environmental Intelligence" subtitle="Bangladesh-wide alerts, reports, and climate indicators" />
 
       {/* KPI strip */}
       <div className="stat-grid">

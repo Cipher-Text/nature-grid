@@ -1,6 +1,18 @@
 import Link from 'next/link';
 import { titleCase } from '../../../../lib/format';
 
+export function DashboardHeader({ title, subtitle, eyebrow = 'Workspace' }: { title: string; subtitle: string; eyebrow?: string }) {
+  return (
+    <header className="dashboard-header">
+      <div>
+        <p className="dashboard-eyebrow">{eyebrow}</p>
+        <h1>{title}</h1>
+        <p className="dashboard-subtitle">{subtitle}</p>
+      </div>
+    </header>
+  );
+}
+
 // ─── StatCard ─────────────────────────────────────────────────────────────────
 
 interface StatCardProps {

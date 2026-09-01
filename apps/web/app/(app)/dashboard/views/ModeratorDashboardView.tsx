@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type { ModeratorDashboard } from '@nature-grid/contracts';
 import type { CurrentUser } from '../../../../lib/current-user';
-import { StatCard, BarChart, TrendChart, SectionHeader } from '../components/DashboardPrimitives';
+import { DashboardHeader, StatCard, BarChart, TrendChart, SectionHeader } from '../components/DashboardPrimitives';
 
 const STATUS_VARIANT: Record<string, string> = {
   SUBMITTED: 'warning',
@@ -23,12 +23,7 @@ export default function ModeratorDashboardView({
 
   return (
     <>
-      <div className="panel-header">
-        <div>
-          <h1>Moderation Queue</h1>
-          <p>Report review status and submission trends</p>
-        </div>
-      </div>
+      <DashboardHeader title="Moderation Queue" subtitle="Report review status and submission trends" eyebrow="Operations" />
 
       {/* Queue KPIs */}
       <div className="stat-grid">
