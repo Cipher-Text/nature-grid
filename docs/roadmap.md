@@ -147,7 +147,7 @@ Exit criteria met:
 
 ## Phase 6: Production Hardening
 
-Status: Done — 6a security (2026-08-21), 6b test suite + CI + API contract enforcement (2026-08-21/22), 6c notification delivery (2026-08-22), 6d Dockerfiles (2026-08-22). Remaining: end-to-end tests, accessibility pass.
+Status: Done — 6a security (2026-08-21), 6b test suite + CI + API contract enforcement (2026-08-21/22), 6c notification delivery (2026-08-22), 6d Dockerfiles (2026-08-22), e2e tests (2026-09-02). Remaining: accessibility pass.
 
 Goal: Prepare the system for real users and operational trust.
 
@@ -166,7 +166,7 @@ Ordered roughly by risk: the security items are cheap and block any real deploym
 - ~~CI on pull requests.~~ Done (2026-08-21); updated (2026-08-29) to add `pnpm audit --prod --audit-level=high` in the `verify` job and a parallel `docker-build` job (`docker build -f apps/api/Dockerfile`). Note the repo has no git remote yet, so nothing runs until one is added.
 - ~~Install a working lint setup.~~ Done (2026-08-21). `.eslintrc.json` added for `apps/api`, `apps/web`, and `apps/admin`. `pnpm lint` now runs cleanly across all three apps; added to local verification workflow but deliberately kept out of CI until the rule set is stable.
 - ~~API contract tests.~~ Done (2026-08-22). `@nature-grid/contracts` added as a devDependency to `apps/api`. `src/common/contract-types.typecheck.ts` uses TypeScript's structural type system to assert that every service's return type (after JSON serialisation — `Date`→`string` via a `Jsonified<T>` utility) is assignable to its contract type. Checked by the existing `tsc --noEmit` step in CI. Also fixed `include`→`select` discipline in `datasets.service.ts`, `reports.service.ts` (`getById`), `alerts.service.ts` (`getById`), and four weather read methods — eliminating unintended field leakage (e.g. `createdAt` from weather readings not in the contract).
-- End-to-end tests for the public and authenticated flows.
+- ~~End-to-end tests for the public and authenticated flows.~~ Done (2026-09-02) — 45 tests across 4 spec files (`health.e2e-spec.ts`, `auth.e2e-spec.ts`, `public.e2e-spec.ts`, `protected.e2e-spec.ts`). Full NestJS app bootstrapped against a real database; BullMQ and throttler stubbed. Covers auth register/login/refresh/logout token lifecycle, all public read endpoints, CITIZEN/RESEARCHER/MODERATOR/ADMIN authenticated flows, and role/permission enforcement. CI `e2e` job added with a postgres:16 service container and `prisma migrate deploy`. See `docs/progress.md` "2026-09-02 E2E Test Suite".
 - Accessibility pass.
 
 ### 6c. Notification delivery — Done (2026-08-22)
@@ -195,7 +195,7 @@ Exit criteria:
 - ~~Auth and RBAC have automated test coverage, and CI runs on every PR.~~ **Met** (2026-08-21) — pending a git remote for CI to actually execute.
 - ~~Brute-force attempts leave a visible audit trail.~~ **Met** (2026-08-21) — `USER_LOGIN_FAILED` written on every rejected login; see 6a.
 - An `EMERGENCY` alert reaches a subscribed user, and a failed delivery is visible. — **Not met.** See 6c.
-- Public and authenticated flows are tested. — **Partially met.** 153 unit tests across 11 spec files cover auth, RBAC, env validation, reports, observations, restoration, notifications, gamification, and media services. No end-to-end tests yet, and `apps/web`/`apps/admin` still have no tests.
+- Public and authenticated flows are tested. — **Met** (2026-09-02). 153 unit tests (11 spec files) + 45 e2e tests (4 spec files) covering public endpoints, auth token lifecycle, and CITIZEN/RESEARCHER/MODERATOR/ADMIN role + permission flows against a real database. `apps/web` and `apps/admin` still have no tests.
 - Sensitive actions are auditable. — **Met** (complete as of 2026-08-27). All 25 `AuditAction` values are written. Every implemented mutating endpoint audits.
 - Deployment and operations are repeatable. — **Not met.** No container image or deployment path exists.
 
@@ -203,7 +203,7 @@ Exit criteria:
 
 ## Phase 7: Advanced Platform Domains
 
-Status: In Progress — emissions tracking done (2026-08-28); satellite radiation and marine weather implemented as data-ingestion additions (2026-08-28, not originally scoped in Phase 7 but logically grouped here); remaining domains still planned.
+Status: In Progress — 3 of 11 domains complete. Emissions tracking, satellite radiation, and marine weather done (2026-08-28). Frontend gap: none of the three completed data domains have a public web page yet — data is being collected by cron jobs but is not visible to users. Priority before adding new domains: add an `/environment` section to `apps/web` surfacing weather, flood, marine, radiation, and emissions data; add emissions management pages to `apps/admin`. Remaining 8 domains (Industrial Facility Registry, ApiCallLog, structured surveys, climate forecasting, carbon accounting, research platform, Python data-worker, satellite/remote sensing) still planned.
 
 Goal: Extend Nature Grid into the richer environmental science domains that the core platform was designed to support but that require deeper infrastructure, specialist data sources, or a larger user base before they pay off. Each domain here either has a clear data dependency on Phase 3–6 work, or requires specialist review before scoping.
 
@@ -233,7 +233,11 @@ Exit criteria:
 
 ## Phase 8: Land, Forest & Agricultural Intelligence
 
-Status: *Planned* — forest registry and crop catalog can begin as standalone data modules independent of other Phase 7 work; crop suitability, land-cover analysis, and satellite forest monitoring are Phase 9 concerns that depend on PostGIS polygon geometry, object storage, and the Python data-worker.
+Status: *Planned* — two independent tracks, different blockers:
+
+**Data-sourcing track (can begin now):** Forest registry, crop catalog, AEZ definitions, crop calendar, and agricultural production statistics are reference-data modules. They depend on securing verified national datasets (BARC/FAO for AEZ, BBS/DAE for crop geography, SRDI for soil reference, Forest Department for forest inventory) — not on Phase 7 infrastructure. These can be scoped and seeded as soon as source data is available.
+
+**Infrastructure-dependent track:** Crop suitability analysis, land-cover change detection, and satellite forest monitoring depend on PostGIS polygon geometry (Phase 7 infrastructure item), a working Python data-worker (Phase 7 prerequisite), and at least two years of land-cover reference data. These should not be started until Phase 7's satellite/remote sensing proof-of-concept is stable.
 
 Goal: Establish structured environmental data layers for Bangladesh's forests, land cover, and agricultural geography. The product boundary is explicit: this phase captures how environment, climate, land, water, and soil shape agricultural areas of Bangladesh — it does not build farm-management software, farmer ERP, or any commercial agricultural tooling. Nature Grid describes the environmental system; it does not manage the farmer's response to it.
 

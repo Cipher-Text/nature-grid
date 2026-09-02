@@ -1,6 +1,6 @@
 # Progress
 
-Last updated: 2026-09-01 (Community module — `CommunityModule`, 5 models, full CRUD + poll vote, `/community` and `/community/:id` pages; Phase 5 closed. Previously: PostGIS point geometry on District; Water Bodies module; flood module refactored to station-based; observation measurements; restoration sub-resources; AlertType enum + AlertArea; DatasetVersion; water level readings; docs revised to add gamification module entry, notifications module entry, and correct module count. 2026-08-29 BullMQ, Gamification module, Media module; 2026-08-28 OpenMeteo audit, Radiation, Marine, Emissions.)
+Last updated: 2026-09-02 (E2E test suite — 45 tests across 4 spec files; CI e2e job with postgres service container; docs updated — roadmap Phase 6/7/8 status, roles-and-permissions expanded with role-feature matrix and planned Phase 7/8 permissions. Previously: Community module — `CommunityModule`, 5 models, full CRUD + poll vote, `/community` and `/community/:id` pages; Phase 5 closed. PostGIS point geometry on District; Water Bodies module; flood module refactored to station-based; observation measurements; restoration sub-resources; AlertType enum + AlertArea; DatasetVersion; water level readings. 2026-08-29 BullMQ, Gamification module, Media module; 2026-08-28 OpenMeteo audit, Radiation, Marine, Emissions.)
 
 ## Status Legend
 
@@ -29,8 +29,8 @@ Last updated: 2026-09-01 (Community module — `CommunityModule`, 5 models, full
 | District coordinates | Done | Migration `add_district_coordinates`; all 64 districts backfilled with real lat/lng sourced from `open-nature`'s district registry (`LocationsService.onModuleInit` backfills on boot if missing) |
 | Seed data | Done | LocationsService auto-seeds 8 divisions + 64 districts (all with GeoJSON boundary) on boot; DatasetsService auto-seeds 9 catalog records; ProvidersService auto-seeds `OpenMeteo` and `GBIF` providers on boot idempotently; no separate seed script needed |
 | Auth — refresh / logout | Done | Postgres-backed `RefreshToken` model (not Redis — see "Auth Refresh/Logout" below), opaque tokens with rotation, daily cleanup cron |
-| Automated tests | Done | 153 tests in 11 spec files in `apps/api` — auth (incl. failed-login audit), RBAC, env validation (original 5 files, 52 tests), plus reports, observations, restoration, notifications, gamification, media service specs. No e2e tests, no web/admin tests. See "First Test Suite + CI" below. |
-| CI | Done | `.github/workflows/ci.yml` — 2026-08-21; updated to add `pnpm audit --prod --audit-level=high` in `verify` job and a parallel `docker-build` job. Needs a git remote to execute. |
+| Automated tests | Done | 153 unit tests in 11 spec files + 45 e2e tests in 4 spec files (`health`, `auth`, `public`, `protected`). Unit tests: auth, RBAC, env validation, reports, observations, restoration, notifications, gamification, media (fully mocked). E2e tests: full NestJS app against real DB, BullMQ/throttler stubbed. No web/admin tests. See "First Test Suite + CI" and "2026-09-02 E2E Test Suite" below. |
+| CI | Done | `.github/workflows/ci.yml` — 2026-08-21; updated (2026-09-02) to add `e2e` job with postgres:16 service container, `prisma migrate deploy`, and `jest --config jest.e2e.config.js --runInBand --ci`. Needs a git remote to execute. |
 | API contract enforcement | Done | 2026-08-22 — `contract-types.typecheck.ts` + `select` discipline in 4 services. Checked by `tsc --noEmit` in CI. See "Phase 6b: API Contract Enforcement" below. |
 | Notification delivery — Phase 6c | Done | 2026-08-22 — `AlertSubscription` + `NotificationDelivery` schema, Nodemailer email service. `NotificationsService.dispatchForAlert` now creates PENDING `NotificationDelivery` records and enqueues per-user jobs via the BullMQ `email` queue (4-attempt exponential backoff). See "Phase 6c: Notification Delivery" below. |
 | JWT secret handling | Done | Fixed 2026-08-21 — boot-time validation, no fallback. See "JWT Secret Fail-Fast" below. |
@@ -72,6 +72,45 @@ Last updated: 2026-09-01 (Community module — `CommunityModule`, 5 models, full
 | Analytics module | Done | Role-scoped dashboard endpoints: admin, moderator, government, researcher, org admin — each returns aggregated stats relevant to that role. |
 | Seed service | Done | `SeedService` registered in `AppModule`; seeds 6 dev user accounts (one per role, password `NatureGrid123!`) and 1 seed organization on first boot. |
 | Users reactivate endpoint | Done | `PATCH /users/:id/reactivate` re-enables deactivated accounts. |
+
+## 2026-09-02 E2E Test Suite
+
+### Infrastructure (`apps/api/test/`)
+
+New test directory structure:
+
+- `test/env-setup.js` — `setupFiles` script; loads `.env.test` via `dotenv.config()` in every Jest worker process before any module imports. `dotenv.config()` does not override existing env vars, so CI env vars (`DATABASE_URL`, `JWT_SECRET`) take precedence when `.env.test` is absent.
+- `test/helpers/app.ts` — `createTestApp()` bootstraps the full `AppModule` against a real database with three targeted overrides: `ThrottlerGuard` stubbed to always allow (avoid rate-limit interference); `NotificationsService`, `EmailService`, and `GamificationService` replaced with jest stubs (all three inject BullMQ queues via `@InjectQueue`, which is incompatible with the CJS Jest loader — overriding the full service avoids the ESM incompatibility). Applies the same middleware chain as `main.ts`: `helmet`, global prefix `/api/v1`, `AllExceptionsFilter`, `ValidationPipe`, and all three guards.
+- `test/helpers/auth.ts` — `loginAs(app, email, password?)` helper returns `{ accessToken, refreshToken }`; `bearer(token)` returns the Authorization header object.
+- `jest.e2e.config.js` — separate Jest config; `testMatch: ['<rootDir>/test/specs/**/*.e2e-spec.ts']`, `testTimeout: 60_000`, same `moduleNameMapper` BullMQ stubs as the unit config, `transform` using `ts-jest` with `tsconfig.e2e.json`.
+- `tsconfig.e2e.json` — extends `tsconfig.json`, adds `test/**/*.ts` to `include`.
+- `.env.test` — local e2e env vars (gitignored); CI provides equivalent vars directly.
+
+### Spec files (45 tests, 4 files)
+
+**`health.e2e-spec.ts`** (2 tests) — `GET /health` shape, unknown route 404.
+
+**`auth.e2e-spec.ts`** (13 tests) — register (201 / 409 duplicate / 400 missing fields / 400 short password); login (200 / 401 wrong password / 401 unknown email); profile with JWT (200) / no token (401) / malformed token (401); refresh token rotation (200 + old token invalidated → 401); logout (200 + invalidated → 401, idempotent second logout). Creates a unique test user per run (`e2e.auth.${Date.now()}@test.naturegrid.bd`); cleans up in `afterAll`.
+
+**`public.e2e-spec.ts`** (16 tests) — all unauthenticated. Health; locations (divisions × 8, districts × 64, `?divisionId` filter, upazilas); reports paginated shape; nearby reports; alerts paginated; observations paginated; biodiversity species paginated; datasets paginated; `GET /metrics/platform` (not `/metrics`); auth boundary (profile/mine/POST reports all → 401 without token).
+
+**`protected.e2e-spec.ts`** (14 tests) — logs in as all 4 seed roles. Profile returns correct email + role + permissions. CITIZEN submits report (201; `reporter: { id }` joined object not flat `reporterId`); `GET /reports/mine` includes it; invalid payload → 400; no token → 401. CITIZEN logs observation (201; `observer: { id }`); future `observedAt` → 400. Analytics role enforcement: CITIZEN → 403 on `/analytics/admin`; ADMIN → 200; MODERATOR → 200 on `/analytics/moderator`; ADMIN → 403 on `/analytics/moderator` (exact role check); RESEARCHER → 200 on `/analytics/researcher`; no token → 401. CITIZEN denied `PATCH /reports/:id/status` (`reports.moderate` permission) → 403. Cleanup in `afterAll` deletes all created records (reportStatusEvent, reportMedia, reportComment, auditEvent, citizenReport; observationMeasurement, auditEvent, observation).
+
+### Bug fixes discovered during test authoring
+
+- **`POST /auth/login` (and refresh, logout, forgot-password, reset-password, verify-email) returned 201** — NestJS defaults all `@Post()` handlers to HTTP 201. Added `@HttpCode(HttpStatus.OK)` to each non-create POST in `auth.controller.ts`. `register` intentionally left as 201 (creates a new resource).
+- **`GET /metrics` returned 404** — the actual route is `GET /metrics/platform` (controller at `@Controller('metrics')`, handler at `@Get('platform')`).
+- **`reporterId`/`observerId` not in API response** — `REPORT_SELECT` returns `reporter: { id, displayName }` (joined object), not a flat foreign key. Matchers updated to `reporter: { id: expect.any(String) }`.
+
+### CI update
+
+`e2e` job added to `.github/workflows/ci.yml` after the `verify` job. Runs a `postgres:16` service container (user: `ci`, pass: `ci`, db: `ci`; `pg_isready` health check). Steps: `pnpm install --frozen-lockfile`, `prisma generate`, `prisma migrate deploy`, `jest --config jest.e2e.config.js --runInBand --ci`. `REDIS_URL` set in env (BullMQ reads it at module init even though it is stubbed in tests).
+
+### npm script
+
+Added to `apps/api/package.json`: `"test:e2e": "jest --config jest.e2e.config.js --runInBand"`.
+
+---
 
 ## 2026-08-31 – 2026-09-01 Water Bodies, Schema Expansion & PostGIS
 
