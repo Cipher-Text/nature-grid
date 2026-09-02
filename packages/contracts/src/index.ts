@@ -983,6 +983,86 @@ export interface WaterLevelStationPagedResponse {
 }
 
 
+// ─── Emissions ────────────────────────────────────────────────────────────────
+
+export type PollutionSourceType =
+  | 'FACTORY' | 'POWER_PLANT' | 'VEHICLE_FLEET' | 'AGRICULTURE'
+  | 'CONSTRUCTION' | 'WASTE_FACILITY' | 'OTHER';
+
+export type PollutantType =
+  | 'CO2' | 'CH4' | 'N2O' | 'PM25' | 'PM10' | 'NOX' | 'SOX' | 'VOC' | 'CO' | 'OTHER';
+
+export type EmissionUnit =
+  | 'TONS_PER_YEAR' | 'KG_PER_DAY' | 'GRAMS_PER_HOUR' | 'MG_PER_M3' | 'OTHER';
+
+export interface PollutionSource {
+  id: string;
+  name: string;
+  type: PollutionSourceType;
+  description: string | null;
+  districtId: string | null;
+  lat: number | null;
+  lng: number | null;
+  organizationId: string | null;
+  isActive: boolean;
+  createdById: string;
+  createdAt: string;
+  updatedAt: string;
+  district: { id: string; name: string } | null;
+  organization: { id: string; name: string } | null;
+  _count: { entries: number };
+}
+
+export interface EmissionEntry {
+  id: string;
+  sourceId: string;
+  pollutant: PollutantType;
+  value: number;
+  unit: EmissionUnit;
+  measurementMethod: string | null;
+  periodStart: string | null;
+  periodEnd: string | null;
+  notes: string | null;
+  reportedById: string | null;
+  createdAt: string;
+  updatedAt: string;
+  reportedBy: { id: string; displayName: string } | null;
+}
+
+// ─── Marine ───────────────────────────────────────────────────────────────────
+
+export interface MarineForecast {
+  id: string;
+  districtId: string;
+  lat: number;
+  lng: number;
+  forecastDate: string;
+  waveHeightMax: number | null;
+  waveDirectionDominant: number | null;
+  wavePeriodMax: number | null;
+  windWaveHeightMax: number | null;
+  windWaveDirectionDominant: number | null;
+  windWavePeriodMax: number | null;
+  swellWaveHeightMax: number | null;
+  swellWaveDirectionDominant: number | null;
+  swellWavePeriodMax: number | null;
+  swellWavePeakPeriodMax: number | null;
+  seaSurfaceTemp: number | null;
+  district?: { id: string; name: string };
+}
+
+// ─── Radiation ────────────────────────────────────────────────────────────────
+
+export interface SatelliteRadiationReading {
+  id: string;
+  districtId: string;
+  lat: number;
+  lng: number;
+  readingDate: string;
+  shortwaveRadiationSum: number | null;
+  district?: { id: string; name: string };
+}
+
 // ─── Community ────────────────────────────────────────────────────────────────
 
 export interface CommunityPostSummary {
