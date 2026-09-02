@@ -37,52 +37,18 @@ export default async function CommunityPage({
           <h1>Community</h1>
           <p>Posts, discussions, and polls from contributors across Bangladesh.</p>
         </div>
+        {!user && (
+          <Link href="/login" className="button">
+            Sign in to post
+          </Link>
+        )}
       </div>
 
       {searchParams.created && <p className="form-success">Post created.</p>}
       {searchParams.deleted && <p className="form-success">Post deleted.</p>}
       {searchParams.error && <p className="form-error">{decodeURIComponent(searchParams.error)}</p>}
 
-      <ListResultToolbar total={postsRes.total} label="community posts" />
-
-      <div className="table" role="table" aria-label="Community posts">
-        <div className="table-row table-head" role="row">
-          <span>Post</span>
-          <span>Author</span>
-          <span>District</span>
-          <span>Activity</span>
-          <span>Posted</span>
-        </div>
-        {postsRes.data.map((p) => (
-          <Link
-            key={p.id}
-            className="table-row table-row-link"
-            role="row"
-            href={`/community/${p.id}`}
-          >
-            <strong>
-              {p.title}
-              {p.poll && (
-                <span className="tag muted" style={{ marginLeft: 6 }}>
-                  Poll
-                </span>
-              )}
-            </strong>
-            <span>{p.author.displayName}</span>
-            <span>{p.district?.name ?? '—'}</span>
-            <span>
-              {p._count.comments} comment{p._count.comments !== 1 ? 's' : ''}
-            </span>
-            <span>{relativeTime(p.createdAt)}</span>
-          </Link>
-        ))}
-        {postsRes.data.length === 0 && (
-          <div className="empty-state">No posts yet. Be the first to post!</div>
-        )}
-      </div>
-      <ListPagination pathname="/community" page={postsRes.page} pageSize={postsRes.pageSize} total={postsRes.total} query={{ districtId }} />
-
-      {user ? (
+      {user && (
         <article className="panel">
           <div className="panel-header">
             <div>
@@ -121,54 +87,87 @@ export default async function CommunityPage({
               <DistrictSelect districts={districts} />
             </div>
 
-            <fieldset
-              style={{
-                border: '1px solid var(--border)',
-                borderRadius: 6,
-                padding: '12px 16px',
-                marginTop: 8,
-              }}
-            >
-              <legend style={{ padding: '0 6px', fontSize: '0.875rem', fontWeight: 600 }}>
-                Poll (optional)
-              </legend>
-              <div className="field">
-                <label htmlFor="pollQuestion">Poll question</label>
-                <input
-                  id="pollQuestion"
-                  name="pollQuestion"
-                  type="text"
-                  maxLength={500}
-                  placeholder="e.g. How often do you observe plastic waste near waterways?"
-                />
-              </div>
-              {[0, 1, 2, 3].map((i) => (
-                <div className="field" key={i}>
-                  <label htmlFor={`pollOption${i}`}>
-                    Option {i + 1}
-                    {i < 2 ? ' *' : ' (optional)'}
-                  </label>
+            {(user.role === 'ADMIN' || user.role === 'MODERATOR') && (
+              <fieldset
+                style={{
+                  border: '1px solid var(--border)',
+                  borderRadius: 6,
+                  padding: '12px 16px',
+                  marginTop: 8,
+                }}
+              >
+                <legend style={{ padding: '0 6px', fontSize: '0.875rem', fontWeight: 600 }}>
+                  Poll (optional)
+                </legend>
+                <div className="field">
+                  <label htmlFor="pollQuestion">Poll question</label>
                   <input
-                    id={`pollOption${i}`}
-                    name={`pollOption${i}`}
+                    id="pollQuestion"
+                    name="pollQuestion"
                     type="text"
-                    maxLength={200}
-                    placeholder={`Option ${i + 1}`}
+                    maxLength={500}
+                    placeholder="e.g. How often do you observe plastic waste near waterways?"
                   />
                 </div>
-              ))}
-            </fieldset>
+                {[0, 1, 2, 3].map((i) => (
+                  <div className="field" key={i}>
+                    <label htmlFor={`pollOption${i}`}>
+                      Option {i + 1}
+                      {i < 2 ? ' *' : ' (optional)'}
+                    </label>
+                    <input
+                      id={`pollOption${i}`}
+                      name={`pollOption${i}`}
+                      type="text"
+                      maxLength={200}
+                      placeholder={`Option ${i + 1}`}
+                    />
+                  </div>
+                ))}
+              </fieldset>
+            )}
 
             <button className="button" type="submit">
               Create post
             </button>
           </form>
         </article>
-      ) : (
-        <p className="access-note" style={{ marginTop: 16 }}>
-          <Link href="/login">Sign in</Link> to create posts and join the discussion.
-        </p>
       )}
+
+      <ListResultToolbar total={postsRes.total} label="community posts" />
+
+      <div className="table" role="table" aria-label="Community posts">
+        <div className="table-row table-head" role="row">
+          <span>Post</span>
+          <span>Author</span>
+          <span>District</span>
+          <span>Activity</span>
+          <span>Posted</span>
+        </div>
+        {postsRes.data.map((p) => (
+          <Link
+            key={p.id}
+            className="table-row table-row-link"
+            role="row"
+            href={`/community/${p.id}`}
+          >
+            <strong>
+              {p.title}
+              {p.poll && <span className="tag muted" style={{ marginLeft: 6 }}>Poll</span>}
+            </strong>
+            <span>{p.author.displayName}</span>
+            <span>{p.district?.name ?? '—'}</span>
+            <span>
+              {p._count.comments} comment{p._count.comments !== 1 ? 's' : ''}
+            </span>
+            <span>{relativeTime(p.createdAt)}</span>
+          </Link>
+        ))}
+        {postsRes.data.length === 0 && (
+          <div className="empty-state">No posts yet. Be the first to post!</div>
+        )}
+      </div>
+      <ListPagination pathname="/community" page={postsRes.page} pageSize={postsRes.pageSize} total={postsRes.total} query={{ districtId }} />
     </>
   );
 }

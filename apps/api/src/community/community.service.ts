@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { AuditAction } from '@prisma/client';
@@ -11,6 +12,7 @@ import type { JwtPayload } from '../common/decorators/current-user.decorator';
 import { CreatePostDto } from './dto/create-post.dto';
 import { CreatePostCommentDto } from './dto/create-comment.dto';
 import { CastVoteDto } from './dto/cast-vote.dto';
+import { GamificationService } from '../gamification/gamification.service';
 
 const POST_LIST_SELECT = {
   id: true,
@@ -40,7 +42,12 @@ const OPTION_WITH_COUNT_SELECT = {
 
 @Injectable()
 export class CommunityService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(CommunityService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly gamification: GamificationService,
+  ) {}
 
   listPosts(districtId: string | undefined, rawPage: number, rawPageSize: number) {
     const { page, pageSize } = clampPagination(rawPage, rawPageSize);
@@ -59,13 +66,17 @@ export class CommunityService {
   }
 
   async createPost(dto: CreatePostDto, actor: JwtPayload) {
+    if (dto.poll && actor.role !== 'ADMIN' && actor.role !== 'MODERATOR') {
+      throw new ForbiddenException('Only moderators and admins can create polls');
+    }
+
     if (dto.districtId) {
       const district = await this.prisma.district.findUnique({ where: { id: dto.districtId } });
       if (!district) throw new NotFoundException('District not found');
     }
 
-    return this.prisma.$transaction(async (tx) => {
-      const post = await tx.communityPost.create({
+    const post = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.communityPost.create({
         data: {
           title: dto.title,
           body: dto.body,
@@ -95,12 +106,18 @@ export class CommunityService {
           action: AuditAction.COMMUNITY_POST_CREATE,
           userId: actor.sub,
           entityType: 'CommunityPost',
-          entityId: post.id,
+          entityId: created.id,
         },
       });
 
-      return post;
+      return created;
     });
+
+    this.gamification.evaluateBadges(actor.sub).catch((err: unknown) => {
+      this.logger.warn(`Badge evaluation failed after post create: ${String(err)}`);
+    });
+
+    return post;
   }
 
   async getPost(id: string) {
@@ -161,8 +178,8 @@ export class CommunityService {
     });
     if (!post) throw new NotFoundException('Post not found');
 
-    return this.prisma.$transaction(async (tx) => {
-      const comment = await tx.postComment.create({
+    const comment = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.postComment.create({
         data: { postId, authorId: actor.sub, body: dto.body },
         select: COMMENT_SELECT,
       });
@@ -171,12 +188,18 @@ export class CommunityService {
           action: AuditAction.COMMUNITY_COMMENT_ADD,
           userId: actor.sub,
           entityType: 'PostComment',
-          entityId: comment.id,
+          entityId: created.id,
           meta: { postId },
         },
       });
-      return comment;
+      return created;
     });
+
+    this.gamification.evaluateBadges(actor.sub).catch((err: unknown) => {
+      this.logger.warn(`Badge evaluation failed after comment add: ${String(err)}`);
+    });
+
+    return comment;
   }
 
   async deleteComment(postId: string, commentId: string, actor: JwtPayload) {

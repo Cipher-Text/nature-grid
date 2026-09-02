@@ -50,6 +50,7 @@ Current implemented capabilities per domain. `✓` = permitted, `—` = not perm
 | **Community** | | | | | | | |
 | View posts | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Create post | — | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Create poll (post with poll) | — | — | — | — | — | ✓ | ✓ |
 | Delete own post / comment | — | own | own | own | own | own | ✓ |
 | Delete any post / comment (moderation) | — | — | — | — | — | ✓ | ✓ |
 | Vote on poll | — | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |

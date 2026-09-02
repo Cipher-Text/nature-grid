@@ -38,7 +38,8 @@ export default async function CommunityPostDetailPage({
 
   if (!post) notFound();
 
-  const canDeletePost = user && (user.id === post.author.id || user.role === 'ADMIN');
+  const canDeletePost =
+    user && (user.id === post.author.id || user.role === 'ADMIN' || user.role === 'MODERATOR');
 
   return (
     <>
@@ -46,9 +47,9 @@ export default async function CommunityPostDetailPage({
         ← Community
       </Link>
 
-      <div className="report-detail-header">
+      <div className="post-detail-header">
         <h1>{post.title}</h1>
-        <div className="report-detail-meta">
+        <div className="post-detail-meta">
           <span>By {post.author.displayName}</span>
           {post.district && <span>{post.district.name}</span>}
           <span>{relativeTime(post.createdAt)}</span>
@@ -72,87 +73,92 @@ export default async function CommunityPostDetailPage({
       </article>
 
       {/* Poll */}
-      {post.poll && (
-        <article className="panel">
-          <h2>Poll</h2>
-          <p>
-            <strong>{post.poll.question}</strong>
-          </p>
-          {post.poll.endsAt && (
-            <p className="muted-text">
-              {new Date() > new Date(post.poll.endsAt)
-                ? 'Poll closed'
-                : `Closes ${relativeTime(post.poll.endsAt)}`}
-            </p>
-          )}
+      {post.poll && (() => {
+        const poll = post.poll!;
+        const isClosed = !!poll.endsAt && new Date() > new Date(poll.endsAt);
+        const hasVoted = !!poll.userVotedOptionId;
+        const showResults = hasVoted || isClosed || !user;
+        const totalVotes = poll.options.reduce((s, o) => s + o._count.votes, 0);
 
-          {searchParams.voted && <p className="form-success">Vote recorded.</p>}
+        return (
+          <article className="panel">
+            <h2>Poll</h2>
+            <p><strong>{poll.question}</strong></p>
+            {poll.endsAt && (
+              <p className="muted-text">
+                {isClosed ? 'Poll closed' : `Closes ${relativeTime(poll.endsAt)}`}
+              </p>
+            )}
 
-          <div style={{ marginTop: 12 }}>
-            {post.poll.options.map((opt) => {
-              const totalVotes = post.poll!.options.reduce((s, o) => s + o._count.votes, 0);
-              const pct =
-                totalVotes > 0 ? Math.round((opt._count.votes / totalVotes) * 100) : 0;
-              const isMyVote = post.poll!.userVotedOptionId === opt.id;
+            {searchParams.voted && <p className="form-success">Vote recorded.</p>}
 
-              return (
-                <div key={opt.id} style={{ marginBottom: 12 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>{isMyVote ? <strong>{opt.text}</strong> : opt.text}</span>
-                    <span className="muted-text">
-                      {pct}% ({opt._count.votes})
-                    </span>
-                  </div>
-                  <div
-                    style={{
-                      height: 6,
-                      background: 'var(--border)',
-                      borderRadius: 3,
-                      marginTop: 4,
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: `${pct}%`,
-                        height: '100%',
-                        background: 'var(--accent)',
-                        borderRadius: 3,
-                      }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {user && (
-            <form action={castVoteAction.bind(null, post.id)} style={{ marginTop: 12 }}>
-              <div className="field">
-                <label htmlFor="optionId">Cast your vote</label>
-                <select
-                  id="optionId"
-                  name="optionId"
-                  className="select-field"
-                  required
-                  defaultValue={post.poll.userVotedOptionId ?? ''}
-                >
-                  <option value="" disabled>
-                    Select an option
-                  </option>
-                  {post.poll.options.map((opt) => (
-                    <option key={opt.id} value={opt.id}>
-                      {opt.text}
-                    </option>
-                  ))}
-                </select>
+            {showResults ? (
+              /* ── Results view ── */
+              <div className="poll-results">
+                {poll.options.map((opt) => {
+                  const pct = totalVotes > 0 ? Math.round((opt._count.votes / totalVotes) * 100) : 0;
+                  const isMyVote = poll.userVotedOptionId === opt.id;
+                  return (
+                    <div key={opt.id} className="poll-option-result">
+                      <div className="poll-option-label">
+                        <span>{isMyVote ? <strong>{opt.text}</strong> : opt.text}</span>
+                        {isMyVote && <span className="poll-your-vote">Your vote</span>}
+                        <span className="poll-pct">{pct}% ({opt._count.votes})</span>
+                      </div>
+                      <div className="poll-bar-track">
+                        <div className="poll-bar-fill" style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+                <p className="muted-text" style={{ marginTop: 12, marginBottom: 0 }}>
+                  {totalVotes} vote{totalVotes !== 1 ? 's' : ''}
+                </p>
+                {hasVoted && !isClosed && user && (
+                  /* Allow changing vote */
+                  <form action={castVoteAction.bind(null, post.id)} className="poll-change-vote">
+                    <fieldset className="poll-radio-group">
+                      <legend className="poll-radio-legend">Change your vote</legend>
+                      {poll.options.map((opt) => (
+                        <label key={opt.id} className="poll-radio-label">
+                          <input
+                            type="radio"
+                            name="optionId"
+                            value={opt.id}
+                            defaultChecked={poll.userVotedOptionId === opt.id}
+                          />
+                          {opt.text}
+                        </label>
+                      ))}
+                    </fieldset>
+                    <button className="button" type="submit">Change vote</button>
+                  </form>
+                )}
               </div>
-              <button className="button" type="submit">
-                {post.poll.userVotedOptionId ? 'Change vote' : 'Vote'}
-              </button>
-            </form>
-          )}
-        </article>
-      )}
+            ) : (
+              /* ── Voting view (authenticated, not yet voted, poll open) ── */
+              <form action={castVoteAction.bind(null, post.id)} className="poll-vote-form">
+                <fieldset className="poll-radio-group">
+                  <legend className="poll-radio-legend">Select an option</legend>
+                  {poll.options.map((opt) => (
+                    <label key={opt.id} className="poll-radio-label">
+                      <input type="radio" name="optionId" value={opt.id} required />
+                      {opt.text}
+                    </label>
+                  ))}
+                </fieldset>
+                <button className="button" type="submit">Vote</button>
+              </form>
+            )}
+
+            {!user && !isClosed && (
+              <p className="access-note" style={{ marginTop: 12 }}>
+                <a href="/login">Sign in</a> to vote.
+              </p>
+            )}
+          </article>
+        );
+      })()}
 
       {/* Comments */}
       <article className="panel">
@@ -170,7 +176,10 @@ export default async function CommunityPostDetailPage({
           <div className="comment-list">
             {post.comments.map((c) => {
               const canDeleteComment =
-                user && (user.id === c.author.id || user.role === 'ADMIN');
+                user &&
+                (user.id === c.author.id ||
+                  user.role === 'ADMIN' ||
+                  user.role === 'MODERATOR');
               return (
                 <div key={c.id} className="comment-row">
                   <div className="comment-header">

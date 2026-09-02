@@ -71,8 +71,8 @@ export class ObservationsService {
       throw new BadRequestException('observedAt cannot be in the future');
     }
 
-    return this.prisma.$transaction(async (tx) => {
-      const observation = await tx.observation.create({
+    const observation = await this.prisma.$transaction(async (tx) => {
+      const obs = await tx.observation.create({
         data: {
           category: dto.category,
           description: dto.description,
@@ -109,13 +109,24 @@ export class ObservationsService {
           action: 'OBSERVATION_SUBMIT',
           userId: user.sub,
           entityType: 'Observation',
-          entityId: observation.id,
+          entityId: obs.id,
           meta: dto.measurements?.length ? { measurementCount: dto.measurements.length } : undefined,
         },
       });
 
-      return observation;
+      return obs;
     });
+
+    // Trigger badge evaluation after the transaction commits.
+    // Water Sentinel counts all WATER_QUALITY observations and Clean Air Defender
+    // counts all AIR_QUALITY observations regardless of trust level — so badge
+    // progress must be recalculated on every new observation, not just on trust
+    // level promotion.
+    this.gamification.evaluateBadges(user.sub).catch((err: unknown) => {
+      this.logger.warn(`Badge evaluation failed after observation create: ${String(err)}`);
+    });
+
+    return observation;
   }
 
   listMine(userId: string, rawPage = 1, rawPageSize = 10) {

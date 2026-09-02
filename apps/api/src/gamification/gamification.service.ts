@@ -46,11 +46,15 @@ const COMPLETENESS_CHECKS: CompletenessCheck[] = [
 // ── Badge count queries (run in parallel) ─────────────────────────────────────
 
 interface BadgeCounts {
-  civicGuardian:       number; // verified/resolved reports by this user
-  waterSentinel:       number; // WATER_QUALITY observations
-  cleanAirDefender:    number; // AIR_QUALITY obs + verified AIR_POLLUTION reports
-  biodiversityExplorer: number; // BIODIVERSITY obs with RESEARCH_GRADE trust
-  restorationPioneer:  number; // restoration project participations
+  // civic_guardian split: Bronze unlocks on first SUBMITTED report;
+  // Silver and above require VERIFIED/RESOLVED reports.
+  civicGuardianSubmitted: number;
+  civicGuardianVerified:  number;
+  communityVoice:          number; // posts + comments authored
+  waterSentinel:           number; // WATER_QUALITY observations
+  cleanAirDefender:        number; // AIR_QUALITY obs + verified AIR_POLLUTION reports
+  biodiversityExplorer:    number; // BIODIVERSITY obs at RESEARCH_GRADE trust
+  restorationPioneer:      number; // restoration project participations
 }
 
 @Injectable()
@@ -154,29 +158,38 @@ export class GamificationService {
 
   private async fetchBadgeCounts(userId: string): Promise<BadgeCounts> {
     const [
-      civicGuardian,
+      civicGuardianSubmitted,
+      civicGuardianVerified,
+      communityPosts,
+      communityComments,
       waterSentinel,
       airObs,
       airReports,
       biodiversityExplorer,
       restorationPioneer,
     ] = await Promise.all([
-      // 🛡️ Verified/resolved citizen reports by this user
+      // 🛡️ All submitted reports — unlocks Civic Guardian Bronze immediately
+      this.prisma.citizenReport.count({ where: { reporterId: userId } }),
+      // 🛡️ Verified/resolved reports — unlocks Silver and above
       this.prisma.citizenReport.count({
         where: {
           reporterId: userId,
           status: { in: [ReportStatus.VERIFIED, ReportStatus.RESOLVED] },
         },
       }),
-      // 🌊 Water quality observations
+      // 💬 Community posts authored
+      this.prisma.communityPost.count({ where: { authorId: userId } }),
+      // 💬 Post comments authored
+      this.prisma.postComment.count({ where: { authorId: userId } }),
+      // 🌊 Water quality observations (all trust levels)
       this.prisma.observation.count({
         where: { observerId: userId, category: ObservationCategory.WATER_QUALITY },
       }),
-      // 🌬️ Air quality observations
+      // 🌬️ Air quality observations (all trust levels)
       this.prisma.observation.count({
         where: { observerId: userId, category: ObservationCategory.AIR_QUALITY },
       }),
-      // 🌬️ Verified air pollution reports (contributes to same badge)
+      // 🌬️ Verified air pollution reports (contributes to Clean Air Defender)
       this.prisma.citizenReport.count({
         where: {
           reporterId: userId,
@@ -197,7 +210,9 @@ export class GamificationService {
     ]);
 
     return {
-      civicGuardian,
+      civicGuardianSubmitted,
+      civicGuardianVerified,
+      communityVoice: communityPosts + communityComments,
       waterSentinel,
       cleanAirDefender: airObs + airReports,
       biodiversityExplorer,
@@ -206,20 +221,28 @@ export class GamificationService {
   }
 
   private computeEarnedKeys(counts: BadgeCounts): Set<string> {
-    const categoryCountMap: Record<BadgeCategory, number> = {
-      civic_guardian:        counts.civicGuardian,
-      water_sentinel:        counts.waterSentinel,
-      clean_air_defender:    counts.cleanAirDefender,
-      biodiversity_explorer: counts.biodiversityExplorer,
-      restoration_pioneer:   counts.restorationPioneer,
-    };
-
     const keys = new Set<string>();
-    for (const [cat, count] of Object.entries(categoryCountMap)) {
-      for (const key of earnedKeysForCategory(cat as BadgeCategory, count)) {
+
+    // civic_guardian: Bronze uses submitted count; Silver–Platinum use verified count.
+    if (counts.civicGuardianSubmitted >= 1) keys.add('civic_guardian_bronze');
+    for (const key of earnedKeysForCategory('civic_guardian', counts.civicGuardianVerified)) {
+      if (key !== 'civic_guardian_bronze') keys.add(key);
+    }
+
+    // All other categories use a single count.
+    const simple: Array<[BadgeCategory, number]> = [
+      ['community_voice',       counts.communityVoice],
+      ['water_sentinel',        counts.waterSentinel],
+      ['clean_air_defender',    counts.cleanAirDefender],
+      ['biodiversity_explorer', counts.biodiversityExplorer],
+      ['restoration_pioneer',   counts.restorationPioneer],
+    ];
+    for (const [cat, count] of simple) {
+      for (const key of earnedKeysForCategory(cat, count)) {
         keys.add(key);
       }
     }
+
     return keys;
   }
 
@@ -227,12 +250,21 @@ export class GamificationService {
     counts: BadgeCounts,
     earnedKeys: Set<string>,
   ): BadgeSummaryDto[] {
-    const categoryCountMap: Record<BadgeCategory, number> = {
-      civic_guardian:        counts.civicGuardian,
-      water_sentinel:        counts.waterSentinel,
-      clean_air_defender:    counts.cleanAirDefender,
-      biodiversity_explorer: counts.biodiversityExplorer,
-      restoration_pioneer:   counts.restorationPioneer,
+    // For progress display, civic_guardian Bronze shows submitted count;
+    // Silver–Platinum show the verified count.
+    const progressCount = (def: { category: BadgeCategory; tier: string }): number => {
+      if (def.category === 'civic_guardian') {
+        return def.tier === 'BRONZE' ? counts.civicGuardianSubmitted : counts.civicGuardianVerified;
+      }
+      const map: Record<BadgeCategory, number> = {
+        civic_guardian:        counts.civicGuardianVerified,
+        community_voice:       counts.communityVoice,
+        water_sentinel:        counts.waterSentinel,
+        clean_air_defender:    counts.cleanAirDefender,
+        biodiversity_explorer: counts.biodiversityExplorer,
+        restoration_pioneer:   counts.restorationPioneer,
+      };
+      return map[def.category];
     };
 
     return BADGE_DEFS.map((def) => ({
@@ -244,7 +276,7 @@ export class GamificationService {
       emoji:       def.emoji,
       description: def.description,
       earned:      earnedKeys.has(def.key),
-      current:     Math.min(categoryCountMap[def.category], def.threshold),
+      current:     Math.min(progressCount(def), def.threshold),
       threshold:   def.threshold,
       points:      def.points,
     }));
