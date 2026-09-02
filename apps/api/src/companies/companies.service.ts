@@ -55,20 +55,19 @@ export class CompaniesService {
   constructor(private readonly prisma: PrismaService) {}
 
   async onModuleInit() {
-    const companyCount = await this.prisma.company.count();
-    if (companyCount > 0) return;
-
-    this.logger.log('Seeding companies and industrial facilities...');
+    this.logger.log('Synchronizing companies and industrial facilities...');
     await this.seedCompanies();
     await this.seedFacilities();
   }
 
   private async seedCompanies() {
     // First pass: create companies without parentCompanyId
-    const nameToId = new Map<string, string>();
+    const existingCompanies = await this.prisma.company.findMany({ select: { id: true, name: true } });
+    const nameToId = new Map(existingCompanies.map((company) => [company.name, company.id]));
 
     for (const entry of COMPANY_SEED_DATA) {
       if (entry.parentCompanyName) continue;
+      if (nameToId.has(entry.name)) continue;
 
       let districtId: string | undefined;
       if (entry.headquarterDistrictName) {
@@ -100,6 +99,11 @@ export class CompaniesService {
       if (!entry.parentCompanyName) continue;
 
       const parentId = nameToId.get(entry.parentCompanyName);
+      if (!parentId) {
+        this.logger.warn(`Parent company not found for seed: ${entry.parentCompanyName} (${entry.name})`);
+        continue;
+      }
+      if (nameToId.has(entry.name)) continue;
       let districtId: string | undefined;
       if (entry.headquarterDistrictName) {
         const d = await this.prisma.district.findFirst({
@@ -126,14 +130,17 @@ export class CompaniesService {
       nameToId.set(company.name, company.id);
     }
 
-    this.logger.log(`Seeded ${COMPANY_SEED_DATA.length} companies.`);
+    this.logger.log(`Verified ${COMPANY_SEED_DATA.length} company seed records.`);
   }
 
   private async seedFacilities() {
-    const facilityCount = await this.prisma.industrialFacility.count();
-    if (facilityCount > 0) return;
-
     for (const entry of FACILITY_SEED_DATA) {
+      const existingFacility = await this.prisma.industrialFacility.findFirst({
+        where: { name: entry.name },
+        select: { id: true },
+      });
+      if (existingFacility) continue;
+
       const district = await this.prisma.district.findFirst({
         where: { name: entry.districtName },
         select: { id: true },
