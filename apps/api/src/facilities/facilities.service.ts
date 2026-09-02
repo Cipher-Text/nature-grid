@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { ComplianceStatus, FacilityType } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { CreateFacilityDto } from './dto/create-facility.dto';
@@ -55,8 +55,6 @@ const FACILITY_DETAIL_SELECT = {
 
 @Injectable()
 export class FacilitiesService {
-  private readonly logger = new Logger(FacilitiesService.name);
-
   constructor(private readonly prisma: PrismaService) {}
 
   list(
