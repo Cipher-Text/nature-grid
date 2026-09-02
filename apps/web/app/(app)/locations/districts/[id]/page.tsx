@@ -12,7 +12,6 @@ import {
   type PaginatedEnvelope,
   type MarineForecast,
   type SatelliteRadiationReading,
-  type PollutionSource,
 } from '@nature-grid/contracts';
 import { apiGet } from '../../../../../lib/api';
 import LocationBreadcrumb from '../../../../../components/location-breadcrumb';
@@ -91,16 +90,6 @@ const TRUST_BADGE: Record<string, string> = {
   UNVERIFIED: 'muted',
 };
 
-const SOURCE_TYPE_LABEL: Record<string, string> = {
-  FACTORY: 'Factory',
-  POWER_PLANT: 'Power Plant',
-  VEHICLE_FLEET: 'Vehicle Fleet',
-  AGRICULTURE: 'Agriculture',
-  CONSTRUCTION: 'Construction',
-  WASTE_FACILITY: 'Waste Facility',
-  OTHER: 'Other',
-};
-
 async function tryGet<T>(url: string, revalidate = 900): Promise<T | null> {
   try {
     return await apiGet<T>(url, revalidate);
@@ -129,7 +118,6 @@ export default async function DistrictPage({
     alertsRes,
     marine,
     radiation,
-    emissionsRes,
     occurrencesRes,
     reportsRes,
     observationsRes,
@@ -144,7 +132,6 @@ export default async function DistrictPage({
       ? tryGet<MarineForecast[]>(routes.marine.forecastByDistrict(id), 3600)
       : Promise.resolve(null),
     tryGet<SatelliteRadiationReading[]>(routes.radiation.dailyByDistrict(id), 3600),
-    tryGet<PaginatedEnvelope<PollutionSource>>(`${routes.emissions.sources}?districtId=${id}&pageSize=10`, 900),
     tryGet<PaginatedEnvelope<Occurrence>>(`${routes.biodiversity.occurrences}?districtId=${id}&pageSize=5`, 900),
     tryGet<PaginatedEnvelope<CitizenReport>>(`${routes.reports.list}?districtId=${id}&pageSize=5`, 900),
     tryGet<PaginatedEnvelope<Observation>>(`${routes.observations.list}?districtId=${id}&pageSize=5`, 900),
@@ -162,7 +149,6 @@ export default async function DistrictPage({
     : null;
   const marineToday = marine?.[0] ?? null;
   const radiationRecent = radiation?.slice(0, 7) ?? [];
-  const emissionSources = emissionsRes?.data ?? [];
   const hasReports = (reportsRes?.data.length ?? 0) > 0;
   const hasObs = (observationsRes?.data.length ?? 0) > 0;
   const hasRestoration = (restorationRes?.data.length ?? 0) > 0;
@@ -208,7 +194,6 @@ export default async function DistrictPage({
       <nav className="tab-nav" aria-label="District sections">
         <Link href="?tab=overview" className={tab === 'overview' ? 'active' : ''}>Overview</Link>
         <Link href="?tab=climate" className={tab === 'climate' ? 'active' : ''}>Climate</Link>
-        <Link href="?tab=emissions" className={tab === 'emissions' ? 'active' : ''}>Emissions</Link>
         <Link href="?tab=activity" className={tab === 'activity' ? 'active' : ''}>Activity</Link>
       </nav>
 
@@ -600,47 +585,6 @@ export default async function DistrictPage({
             </article>
           )}
         </>
-      )}
-
-      {/* ── Emissions tab ────────────────────────────────────────────────────── */}
-      {tab === 'emissions' && (
-        <article className="panel">
-          <div className="panel-header">
-            <div>
-              <h2>Pollution Sources</h2>
-              <p>Registered industrial and agricultural emission sources in {district.name}</p>
-            </div>
-            <Link href="/emissions" className="button ghost">View all sources</Link>
-          </div>
-
-          {emissionSources.length === 0 ? (
-            <p className="muted" style={{ paddingTop: 8 }}>No registered pollution sources in this district.</p>
-          ) : (
-            <div className="table" role="table" aria-label="Pollution sources">
-              <div className="table-row table-head" role="row">
-                <span>Source</span>
-                <span>Type</span>
-                <span>Status</span>
-                <span>Entries</span>
-              </div>
-              {emissionSources.map((s) => (
-                <Link
-                  className="table-row table-row-link"
-                  role="row"
-                  key={s.id}
-                  href={`/emissions/${s.id}`}
-                >
-                  <strong>{s.name}</strong>
-                  <span>{SOURCE_TYPE_LABEL[s.type] ?? s.type}</span>
-                  <span className={`tag ${s.isActive ? 'success' : 'muted'}`}>
-                    {s.isActive ? 'Active' : 'Inactive'}
-                  </span>
-                  <span>{s._count.entries}</span>
-                </Link>
-              ))}
-            </div>
-          )}
-        </article>
       )}
 
       {/* ── Activity tab ─────────────────────────────────────────────────────── */}

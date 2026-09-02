@@ -1,147 +1,146 @@
-import Link from 'next/link';
 import { apiGet } from '../../../lib/api';
-import {
-  routes,
-  type PollutionSource,
-  type PaginatedEnvelope,
-  type PollutionSourceType,
-  type DistrictSummary,
-} from '@nature-grid/contracts';
-import { titleCase } from '../../../lib/format';
+import { routes, type NationalEmissionReading, type EmissionIndicator } from '@nature-grid/contracts';
 
-const SOURCE_TYPES: PollutionSourceType[] = [
-  'FACTORY',
-  'POWER_PLANT',
-  'VEHICLE_FLEET',
-  'AGRICULTURE',
-  'CONSTRUCTION',
-  'WASTE_FACILITY',
-  'OTHER',
-];
-
-const TYPE_TAG: Record<string, string> = {
-  FACTORY: 'danger',
-  POWER_PLANT: 'warning',
-  VEHICLE_FLEET: 'warning',
-  AGRICULTURE: 'info',
-  CONSTRUCTION: 'muted',
-  WASTE_FACILITY: 'danger',
-  OTHER: 'muted',
+const INDICATOR_LABEL: Record<string, string> = {
+  'EN.GHG.ALL.MT.CE.AR5': 'Total GHG',
+  'EN.GHG.CO2.MT.CE.AR5': 'CO₂',
+  'EN.GHG.CH4.MT.CE.AR5': 'CH₄',
+  'EN.GHG.N2O.MT.CE.AR5': 'N₂O',
 };
 
 export default async function EmissionsPage({
   searchParams,
 }: {
-  searchParams: { type?: string; districtId?: string; page?: string };
+  searchParams: { indicator?: string; from?: string; to?: string };
 }) {
-  const type = searchParams.type as PollutionSourceType | undefined;
-  const districtId = searchParams.districtId;
-  const page = searchParams.page ? parseInt(searchParams.page, 10) : 1;
+  const { indicator, from, to } = searchParams;
 
-  const params = new URLSearchParams({ pageSize: '30', page: String(page) });
-  if (type) params.set('type', type);
-  if (districtId) params.set('districtId', districtId);
+  const params = new URLSearchParams();
+  if (indicator) params.set('indicator', indicator);
+  if (from) params.set('from', from);
+  if (to) params.set('to', to);
 
-  const [res, districts] = await Promise.all([
-    apiGet<PaginatedEnvelope<PollutionSource>>(`${routes.emissions.sources}?${params.toString()}`, 300),
-    apiGet<DistrictSummary[]>(routes.locations.districts, 3600),
+  const [readings, indicators] = await Promise.all([
+    apiGet<NationalEmissionReading[]>(
+      `${routes.emissions.list}${params.toString() ? `?${params.toString()}` : ''}`,
+      900,
+    ),
+    apiGet<EmissionIndicator[]>(routes.emissions.indicators, 3600),
   ]);
 
-  function filterHref(overrides: { type?: string; districtId?: string }) {
-    const next = new URLSearchParams();
-    const t = overrides.type ?? type ?? '';
-    const d = overrides.districtId ?? districtId ?? '';
-    if (t) next.set('type', t);
-    if (d) next.set('districtId', d);
-    const query = next.toString();
-    return `/emissions${query ? `?${query}` : ''}`;
+  // Group by year for a compact table view (year → indicator → value)
+  const years = [...new Set(readings.map((r) => r.year))].sort((a, b) => b - a);
+  const indicatorCodes = [...new Set(readings.map((r) => r.indicatorCode))].sort();
+
+  const byYearAndCode = new Map<string, number | null>();
+  for (const r of readings) {
+    byYearAndCode.set(`${r.year}__${r.indicatorCode}`, r.value);
   }
 
-  function pageHref(nextPage: number) {
-    const href = filterHref({});
-    return `${href}${href.includes('?') ? '&' : '?'}page=${nextPage}`;
-  }
+  const lastUpdated = readings[0]?.updatedAt
+    ? new Date(readings[0].updatedAt).toLocaleDateString('en-GB', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      })
+    : null;
 
   return (
     <>
       <div className="panel-header">
         <div>
-          <h1>Emissions</h1>
-          <p>Registered industrial and agricultural pollution sources across Bangladesh.</p>
+          <h1>National GHG Emissions</h1>
+          <p>
+            Bangladesh greenhouse gas emissions sourced from the World Bank Climate Change API.
+            Values in Mt CO₂e, excluding land-use change (LULUCF).
+            {lastUpdated && <span className="muted"> · Last synced {lastUpdated}</span>}
+          </p>
         </div>
       </div>
 
-      <form className="toolbar" method="get" aria-label="Emission source filters">
-        <label htmlFor="type">Type</label>
-        <select id="type" name="type" className="select-field" defaultValue={type ?? ''}>
-          <option value="">All types</option>
-          {SOURCE_TYPES.map((t) => (
-            <option key={t} value={t}>{titleCase(t)}</option>
+      {/* Filters */}
+      <form className="toolbar" method="get" aria-label="Emission filters">
+        <label htmlFor="indicator">Indicator</label>
+        <select id="indicator" name="indicator" className="select-field" defaultValue={indicator ?? ''}>
+          <option value="">All indicators</option>
+          {indicators.map((ind) => (
+            <option key={ind.indicatorCode} value={ind.indicatorCode}>
+              {INDICATOR_LABEL[ind.indicatorCode] ?? ind.indicatorCode}
+            </option>
           ))}
         </select>
-        <label htmlFor="districtId">District</label>
-        <select id="districtId" name="districtId" className="select-field" defaultValue={districtId ?? ''}>
-          <option value="">All districts</option>
-          {districts.map((d) => (
-            <option key={d.id} value={d.id}>{d.name}</option>
-          ))}
-        </select>
+
+        <label htmlFor="from">From year</label>
+        <input
+          id="from"
+          name="from"
+          type="number"
+          className="select-field"
+          style={{ width: 90 }}
+          defaultValue={from ?? ''}
+          min={1976}
+          max={2030}
+          placeholder="1976"
+        />
+
+        <label htmlFor="to">To year</label>
+        <input
+          id="to"
+          name="to"
+          type="number"
+          className="select-field"
+          style={{ width: 90 }}
+          defaultValue={to ?? ''}
+          min={1976}
+          max={2030}
+          placeholder="2024"
+        />
+
         <button type="submit" className="button">Apply</button>
-        {(type || districtId) && (
-          <Link className="button ghost" href={filterHref({ type: '', districtId: '' })}>Reset</Link>
+        {(indicator || from || to) && (
+          <a className="button ghost" href="/emissions">Reset</a>
         )}
       </form>
 
-      <div className="table" role="table" aria-label="Pollution sources">
-        <div className="table-row table-head" role="row">
-          <span>Source</span>
-          <span>Type</span>
-          <span>District</span>
-          <span>Status</span>
-        </div>
-        {res.data.map((s) => (
-          <Link
-            className="table-row table-row-link"
+      {readings.length === 0 ? (
+        <div className="empty-state">No emission data available for this filter.</div>
+      ) : (
+        <div className="table" role="table" aria-label="GHG emissions">
+          <div
+            className="table-row table-head"
             role="row"
-            key={s.id}
-            href={`/emissions/${s.id}`}
+            style={{ gridTemplateColumns: `80px repeat(${indicatorCodes.length}, 1fr)` }}
           >
-            <div>
-              <strong>{s.name}</strong>
-              {s.description && (
-                <span className="muted" style={{ fontSize: '0.82rem', display: 'block' }}>
-                  {s.description.length > 80 ? `${s.description.slice(0, 80)}…` : s.description}
-                </span>
-              )}
-            </div>
-            <span className={`tag ${TYPE_TAG[s.type] ?? 'muted'}`}>{titleCase(s.type)}</span>
-            <span>{s.district?.name ?? '—'}</span>
-            <span className={`tag ${s.isActive ? 'success' : 'muted'}`}>
-              {s.isActive ? 'Active' : 'Inactive'}
-            </span>
-          </Link>
-        ))}
-        {res.data.length === 0 && (
-          <div className="empty-state">No pollution sources found for this filter.</div>
-        )}
-      </div>
-
-      {(() => {
-        const totalPages = Math.ceil(res.total / res.pageSize);
-        return totalPages > 1 ? (
-          <div className="toolbar" style={{ justifyContent: 'center', marginTop: '1rem' }}>
-            {page > 1 && (
-              <Link className="chip" href={pageHref(page - 1)}>← Previous</Link>
-            )}
-            <span className="chip active" aria-current="page">
-              {page} / {totalPages}
-            </span>
-            {page < totalPages && (
-              <Link className="chip" href={pageHref(page + 1)}>Next →</Link>
-            )}
+            <span>Year</span>
+            {indicatorCodes.map((code) => (
+              <span key={code}>{INDICATOR_LABEL[code] ?? code}</span>
+            ))}
           </div>
-        ) : null;
-      })()}
+
+          {years.map((year) => (
+            <div
+              key={year}
+              className="table-row"
+              role="row"
+              style={{ gridTemplateColumns: `80px repeat(${indicatorCodes.length}, 1fr)` }}
+            >
+              <strong>{year}</strong>
+              {indicatorCodes.map((code) => {
+                const val = byYearAndCode.get(`${year}__${code}`);
+                return (
+                  <span key={code} style={{ fontVariantNumeric: 'tabular-nums' }}>
+                    {val !== undefined && val !== null ? val.toFixed(1) : '—'}
+                  </span>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      )}
+
+      <p className="muted" style={{ fontSize: '0.78rem', marginTop: '1rem' }}>
+        Source: World Bank Climate Change API · Indicator codes: {indicatorCodes.join(', ')}
+      </p>
     </>
   );
 }

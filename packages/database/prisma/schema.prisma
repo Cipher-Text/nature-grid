@@ -121,37 +121,6 @@ enum IngestionStatus {
   CANCELLED
 }
 
-enum PollutionSourceType {
-  FACTORY
-  POWER_PLANT
-  VEHICLE_FLEET
-  AGRICULTURE
-  CONSTRUCTION
-  WASTE_FACILITY
-  OTHER
-}
-
-enum PollutantType {
-  CO2
-  CH4
-  N2O
-  PM25
-  PM10
-  NOX
-  SOX
-  VOC
-  CO
-  OTHER
-}
-
-enum EmissionUnit {
-  TONS_PER_YEAR
-  KG_PER_DAY
-  GRAMS_PER_HOUR
-  MG_PER_M3
-  OTHER
-}
-
 enum RestorationTargetMetric {
   TREES_PLANTED
   AREA_RESTORED_HA
@@ -372,8 +341,6 @@ model User {
   organizationMemberships    OrganizationMembership[]
   profile                    UserProfile?
   socialLinks                UserSocialLink[]
-  pollutionSourcesCreated    PollutionSource[]
-  emissionEntriesReported    EmissionEntry[]
   recordedActivities         ProjectActivity[]
   measuredMetrics            ProjectMetric[]
   publishedDatasetVersions   DatasetVersion[]
@@ -483,7 +450,6 @@ model Organization {
   providers           Provider[]
   restorationProjects RestorationProject[]
   memberships         OrganizationMembership[]
-  pollutionSources    PollutionSource[]
 }
 
 model OrganizationMembership {
@@ -596,7 +562,6 @@ model District {
   airQualityReadings         HourlyAirQuality[]
   satelliteRadiationReadings SatelliteRadiationReading[]
   marineForecasts            MarineForecast[]
-  pollutionSources           PollutionSource[]
   waterLevelStations         WaterLevelStation[]
   communityPosts             CommunityPost[]
 
@@ -1457,50 +1422,23 @@ model HourlyAirQuality {
 }
 
 // ─── Emissions ────────────────────────────────────────────────────────────────
-// Source-level pollution tracking — distinct from ambient HourlyAirQuality readings.
+// National-level GHG readings ingested from the World Bank Climate Change API.
+// One row per (year, indicatorCode); values are in Mt CO2e.
 
-model PollutionSource {
-  id             String              @id @default(cuid())
-  name           String
-  type           PollutionSourceType
-  description    String?
-  districtId     String?
-  district       District?           @relation(fields: [districtId], references: [id])
-  lat            Float?
-  lng            Float?
-  organizationId String?
-  organization   Organization?       @relation(fields: [organizationId], references: [id])
-  isActive       Boolean             @default(true)
-  createdById    String
-  createdBy      User                @relation(fields: [createdById], references: [id], onDelete: Cascade)
-  createdAt      DateTime            @default(now())
-  updatedAt      DateTime            @updatedAt
+model NationalEmissionReading {
+  id            String   @id @default(cuid())
+  year          Int
+  indicatorCode String
+  indicatorName String
+  value         Float?
+  unit          String   @default("Mt CO2e")
+  ingestionJobId String? // IngestionJob that last wrote this row
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  entries EmissionEntry[]
-
-  @@index([districtId])
-  @@index([type])
-  @@index([isActive])
-}
-
-model EmissionEntry {
-  id                String          @id @default(cuid())
-  sourceId          String
-  source            PollutionSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
-  pollutant         PollutantType
-  value             Float
-  unit              EmissionUnit
-  measurementMethod String?
-  periodStart       DateTime?
-  periodEnd         DateTime?
-  notes             String?
-  reportedById      String?
-  reportedBy        User?           @relation(fields: [reportedById], references: [id], onDelete: SetNull)
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
-
-  @@index([sourceId])
-  @@index([pollutant])
+  @@unique([year, indicatorCode])
+  @@index([indicatorCode])
+  @@index([year])
 }
 
 // ─── Permissions ──────────────────────────────────────────────────────────────

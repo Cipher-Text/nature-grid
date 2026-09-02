@@ -185,12 +185,9 @@ export const routes = {
   },
 
   emissions: {
-    sources: `${apiPrefix}/emissions/sources`,
-    source: (id: string) => `${apiPrefix}/emissions/sources/${id}`,
-    createSource: `${apiPrefix}/emissions/sources`,
-    updateSource: (id: string) => `${apiPrefix}/emissions/sources/${id}`,
-    entries: (sourceId: string) => `${apiPrefix}/emissions/sources/${sourceId}/entries`,
-    createEntry: (sourceId: string) => `${apiPrefix}/emissions/sources/${sourceId}/entries`,
+    list: `${apiPrefix}/emissions`,
+    byYear: (year: number) => `${apiPrefix}/emissions/${year}`,
+    indicators: `${apiPrefix}/emissions/indicators`,
   },
 
   users: {
@@ -984,49 +981,21 @@ export interface WaterLevelStationPagedResponse {
 
 
 // ─── Emissions ────────────────────────────────────────────────────────────────
+// National-level GHG data ingested from the World Bank Climate Change API.
 
-export type PollutionSourceType =
-  | 'FACTORY' | 'POWER_PLANT' | 'VEHICLE_FLEET' | 'AGRICULTURE'
-  | 'CONSTRUCTION' | 'WASTE_FACILITY' | 'OTHER';
-
-export type PollutantType =
-  | 'CO2' | 'CH4' | 'N2O' | 'PM25' | 'PM10' | 'NOX' | 'SOX' | 'VOC' | 'CO' | 'OTHER';
-
-export type EmissionUnit =
-  | 'TONS_PER_YEAR' | 'KG_PER_DAY' | 'GRAMS_PER_HOUR' | 'MG_PER_M3' | 'OTHER';
-
-export interface PollutionSource {
+export interface NationalEmissionReading {
   id: string;
-  name: string;
-  type: PollutionSourceType;
-  description: string | null;
-  districtId: string | null;
-  lat: number | null;
-  lng: number | null;
-  organizationId: string | null;
-  isActive: boolean;
-  createdById: string;
-  createdAt: string;
+  year: number;
+  indicatorCode: string;
+  indicatorName: string;
+  value: number | null;
+  unit: string;
   updatedAt: string;
-  district: { id: string; name: string } | null;
-  organization: { id: string; name: string } | null;
-  _count: { entries: number };
 }
 
-export interface EmissionEntry {
-  id: string;
-  sourceId: string;
-  pollutant: PollutantType;
-  value: number;
-  unit: EmissionUnit;
-  measurementMethod: string | null;
-  periodStart: string | null;
-  periodEnd: string | null;
-  notes: string | null;
-  reportedById: string | null;
-  createdAt: string;
-  updatedAt: string;
-  reportedBy: { id: string; displayName: string } | null;
+export interface EmissionIndicator {
+  indicatorCode: string;
+  indicatorName: string;
 }
 
 // ─── Marine ───────────────────────────────────────────────────────────────────

@@ -26,6 +26,7 @@ export const CRON_LOCK_KEYS = {
   LOCATION_CLIMATE: 1_006,
   RADIATION:        1_007,
   MARINE:           1_008,
+  EMISSIONS:        1_009,
 } as const;
 
 /**

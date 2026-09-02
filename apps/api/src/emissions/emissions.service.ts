@@ -1,198 +1,129 @@
-import {
-  BadRequestException,
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
-import { PollutantType, PollutionSourceType } from '@prisma/client';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
-import { CreatePollutionSourceDto } from './dto/create-pollution-source.dto';
-import { UpdatePollutionSourceDto } from './dto/update-pollution-source.dto';
-import { CreateEmissionEntryDto } from './dto/create-emission-entry.dto';
-import type { JwtPayload } from '../common/decorators/current-user.decorator';
-import { clampPagination } from '../common/pagination';
-import { assertDistrictExists } from '../common/validate-district';
-
-const SOURCE_SELECT = {
-  id: true,
-  name: true,
-  type: true,
-  description: true,
-  districtId: true,
-  lat: true,
-  lng: true,
-  organizationId: true,
-  isActive: true,
-  createdById: true,
-  createdAt: true,
-  updatedAt: true,
-  district: { select: { id: true, name: true } },
-  organization: { select: { id: true, name: true } },
-  _count: { select: { entries: true } },
-} as const;
-
-const ENTRY_SELECT = {
-  id: true,
-  sourceId: true,
-  pollutant: true,
-  value: true,
-  unit: true,
-  measurementMethod: true,
-  periodStart: true,
-  periodEnd: true,
-  notes: true,
-  reportedById: true,
-  createdAt: true,
-  updatedAt: true,
-  reportedBy: { select: { id: true, displayName: true } },
-} as const;
+import { WorldBankClient, WORLD_BANK_INDICATORS } from './world-bank.client';
 
 @Injectable()
 export class EmissionsService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(EmissionsService.name);
 
-  // ─── Pollution Sources ───────────────────────────────────────────────────────
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly client: WorldBankClient,
+  ) {}
 
-  async createSource(dto: CreatePollutionSourceDto, user: JwtPayload) {
-    if (dto.districtId) await assertDistrictExists(this.prisma, dto.districtId);
-    if (dto.organizationId) {
-      const org = await this.prisma.organization.findUnique({
-        where: { id: dto.organizationId },
-        select: { id: true },
-      });
-      if (!org) throw new BadRequestException('Organization not found');
+  hasReadings(): Promise<boolean> {
+    return this.prisma.nationalEmissionReading
+      .findFirst({ select: { id: true } })
+      .then(Boolean);
+  }
+
+  /**
+   * Fetch all pages for a single indicator from the World Bank API
+   * and upsert into `NationalEmissionReading`, skipping null-value rows.
+   */
+  async syncIndicator(indicatorCode: string, jobId: string | null): Promise<number> {
+    const records = await this.client.fetchIndicator(indicatorCode);
+
+    const toUpsert = records.filter((r) => r.value !== null);
+
+    await this.prisma.$transaction(
+      toUpsert.map((r) =>
+        this.prisma.nationalEmissionReading.upsert({
+          where: {
+            year_indicatorCode: {
+              year: parseInt(r.date, 10),
+              indicatorCode: r.indicator.id,
+            },
+          },
+          update: {
+            value: r.value,
+            indicatorName: r.indicator.value,
+            ingestionJobId: jobId ?? undefined,
+          },
+          create: {
+            year: parseInt(r.date, 10),
+            indicatorCode: r.indicator.id,
+            indicatorName: r.indicator.value,
+            value: r.value,
+            ingestionJobId: jobId ?? undefined,
+          },
+        }),
+      ),
+    );
+
+    this.logger.log(`Upserted ${toUpsert.length} rows for ${indicatorCode}`);
+    return toUpsert.length;
+  }
+
+  /** Sync all configured indicators in sequence. */
+  async syncAll(jobId: string | null): Promise<void> {
+    for (const code of WORLD_BANK_INDICATORS) {
+      try {
+        await this.syncIndicator(code, jobId);
+      } catch (err) {
+        this.logger.error(`Failed to sync indicator ${code}: ${String(err)}`);
+      }
     }
-
-    const source = await this.prisma.pollutionSource.create({
-      data: {
-        name: dto.name,
-        type: dto.type,
-        description: dto.description,
-        districtId: dto.districtId,
-        lat: dto.lat,
-        lng: dto.lng,
-        organizationId: dto.organizationId,
-        createdById: user.sub,
-      },
-      select: SOURCE_SELECT,
-    });
-
-    await this.prisma.auditEvent.create({
-      data: {
-        action: 'EMISSION_SOURCE_CREATE',
-        userId: user.sub,
-        entityType: 'PollutionSource',
-        entityId: source.id,
-      },
-    });
-
-    return source;
   }
 
-  listSources(
-    type?: PollutionSourceType,
-    districtId?: string,
-    isActive?: boolean,
-    rawPage = 1,
-    rawPageSize = 20,
-  ) {
-    const { page, pageSize } = clampPagination(rawPage, rawPageSize);
-    const where = {
-      ...(type ? { type } : {}),
-      ...(districtId ? { districtId } : {}),
-      ...(isActive !== undefined ? { isActive } : {}),
-    };
-    return Promise.all([
-      this.prisma.pollutionSource.findMany({
-        where,
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-        orderBy: { createdAt: 'desc' },
-        select: SOURCE_SELECT,
-      }),
-      this.prisma.pollutionSource.count({ where }),
-    ]).then(([data, total]) => ({ data, total, page, pageSize }));
-  }
+  // ─── Read endpoints ──────────────────────────────────────────────────────────
 
-  async getSourceById(id: string) {
-    const source = await this.prisma.pollutionSource.findUnique({
-      where: { id },
-      select: SOURCE_SELECT,
-    });
-    if (!source) throw new NotFoundException('Pollution source not found');
-    return source;
-  }
-
-  async updateSource(id: string, dto: UpdatePollutionSourceDto, actor: JwtPayload) {
-    const source = await this.getSourceById(id);
-    if (source.createdById !== actor.sub && actor.role !== 'ADMIN') {
-      throw new ForbiddenException('Only the source creator or an admin can update this record');
-    }
-
-    return this.prisma.pollutionSource.update({
-      where: { id },
-      data: {
-        ...(dto.name !== undefined ? { name: dto.name } : {}),
-        ...(dto.description !== undefined ? { description: dto.description } : {}),
-        ...(dto.isActive !== undefined ? { isActive: dto.isActive } : {}),
+  /**
+   * Return all readings, optionally filtered by indicator code and year range.
+   * Results are ordered by year DESC then indicatorCode ASC.
+   */
+  getAll(indicatorCode?: string, fromYear?: number, toYear?: number) {
+    return this.prisma.nationalEmissionReading.findMany({
+      where: {
+        ...(indicatorCode ? { indicatorCode } : {}),
+        ...(fromYear !== undefined || toYear !== undefined
+          ? {
+              year: {
+                ...(fromYear !== undefined ? { gte: fromYear } : {}),
+                ...(toYear !== undefined ? { lte: toYear } : {}),
+              },
+            }
+          : {}),
       },
-      select: SOURCE_SELECT,
+      orderBy: [{ year: 'desc' }, { indicatorCode: 'asc' }],
+      select: {
+        id: true,
+        year: true,
+        indicatorCode: true,
+        indicatorName: true,
+        value: true,
+        unit: true,
+        updatedAt: true,
+      },
     });
   }
 
-  // ─── Emission Entries ────────────────────────────────────────────────────────
-
-  async createEntry(sourceId: string, dto: CreateEmissionEntryDto, user: JwtPayload) {
-    await this.getSourceById(sourceId); // 404 if source doesn't exist
-
-    const entry = await this.prisma.emissionEntry.create({
-      data: {
-        sourceId,
-        pollutant: dto.pollutant,
-        value: dto.value,
-        unit: dto.unit,
-        measurementMethod: dto.measurementMethod,
-        periodStart: dto.periodStart ? new Date(dto.periodStart) : undefined,
-        periodEnd: dto.periodEnd ? new Date(dto.periodEnd) : undefined,
-        notes: dto.notes,
-        reportedById: user.sub,
-      },
-      select: ENTRY_SELECT,
-    });
-
-    await this.prisma.auditEvent.create({
-      data: {
-        action: 'EMISSION_ENTRY_CREATE',
-        userId: user.sub,
-        entityType: 'EmissionEntry',
-        entityId: entry.id,
-        meta: { sourceId, pollutant: dto.pollutant, value: dto.value, unit: dto.unit },
+  /** Return all readings for a specific year, across all indicators. */
+  async getByYear(year: number) {
+    const rows = await this.prisma.nationalEmissionReading.findMany({
+      where: { year },
+      orderBy: { indicatorCode: 'asc' },
+      select: {
+        id: true,
+        year: true,
+        indicatorCode: true,
+        indicatorName: true,
+        value: true,
+        unit: true,
+        updatedAt: true,
       },
     });
-
-    return entry;
+    if (!rows.length) throw new NotFoundException(`No emission data found for year ${year}`);
+    return rows;
   }
 
-  listEntries(
-    sourceId: string,
-    pollutant?: PollutantType,
-    rawPage = 1,
-    rawPageSize = 20,
-  ) {
-    const { page, pageSize } = clampPagination(rawPage, rawPageSize);
-    const where = {
-      sourceId,
-      ...(pollutant ? { pollutant } : {}),
-    };
-    return Promise.all([
-      this.prisma.emissionEntry.findMany({
-        where,
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-        orderBy: { createdAt: 'desc' },
-        select: ENTRY_SELECT,
-      }),
-      this.prisma.emissionEntry.count({ where }),
-    ]).then(([data, total]) => ({ data, total, page, pageSize }));
+  /** Return the distinct indicator codes and names available in the DB. */
+  async getIndicators() {
+    const rows = await this.prisma.nationalEmissionReading.findMany({
+      distinct: ['indicatorCode'],
+      orderBy: { indicatorCode: 'asc' },
+      select: { indicatorCode: true, indicatorName: true },
+    });
+    return rows;
   }
 }

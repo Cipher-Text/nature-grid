@@ -14,6 +14,7 @@ const PROVIDER_SELECT = {
 
 export const OPENMETEO_PROVIDER_NAME = 'OpenMeteo';
 export const GBIF_PROVIDER_NAME = 'GBIF';
+export const WORLD_BANK_PROVIDER_NAME = 'World Bank';
 
 @Injectable()
 export class ProvidersService implements OnModuleInit {
@@ -25,6 +26,7 @@ export class ProvidersService implements OnModuleInit {
   async onModuleInit() {
     await this.upsertProvider(OPENMETEO_PROVIDER_NAME, 'INTERNATIONAL_ORG', 'Germany');
     await this.upsertProvider(GBIF_PROVIDER_NAME, 'INTERNATIONAL_ORG', 'Denmark');
+    await this.upsertProvider(WORLD_BANK_PROVIDER_NAME, 'INTERNATIONAL_ORG', 'United States');
   }
 
   private async upsertProvider(name: string, type: ProviderType, country: string) {

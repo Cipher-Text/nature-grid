@@ -109,9 +109,7 @@ export type Permission =
   | 'observations.delete'  // Delete observations
   | 'organizations.access' // View own organization memberships (granted dynamically)
   | 'organizations.manage' // Full organization CRUD in admin console
-  | 'users.manage'         // Manage user roles and deactivate accounts
-  | 'emissions.manage'     // Register and update pollution sources
-  | 'emissions.report';    // Log emission measurements against pollution sources
+  | 'users.manage';        // Manage user roles and deactivate accounts
 
 export const ENVIRONMENTAL_EXPERTISE = [
   'Biodiversity monitoring',
