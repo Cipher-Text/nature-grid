@@ -7,10 +7,18 @@ import {
 } from '../../weather/dto/open-meteo-response.dto';
 
 /**
- * OpenMeteo supports up to 1,000 locations per batch request.
- * 2,629 unions with coordinates → 3 HTTP requests instead of 2,629.
+ * Granularity rationale:
+ *   Weather (temp, precip, wind, humidity, UV) — upazila level (494 points, ≤5 batches of 100).
+ *     OpenMeteo ERA5 model resolution ~9 km; upazila diameter ~15–20 km — a good match.
+ *   Air quality (PM2.5, PM10) — district level (64 points, 1 batch).
+ *     CAMS AQ model resolution ~40 km; district diameter ~40–60 km — a good match.
+ *
+ * Using past_days=29&forecast_days=1 gives a true 30-day average in one request per location,
+ * eliminating the need for a per-union daily history table.
+ *
+ * Batch size ≤100 keeps GET URLs under ~1.8 KB — well within OpenMeteo's CDN limits.
  */
-const BATCH_SIZE = 1_000;
+const BATCH_SIZE = 100;
 const INTER_BATCH_DELAY_MS = 500;
 
 function numAvg(values: (number | null | undefined)[]): number | null {
@@ -19,7 +27,22 @@ function numAvg(values: (number | null | undefined)[]): number | null {
   return valid.reduce((a, b) => a + b, 0) / valid.length;
 }
 
-type UnionWithCoords = { id: string; name: string; lat: number; lng: number };
+function numMin(values: (number | null | undefined)[]): number | null {
+  const valid = values.filter((v): v is number => v != null && !Number.isNaN(v));
+  return valid.length === 0 ? null : Math.min(...valid);
+}
+
+function numMax(values: (number | null | undefined)[]): number | null {
+  const valid = values.filter((v): v is number => v != null && !Number.isNaN(v));
+  return valid.length === 0 ? null : Math.max(...valid);
+}
+
+function numSum(values: (number | null | undefined)[]): number | null {
+  const valid = values.filter((v): v is number => v != null && !Number.isNaN(v));
+  return valid.length === 0 ? null : valid.reduce((a, b) => a + b, 0);
+}
+
+type WithCoords = { id: string; name: string; lat: number; lng: number };
 
 @Injectable()
 export class LocationClimateService {
@@ -32,235 +55,173 @@ export class LocationClimateService {
 
   /**
    * Full daily sync:
-   *   1. Fetch OpenMeteo in batches of 1,000 unions per HTTP request.
-   *   2. Upsert a UnionDailyClimate row for today per union (batched in a transaction).
-   *   3. Recompute 30-day rolling averages on Union rows (single bulk SQL).
-   *   4. Aggregate Union → Upazila → District → Division (3 bulk SQL statements).
+   *   1. Fetch 30d weather per upazila → set Upazila climate columns.
+   *   2. Fetch 30d AQ per district    → set District AQ columns.
+   *   3. Aggregate Upazila weather    → District weather columns.
+   *   4. Propagate District AQ        → Upazila AQ columns.
+   *   5. Propagate Upazila (all)      → Union columns.
+   *   6. Aggregate District (all)     → Division columns.
    */
   async syncAll(): Promise<void> {
-    // Load all unions; filter for those with coordinates in JS to avoid any Prisma
-    // type-narrowing issues on nullable Float fields.
-    const allUnions = await this.prisma.union.findMany({
+    await this.syncUpazilaWeather();
+    await this.syncDistrictAq();
+
+    this.logger.log('Running aggregation chain…');
+    await this.aggregateUpazilaWeatherToDistrict();
+    await this.propagateAqDistrictToUpazila();
+    await this.propagateUpazilaToUnion();
+    await this.aggregateDistrictToDivision();
+    this.logger.log('Aggregation complete');
+  }
+
+  // ─── Step 1: weather per upazila ─────────────────────────────────────────
+
+  private async syncUpazilaWeather(): Promise<void> {
+    const all = await this.prisma.upazila.findMany({
       select: { id: true, name: true, lat: true, lng: true },
     });
-    // Map through to narrow nullable lat/lng to number — avoids Prisma type-predicate issues.
-    const unions: UnionWithCoords[] = allUnions
+    const upazilas: WithCoords[] = all
       .filter((u) => u.lat != null && u.lng != null)
-      .map((u) => ({
-        id: u.id,
-        name: u.name,
-        lat: u.lat as number,
-        lng: u.lng as number,
-      }));
+      .map((u) => ({ id: u.id, name: u.name, lat: u.lat as number, lng: u.lng as number }));
 
-    const totalBatches = Math.ceil(unions.length / BATCH_SIZE);
-    this.logger.log(
-      `Syncing climate for ${unions.length} unions in ${totalBatches} batch(es)`,
-    );
+    const total = Math.ceil(upazilas.length / BATCH_SIZE);
+    this.logger.log(`Fetching 30d weather for ${upazilas.length} upazilas in ${total} batch(es)…`);
 
-    let ok = 0;
-    let fail = 0;
-
-    for (let i = 0; i < unions.length; i += BATCH_SIZE) {
-      const batch = unions.slice(i, i + BATCH_SIZE);
-      const batchNum = Math.floor(i / BATCH_SIZE) + 1;
+    let ok = 0, fail = 0;
+    for (let i = 0; i < upazilas.length; i += BATCH_SIZE) {
+      const batch = upazilas.slice(i, i + BATCH_SIZE);
+      const num = Math.floor(i / BATCH_SIZE) + 1;
       try {
-        await this.syncBatch(batch);
+        await this.syncWeatherBatch(batch);
         ok += batch.length;
-        this.logger.log(`Batch ${batchNum}/${totalBatches} done (${batch.length} unions)`);
+        this.logger.log(`Weather batch ${num}/${total} done (${batch.length} upazilas)`);
       } catch (err) {
         fail += batch.length;
-        this.logger.error(`Batch ${batchNum}/${totalBatches} failed: ${String(err)}`);
+        this.logger.error(`Weather batch ${num}/${total} failed: ${String(err)}`);
       }
-      if (i + BATCH_SIZE < unions.length) {
+      if (i + BATCH_SIZE < upazilas.length) {
         await new Promise((r) => setTimeout(r, INTER_BATCH_DELAY_MS));
       }
     }
-
-    this.logger.log(`Union fetch done — ${ok} ok, ${fail} errors`);
-
-    this.logger.log('Running bottom-up climate aggregation in a single transaction…');
-    await this.prisma.$transaction([
-      this.updateUnionRollingAverages(),
-      this.aggregateUpazilas(),
-      this.aggregateDistricts(),
-      this.aggregateDivisions(),
-    ]);
-
-    this.logger.log('Bottom-up climate aggregation complete');
+    this.logger.log(`Upazila weather done — ${ok} ok, ${fail} errors`);
   }
 
-  // ─── Batch fetch + upsert ──────────────────────────────────────────────────
-
-  private async syncBatch(batch: UnionWithCoords[]): Promise<void> {
+  private async syncWeatherBatch(batch: WithCoords[]): Promise<void> {
     const lats = batch.map((u) => u.lat).join(',');
     const lngs = batch.map((u) => u.lng).join(',');
 
-    const [weatherRaw, aqRaw] = await Promise.all([
-      this.openMeteo.fetchUnionWeatherBatch(lats, lngs),
-      this.openMeteo.fetchUnionAirQualityBatch(lats, lngs),
-    ]);
+    const raw = await this.openMeteo.fetchWeatherBatch30d(lats, lngs);
+    const arr: OpenMeteoUnionWeatherResponse[] = Array.isArray(raw) ? raw : [raw];
 
-    // OpenMeteo returns a single object for 1 coord, an array for multiple.
-    const weatherArr: OpenMeteoUnionWeatherResponse[] = Array.isArray(weatherRaw)
-      ? weatherRaw
-      : [weatherRaw];
-    const aqArr: OpenMeteoUnionAirQualityResponse[] = Array.isArray(aqRaw)
-      ? aqRaw
-      : [aqRaw];
-
-    if (weatherArr.length !== batch.length || aqArr.length !== batch.length) {
-      throw new Error(
-        `OpenMeteo response size mismatch: expected ${batch.length} entries, ` +
-          `got weather=${weatherArr.length} aq=${aqArr.length}`,
-      );
+    if (arr.length !== batch.length) {
+      throw new Error(`Weather response size mismatch: expected ${batch.length}, got ${arr.length}`);
     }
 
-    const truncatedCount = weatherArr.filter(
-      (w) => (w.hourly.relative_humidity_2m?.length ?? 0) < 24,
-    ).length;
-    if (truncatedCount > 0) {
-      this.logger.warn(
-        `${truncatedCount}/${batch.length} unions returned fewer than 24 hourly entries — daily averages will be based on partial data`,
-      );
-    }
+    const updates = batch
+      .map((upazila, i) => {
+        const w = arr[i];
+        if (!w) return null;
 
-    const today = new Date();
-    today.setUTCHours(0, 0, 0, 0);
+        const maxTemps = w.daily.temperature_2m_max ?? [];
+        const minTemps = w.daily.temperature_2m_min ?? [];
+        const dailyAvgTemps = maxTemps.map((max, j) => {
+          const min = minTemps[j];
+          return max != null && min != null ? (max + min) / 2 : null;
+        });
 
-    const upserts = batch
-      .map((union, i) => {
-        const w = weatherArr[i];
-        const aq = aqArr[i];
-        if (!w || !aq) return null;
-
-        const tempMax = w.daily.temperature_2m_max?.[0] ?? null;
-        const tempMin = w.daily.temperature_2m_min?.[0] ?? null;
-        const avgTemp =
-          tempMax != null && tempMin != null ? (tempMax + tempMin) / 2 : null;
-        const totalPrecip = w.daily.precipitation_sum?.[0] ?? null;
-        const maxWindSpeed = w.daily.wind_speed_10m_max?.[0] ?? null;
-        const uvMax = w.daily.uv_index_max?.[0] ?? null;
-
-        const avgHumidity = numAvg(w.hourly.relative_humidity_2m?.slice(0, 24) ?? []);
-        const avgCloudCover = numAvg(w.hourly.cloud_cover?.slice(0, 24) ?? []);
-        const avgPm25 = numAvg(aq.hourly.pm2_5?.slice(0, 24) ?? []);
-        const avgPm10 = numAvg(aq.hourly.pm10?.slice(0, 24) ?? []);
-        const avgOzone = numAvg(aq.hourly.ozone?.slice(0, 24) ?? []);
-        const avgUvIndex = numAvg(aq.hourly.uv_index?.slice(0, 24) ?? []) ?? uvMax;
-
-        const data = {
-          avgTemp,
-          minTemp: tempMin,
-          maxTemp: tempMax,
-          avgHumidity,
-          totalPrecip,
-          avgWindSpeed: maxWindSpeed,
-          maxWindSpeed,
-          avgCloudCover,
-          avgPm25,
-          avgPm10,
-          avgUvIndex,
-          avgOzone,
-        };
-
-        return this.prisma.unionDailyClimate.upsert({
-          where: { unionId_date: { unionId: union.id, date: today } },
-          update: { ...data, fetchedAt: new Date() },
-          create: { unionId: union.id, date: today, ...data },
+        return this.prisma.upazila.update({
+          where: { id: upazila.id },
+          data: {
+            avgTemp30d:       numAvg(dailyAvgTemps),
+            minTemp30d:       numMin(minTemps),
+            maxTemp30d:       numMax(maxTemps),
+            avgHumidity30d:   numAvg(w.hourly.relative_humidity_2m ?? []),
+            totalPrecip30d:   numSum(w.daily.precipitation_sum ?? []),
+            avgWindSpeed30d:  numAvg(w.daily.wind_speed_10m_max ?? []),
+            avgCloudCover30d: numAvg(w.hourly.cloud_cover ?? []),
+            avgUvIndex30d:    numAvg(w.daily.uv_index_max ?? []),
+            climateUpdatedAt: new Date(),
+          },
         });
       })
       .filter((p): p is NonNullable<typeof p> => p !== null);
 
-    if (upserts.length > 0) {
-      await this.prisma.$transaction(upserts);
+    if (updates.length > 0) {
+      await this.prisma.$transaction(updates);
     }
   }
 
-  // ─── Bulk aggregation (raw SQL) ────────────────────────────────────────────
-  // WARNING: column names below are hardcoded strings and will NOT be caught by
-  // tsc if the Prisma schema is renamed. If you rename any of the following
-  // columns in schema.prisma, update these SQL statements to match:
-  //   UnionDailyClimate: avgTemp, minTemp, maxTemp, avgHumidity, totalPrecip,
-  //     avgWindSpeed, avgCloudCover, avgPm25, avgPm10, avgUvIndex
-  //   Union / Upazila / District / Division: avgTemp30d, minTemp30d, maxTemp30d,
-  //     avgHumidity30d, totalPrecip30d, avgWindSpeed30d, avgCloudCover30d,
-  //     avgPm25_30d, avgPm10_30d, avgUvIndex30d, climateUpdatedAt
+  // ─── Step 2: AQ per district ──────────────────────────────────────────────
 
-  /** Recompute 30-day rolling averages on all Union rows from their daily history. */
-  private updateUnionRollingAverages() {
-    return this.prisma.$executeRaw`
-      UPDATE "Union" u
-      SET
-        "avgTemp30d"       = sub.avg_temp,
-        "minTemp30d"       = sub.min_temp,
-        "maxTemp30d"       = sub.max_temp,
-        "avgHumidity30d"   = sub.avg_humidity,
-        "totalPrecip30d"   = sub.total_precip,
-        "avgWindSpeed30d"  = sub.avg_wind,
-        "avgCloudCover30d" = sub.avg_cloud,
-        "avgPm25_30d"      = sub.avg_pm25,
-        "avgPm10_30d"      = sub.avg_pm10,
-        "avgUvIndex30d"    = sub.avg_uv,
-        "climateUpdatedAt" = NOW()
-      FROM (
-        SELECT
-          "unionId",
-          AVG("avgTemp")       AS avg_temp,
-          AVG("minTemp")       AS min_temp,
-          AVG("maxTemp")       AS max_temp,
-          AVG("avgHumidity")   AS avg_humidity,
-          SUM("totalPrecip")   AS total_precip,
-          AVG("avgWindSpeed")  AS avg_wind,
-          AVG("avgCloudCover") AS avg_cloud,
-          AVG("avgPm25")       AS avg_pm25,
-          AVG("avgPm10")       AS avg_pm10,
-          AVG("avgUvIndex")    AS avg_uv
-        FROM "UnionDailyClimate"
-        WHERE date >= CURRENT_DATE - INTERVAL '30 days'
-        GROUP BY "unionId"
-      ) sub
-      WHERE u.id = sub."unionId"
-    `;
+  private async syncDistrictAq(): Promise<void> {
+    const all = await this.prisma.district.findMany({
+      select: { id: true, name: true, lat: true, lng: true },
+    });
+    const districts: WithCoords[] = all
+      .filter((d) => d.lat != null && d.lng != null)
+      .map((d) => ({ id: d.id, name: d.name, lat: d.lat as number, lng: d.lng as number }));
+
+    const total = Math.ceil(districts.length / BATCH_SIZE);
+    this.logger.log(`Fetching 30d AQ for ${districts.length} districts in ${total} batch(es)…`);
+
+    let ok = 0, fail = 0;
+    for (let i = 0; i < districts.length; i += BATCH_SIZE) {
+      const batch = districts.slice(i, i + BATCH_SIZE);
+      const num = Math.floor(i / BATCH_SIZE) + 1;
+      try {
+        await this.syncAqBatch(batch);
+        ok += batch.length;
+        this.logger.log(`AQ batch ${num}/${total} done (${batch.length} districts)`);
+      } catch (err) {
+        fail += batch.length;
+        this.logger.error(`AQ batch ${num}/${total} failed: ${String(err)}`);
+      }
+      if (i + BATCH_SIZE < districts.length) {
+        await new Promise((r) => setTimeout(r, INTER_BATCH_DELAY_MS));
+      }
+    }
+    this.logger.log(`District AQ done — ${ok} ok, ${fail} errors`);
   }
 
-  private aggregateUpazilas() {
-    return this.prisma.$executeRaw`
-      UPDATE "Upazila" up
-      SET
-        "avgTemp30d"       = sub.avg_temp,
-        "minTemp30d"       = sub.min_temp,
-        "maxTemp30d"       = sub.max_temp,
-        "avgHumidity30d"   = sub.avg_humidity,
-        "totalPrecip30d"   = sub.total_precip,
-        "avgWindSpeed30d"  = sub.avg_wind,
-        "avgCloudCover30d" = sub.avg_cloud,
-        "avgPm25_30d"      = sub.avg_pm25,
-        "avgPm10_30d"      = sub.avg_pm10,
-        "avgUvIndex30d"    = sub.avg_uv,
-        "climateUpdatedAt" = NOW()
-      FROM (
-        SELECT
-          "upazilaId",
-          AVG("avgTemp30d")       AS avg_temp,
-          AVG("minTemp30d")       AS min_temp,
-          AVG("maxTemp30d")       AS max_temp,
-          AVG("avgHumidity30d")   AS avg_humidity,
-          AVG("totalPrecip30d")   AS total_precip,
-          AVG("avgWindSpeed30d")  AS avg_wind,
-          AVG("avgCloudCover30d") AS avg_cloud,
-          AVG("avgPm25_30d")      AS avg_pm25,
-          AVG("avgPm10_30d")      AS avg_pm10,
-          AVG("avgUvIndex30d")    AS avg_uv
-        FROM "Union"
-        WHERE "avgTemp30d" IS NOT NULL
-        GROUP BY "upazilaId"
-      ) sub
-      WHERE up.id = sub."upazilaId"
-    `;
+  private async syncAqBatch(batch: WithCoords[]): Promise<void> {
+    const lats = batch.map((d) => d.lat).join(',');
+    const lngs = batch.map((d) => d.lng).join(',');
+
+    const raw = await this.openMeteo.fetchAqBatch30d(lats, lngs);
+    const arr: OpenMeteoUnionAirQualityResponse[] = Array.isArray(raw) ? raw : [raw];
+
+    if (arr.length !== batch.length) {
+      throw new Error(`AQ response size mismatch: expected ${batch.length}, got ${arr.length}`);
+    }
+
+    const updates = batch
+      .map((district, i) => {
+        const aq = arr[i];
+        if (!aq) return null;
+
+        return this.prisma.district.update({
+          where: { id: district.id },
+          data: {
+            avgPm25_30d:      numAvg(aq.hourly.pm2_5 ?? []),
+            avgPm10_30d:      numAvg(aq.hourly.pm10 ?? []),
+            climateUpdatedAt: new Date(),
+          },
+        });
+      })
+      .filter((p): p is NonNullable<typeof p> => p !== null);
+
+    if (updates.length > 0) {
+      await this.prisma.$transaction(updates);
+    }
   }
 
-  private aggregateDistricts() {
+  // ─── Aggregation chain (raw SQL) ──────────────────────────────────────────
+  // WARNING: column names below are hardcoded strings — not caught by tsc if
+  // schema.prisma is renamed. If you rename any column used here, update these
+  // SQL statements to match.
+
+  /** Step 3: Roll upazila weather up into district weather columns. */
+  private aggregateUpazilaWeatherToDistrict() {
     return this.prisma.$executeRaw`
       UPDATE "District" d
       SET
@@ -271,22 +232,18 @@ export class LocationClimateService {
         "totalPrecip30d"   = sub.total_precip,
         "avgWindSpeed30d"  = sub.avg_wind,
         "avgCloudCover30d" = sub.avg_cloud,
-        "avgPm25_30d"      = sub.avg_pm25,
-        "avgPm10_30d"      = sub.avg_pm10,
         "avgUvIndex30d"    = sub.avg_uv,
         "climateUpdatedAt" = NOW()
       FROM (
         SELECT
           "districtId",
           AVG("avgTemp30d")       AS avg_temp,
-          AVG("minTemp30d")       AS min_temp,
-          AVG("maxTemp30d")       AS max_temp,
+          MIN("minTemp30d")       AS min_temp,
+          MAX("maxTemp30d")       AS max_temp,
           AVG("avgHumidity30d")   AS avg_humidity,
           AVG("totalPrecip30d")   AS total_precip,
           AVG("avgWindSpeed30d")  AS avg_wind,
           AVG("avgCloudCover30d") AS avg_cloud,
-          AVG("avgPm25_30d")      AS avg_pm25,
-          AVG("avgPm10_30d")      AS avg_pm10,
           AVG("avgUvIndex30d")    AS avg_uv
         FROM "Upazila"
         WHERE "avgTemp30d" IS NOT NULL
@@ -296,7 +253,44 @@ export class LocationClimateService {
     `;
   }
 
-  private aggregateDivisions() {
+  /** Step 4: Push district AQ down to child upazilas. */
+  private propagateAqDistrictToUpazila() {
+    return this.prisma.$executeRaw`
+      UPDATE "Upazila" up
+      SET
+        "avgPm25_30d"      = d."avgPm25_30d",
+        "avgPm10_30d"      = d."avgPm10_30d",
+        "climateUpdatedAt" = NOW()
+      FROM "District" d
+      WHERE up."districtId" = d.id
+        AND d."avgPm25_30d" IS NOT NULL
+    `;
+  }
+
+  /** Step 5: Copy all upazila climate columns down to child unions. */
+  private propagateUpazilaToUnion() {
+    return this.prisma.$executeRaw`
+      UPDATE "Union" u
+      SET
+        "avgTemp30d"       = up."avgTemp30d",
+        "minTemp30d"       = up."minTemp30d",
+        "maxTemp30d"       = up."maxTemp30d",
+        "avgHumidity30d"   = up."avgHumidity30d",
+        "totalPrecip30d"   = up."totalPrecip30d",
+        "avgWindSpeed30d"  = up."avgWindSpeed30d",
+        "avgCloudCover30d" = up."avgCloudCover30d",
+        "avgPm25_30d"      = up."avgPm25_30d",
+        "avgPm10_30d"      = up."avgPm10_30d",
+        "avgUvIndex30d"    = up."avgUvIndex30d",
+        "climateUpdatedAt" = NOW()
+      FROM "Upazila" up
+      WHERE u."upazilaId" = up.id
+        AND up."avgTemp30d" IS NOT NULL
+    `;
+  }
+
+  /** Step 6: Aggregate all district climate columns up to division. */
+  private aggregateDistrictToDivision() {
     return this.prisma.$executeRaw`
       UPDATE "Division" dv
       SET
@@ -315,8 +309,8 @@ export class LocationClimateService {
         SELECT
           "divisionId",
           AVG("avgTemp30d")       AS avg_temp,
-          AVG("minTemp30d")       AS min_temp,
-          AVG("maxTemp30d")       AS max_temp,
+          MIN("minTemp30d")       AS min_temp,
+          MAX("maxTemp30d")       AS max_temp,
           AVG("avgHumidity30d")   AS avg_humidity,
           AVG("totalPrecip30d")   AS total_precip,
           AVG("avgWindSpeed30d")  AS avg_wind,

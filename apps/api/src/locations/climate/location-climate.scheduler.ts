@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { LocationClimateService } from './location-climate.service';
 import { IngestionService } from '../../ingestion/ingestion.service';
@@ -7,7 +7,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { withCronLock, CRON_LOCK_KEYS } from '../../common/pg-cron-lock';
 
 @Injectable()
-export class LocationClimateScheduler {
+export class LocationClimateScheduler implements OnModuleInit {
   private readonly logger = new Logger(LocationClimateScheduler.name);
 
   constructor(
@@ -15,6 +15,13 @@ export class LocationClimateScheduler {
     private readonly ingestionService: IngestionService,
     private readonly prisma: PrismaService,
   ) {}
+
+  async onModuleInit() {
+    const count = await this.prisma.upazila.count({ where: { avgTemp30d: { not: null } } });
+    if (count > 0) return;
+    this.logger.log('No upazila climate data found; starting initial sync');
+    void this.dailyClimateSync();
+  }
 
   /** Run once a day at midnight — fetch union-level climate and aggregate bottom-up. */
   @Cron('0 0 0 * * *')

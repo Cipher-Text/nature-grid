@@ -32,7 +32,7 @@ export default async function AirQualityGrid() {
     ? withAqi[Math.floor(withAqi.length / 2)].avgPm25_30d
     : (withAqi[withAqi.length / 2 - 1].avgPm25_30d + withAqi[withAqi.length / 2].avgPm25_30d) / 2;
 
-  const topDistricts = withAqi.slice(0, 12);
+  const topDistricts = withAqi.slice(0, 10);
   const unhealthyCount = withAqi.filter((d) => d.avgPm25_30d > 55.4).length;
 
   return (

@@ -139,10 +139,13 @@ export default async function DatasetDetailPage({ params }: { params: { id: stri
           </article>
 
           <article className="panel dataset-detail-panel">
-            <div className="panel-header"><div><h2>Air quality</h2><p>Latest stored pollutant readings by district.</p></div></div>
+            <div className="panel-header"><div><h2>Air quality</h2><p>Top 10 most polluted districts · latest reading · highest PM2.5 first.</p></div></div>
             <DataTable>
               <div className="table-row table-head"><span>District</span><span>PM2.5</span><span>PM10</span><span>Ozone</span></div>
-              {airQuality.slice(0, 10).map((row) => (
+              {[...airQuality]
+                .sort((a, b) => (b.pm25 ?? -1) - (a.pm25 ?? -1))
+                .slice(0, 10)
+                .map((row) => (
                 <div className="table-row" key={row.id}>
                   <strong>{row.district?.name ?? row.districtId}</strong>
                   <span>{row.pm25 != null ? `${row.pm25} µg/m³` : '—'}</span>

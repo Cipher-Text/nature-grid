@@ -51,11 +51,11 @@ export class WeatherOpenMeteoClient {
   }
 
   /**
-   * Fetch today's daily summary + hourly humidity/cloud for a batch of up to 1,000 unions.
-   * Pass comma-separated latitude and longitude strings.
-   * OpenMeteo returns an array when multiple coords are supplied, a single object for one.
+   * Fetch 30-day weather history for a batch of upazilas (≤100 per call to stay under URL limits).
+   * Returns 30 daily values per location (past_days=29 + today) — caller averages them.
+   * OpenMeteo returns a single object for 1 coord, an array for multiple.
    */
-  fetchUnionWeatherBatch(
+  fetchWeatherBatch30d(
     lats: string,
     lngs: string,
   ): Promise<OpenMeteoUnionWeatherResponse | OpenMeteoUnionWeatherResponse[]> {
@@ -63,22 +63,22 @@ export class WeatherOpenMeteoClient {
       `${FORECAST_BASE_URL}?latitude=${lats}&longitude=${lngs}` +
       `&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max,uv_index_max` +
       `&hourly=relative_humidity_2m,cloud_cover` +
-      `&forecast_days=1&timezone=auto`;
+      `&past_days=29&forecast_days=1&timezone=auto`;
     return this.getJson(url);
   }
 
   /**
-   * Fetch today's hourly air quality for a batch of up to 1,000 unions.
-   * Pass comma-separated latitude and longitude strings.
+   * Fetch 30-day air quality history for a batch of districts (all 64 fit in one call).
+   * Returns 30×24=720 hourly values per location — caller averages them.
    */
-  fetchUnionAirQualityBatch(
+  fetchAqBatch30d(
     lats: string,
     lngs: string,
   ): Promise<OpenMeteoUnionAirQualityResponse | OpenMeteoUnionAirQualityResponse[]> {
     const url =
       `${AIR_QUALITY_BASE_URL}?latitude=${lats}&longitude=${lngs}` +
-      `&hourly=pm10,pm2_5,ozone,uv_index` +
-      `&forecast_days=1&timezone=auto`;
+      `&hourly=pm10,pm2_5` +
+      `&past_days=29&forecast_days=1&timezone=auto`;
     return this.getJson(url);
   }
 
