@@ -2225,7 +2225,7 @@ a {
 
 .comment-header {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 10px;
   margin-bottom: 8px;
   font-size: 0.88rem;
@@ -2276,7 +2276,47 @@ a {
   color: var(--muted);
 }
 
+/* ── Poll list (polls tab) ── */
+.poll-question-preview {
+  display: block;
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin-top: 2px;
+  font-weight: 400;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 40ch;
+}
+
+/* ── Poll create meta row (closes-at + district side by side) ── */
+.poll-create-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 16px;
+}
+
+@media (max-width: 600px) {
+  .poll-create-meta {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Post actions bar (delete, etc.) — separated from post body ── */
+.post-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
 /* ── Poll ── */
+.poll-status {
+  font-size: 0.86rem;
+  color: var(--muted);
+  margin: 4px 0 14px;
+}
+
 .poll-results {
   margin-top: 16px;
   display: grid;

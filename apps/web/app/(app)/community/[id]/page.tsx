@@ -63,14 +63,17 @@ export default async function CommunityPostDetailPage({
       {/* Post body */}
       <article className="panel">
         <p style={{ whiteSpace: 'pre-wrap' }}>{post.body}</p>
-        {canDeletePost && (
-          <form action={deletePostAction.bind(null, post.id)} style={{ marginTop: 12 }}>
-            <button className="button danger" type="submit">
+      </article>
+
+      {canDeletePost && (
+        <div className="post-actions">
+          <form action={deletePostAction.bind(null, post.id, !!post.poll)}>
+            <button className="button danger small" type="submit">
               Delete post
             </button>
           </form>
-        )}
-      </article>
+        </div>
+      )}
 
       {/* Poll */}
       {post.poll && (() => {
@@ -86,7 +89,7 @@ export default async function CommunityPostDetailPage({
             <p><strong>{poll.question}</strong></p>
 
             {/* Status line */}
-            <p className="muted-text">
+            <p className="poll-status">
               {isClosed
                 ? `Closed · ${totalVotes} vote${totalVotes !== 1 ? 's' : ''}`
                 : poll.endsAt
@@ -154,7 +157,7 @@ export default async function CommunityPostDetailPage({
 
             {!user && !isClosed && (
               <p className="access-note" style={{ marginTop: 12 }}>
-                <a href="/login">Sign in</a> to vote.
+                <Link href="/login">Sign in</Link> to vote.
               </p>
             )}
           </article>
@@ -205,7 +208,7 @@ export default async function CommunityPostDetailPage({
         )}
 
         {user && (
-          <div className="comment-form" style={{ marginTop: 16 }}>
+          <div className="comment-form">
             <form action={addPostCommentAction.bind(null, post.id)} className="submit-form">
               <div className="field">
                 <label htmlFor="body">Add a comment</label>

@@ -36,10 +36,11 @@ export class CreatePostDto {
   @MaxLength(300)
   title!: string;
 
+  @IsOptional()
   @IsString()
   @MinLength(10)
   @MaxLength(10000)
-  body!: string;
+  body?: string;
 
   @IsOptional()
   @IsString()

@@ -49,10 +49,19 @@ export class CommunityService {
     private readonly gamification: GamificationService,
   ) {}
 
-  listPosts(districtId: string | undefined, rawPage: number, rawPageSize: number) {
+  listPosts(
+    districtId: string | undefined,
+    hasPoll: boolean | undefined,
+    rawPage: number,
+    rawPageSize: number,
+  ) {
     const { page, pageSize } = clampPagination(rawPage, rawPageSize);
     const skip = (page - 1) * pageSize;
-    const where = districtId ? { districtId } : {};
+    const where = {
+      ...(districtId ? { districtId } : {}),
+      ...(hasPoll === true  ? { poll: { isNot: null } } : {}),
+      ...(hasPoll === false ? { poll: { is:    null } } : {}),
+    };
     return Promise.all([
       this.prisma.communityPost.findMany({
         where,
@@ -79,7 +88,7 @@ export class CommunityService {
       const created = await tx.communityPost.create({
         data: {
           title: dto.title,
-          body: dto.body,
+          body: dto.body ?? '',
           authorId: actor.sub,
           ...(dto.districtId ? { districtId: dto.districtId } : {}),
           ...(dto.poll

@@ -27,10 +27,18 @@ export class CommunityController {
   @Get('posts')
   listPosts(
     @Query('districtId') districtId?: string,
+    @Query('hasPoll') hasPoll?: string,
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
   ) {
-    return this.communityService.listPosts(districtId, Number(page ?? 1), Number(pageSize ?? 20));
+    const hasPollFilter =
+      hasPoll === 'true' ? true : hasPoll === 'false' ? false : undefined;
+    return this.communityService.listPosts(
+      districtId,
+      hasPollFilter,
+      Number(page ?? 1),
+      Number(pageSize ?? 20),
+    );
   }
 
   @Post('posts')

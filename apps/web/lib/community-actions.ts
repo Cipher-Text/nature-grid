@@ -10,21 +10,34 @@ export async function createPostAction(formData: FormData) {
   const accessToken = cookies().get(ACCESS_TOKEN_COOKIE)?.value;
   if (!accessToken) redirect('/login');
 
-  const title = String(formData.get('title') ?? '').trim();
-  const body = String(formData.get('body') ?? '').trim();
+  const rawTitle = String(formData.get('title') ?? '').trim();
+  const body = String(formData.get('body') ?? '').trim() || undefined;
   const districtId = formData.get('districtId') ? String(formData.get('districtId')) : undefined;
   const pollQuestion = formData.get('pollQuestion') ? String(formData.get('pollQuestion')).trim() : undefined;
 
-  // Collect poll options only when a question is provided
-  let poll: { question: string; options: string[] } | undefined;
+  // On the polls tab the title field is hidden — derive it from the question
+  const title = rawTitle || (pollQuestion ? pollQuestion.slice(0, 300) : '');
+
+  // Collect poll fields only when a question is provided
+  let poll: { question: string; options: string[]; endsAt?: string } | undefined;
   if (pollQuestion) {
     const options = [0, 1, 2, 3]
       .map((i) => String(formData.get(`pollOption${i}`) ?? '').trim())
       .filter(Boolean);
     if (options.length >= 2) {
-      poll = { question: pollQuestion, options };
+      const pollEndsAt = formData.get('pollEndsAt')
+        ? String(formData.get('pollEndsAt'))
+        : undefined;
+      poll = {
+        question: pollQuestion,
+        options,
+        ...(pollEndsAt ? { endsAt: new Date(pollEndsAt).toISOString() } : {}),
+      };
     }
   }
+
+  // Determine which tab to redirect back to
+  const redirectTab = poll ? 'polls' : 'posts';
 
   try {
     await apiPostAuthed<unknown>(
@@ -34,10 +47,10 @@ export async function createPostAction(formData: FormData) {
     );
   } catch (err) {
     const message = err instanceof ApiError ? err.message : 'Failed to create post';
-    redirect(`/community?error=${encodeURIComponent(message)}`);
+    redirect(`/community?tab=${redirectTab}&error=${encodeURIComponent(message)}`);
   }
 
-  redirect('/community?created=1');
+  redirect(`/community?tab=${redirectTab}&created=1`);
 }
 
 export async function addPostCommentAction(postId: string, formData: FormData) {
@@ -56,7 +69,7 @@ export async function addPostCommentAction(postId: string, formData: FormData) {
   redirect(`/community/${postId}?commented=1`);
 }
 
-export async function deletePostAction(postId: string) {
+export async function deletePostAction(postId: string, hasPoll: boolean) {
   const accessToken = cookies().get(ACCESS_TOKEN_COOKIE)?.value;
   if (!accessToken) redirect('/login');
 
@@ -67,7 +80,7 @@ export async function deletePostAction(postId: string) {
     redirect(`/community/${postId}?error=${encodeURIComponent(message)}`);
   }
 
-  redirect('/community?deleted=1');
+  redirect(`/community?tab=${hasPoll ? 'polls' : 'posts'}&deleted=1`);
 }
 
 export async function deleteCommentAction(postId: string, commentId: string) {

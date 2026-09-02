@@ -8,27 +8,40 @@ import DistrictSelect, { type DistrictWithDivision } from '../../../components/d
 import ListPagination from '../../../components/list-pagination';
 import ListResultToolbar from '../../../components/list-result-toolbar';
 
+type CommunityTab = 'posts' | 'polls';
+
 export default async function CommunityPage({
   searchParams,
 }: {
-  searchParams: { districtId?: string; page?: string; created?: string; deleted?: string; error?: string };
+  searchParams: {
+    tab?: string;
+    districtId?: string;
+    page?: string;
+    created?: string;
+    deleted?: string;
+    error?: string;
+  };
 }) {
+  const tab: CommunityTab =
+    searchParams.tab === 'polls' ? 'polls' : 'posts';
   const districtId = searchParams.districtId;
   const page = Math.max(1, Number(searchParams.page ?? 1) || 1);
-  const postsPath = districtId
-    ? `${routes.community.posts}?districtId=${districtId}&page=${page}&pageSize=20`
-    : `${routes.community.posts}?page=${page}&pageSize=20`;
 
-  const [postsRes, user] = await Promise.all([
+  const hasPoll = tab === 'polls' ? 'true' : 'false';
+  const postsPath =
+    `${routes.community.posts}?hasPoll=${hasPoll}&page=${page}&pageSize=20` +
+    (districtId ? `&districtId=${districtId}` : '');
+
+  const [postsRes, user, allDistricts] = await Promise.all([
     apiGet<PaginatedEnvelope<CommunityPostSummary>>(postsPath, 0).catch(
       (): PaginatedEnvelope<CommunityPostSummary> => ({ data: [], total: 0, page: 1, pageSize: 20 }),
     ),
     getCurrentUser(),
+    apiGet<DistrictWithDivision[]>(routes.locations.districts, 3600).catch(() => []),
   ]);
 
-  const districts: DistrictWithDivision[] = user
-    ? await apiGet<DistrictWithDivision[]>(routes.locations.districts).catch(() => [])
-    : [];
+  const districts: DistrictWithDivision[] = user ? allDistricts : [];
+  const canCreatePoll = user?.role === 'ADMIN' || user?.role === 'MODERATOR';
 
   return (
     <>
@@ -44,76 +57,148 @@ export default async function CommunityPage({
         )}
       </div>
 
-      {searchParams.created && <p className="form-success">Post created.</p>}
-      {searchParams.deleted && <p className="form-success">Post deleted.</p>}
-      {searchParams.error && <p className="form-error">{decodeURIComponent(searchParams.error)}</p>}
+      {/* Tab nav */}
+      <nav className="tab-nav" aria-label="Community sections">
+        <Link
+          href="/community?tab=posts"
+          className={tab === 'posts' ? 'active' : ''}
+          aria-current={tab === 'posts' ? 'page' : undefined}
+        >
+          Posts
+        </Link>
+        <Link
+          href="/community?tab=polls"
+          className={tab === 'polls' ? 'active' : ''}
+          aria-current={tab === 'polls' ? 'page' : undefined}
+        >
+          Polls
+        </Link>
+      </nav>
 
-      {user && (
-        <article className="panel">
-          <div className="panel-header">
-            <div>
-              <h2>Create a post</h2>
-              <p>Share an update, observation, or question with the community.</p>
+      {searchParams.created && (
+        <p className="form-success">
+          {tab === 'polls' ? 'Poll created.' : 'Post created.'}
+        </p>
+      )}
+      {searchParams.deleted && <p className="form-success">Deleted.</p>}
+      {searchParams.error && (
+        <p className="form-error">{decodeURIComponent(searchParams.error)}</p>
+      )}
+
+      {/* ── Posts tab ─────────────────────────────────────────────────── */}
+      {tab === 'posts' && (
+        <>
+          {user && (
+            <article className="panel">
+              <div className="panel-header">
+                <div>
+                  <h2>Create a post</h2>
+                  <p>Share an update, observation, or question with the community.</p>
+                </div>
+              </div>
+              <form action={createPostAction} className="submit-form">
+                <div className="field">
+                  <label htmlFor="title">Title</label>
+                  <input
+                    id="title"
+                    name="title"
+                    type="text"
+                    required
+                    minLength={3}
+                    maxLength={300}
+                    placeholder="e.g. New mangrove planting near Sundarbans"
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor="body">Body</label>
+                  <textarea
+                    id="body"
+                    name="body"
+                    required
+                    minLength={10}
+                    maxLength={10000}
+                    rows={4}
+                    placeholder="Share details, links, or observations…"
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor="districtId">District (optional)</label>
+                  <DistrictSelect districts={districts} />
+                </div>
+                <button className="button" type="submit">Create post</button>
+              </form>
+            </article>
+          )}
+
+          <ListResultToolbar total={postsRes.total} label="posts" />
+
+          <div className="table" role="table" aria-label="Community posts">
+            <div className="table-row table-head" role="row">
+              <span>Title</span>
+              <span>Author</span>
+              <span>District</span>
+              <span>Comments</span>
+              <span>Posted</span>
             </div>
+            {postsRes.data.map((p) => (
+              <Link
+                key={p.id}
+                className="table-row table-row-link"
+                role="row"
+                href={`/community/${p.id}`}
+              >
+                <strong>{p.title}</strong>
+                <span>{p.author.displayName}</span>
+                <span>{p.district?.name ?? '—'}</span>
+                <span>
+                  {p._count.comments} comment{p._count.comments !== 1 ? 's' : ''}
+                </span>
+                <span>{relativeTime(p.createdAt)}</span>
+              </Link>
+            ))}
+            {postsRes.data.length === 0 && (
+              <div className="empty-state">No posts yet. Be the first to post!</div>
+            )}
           </div>
 
-          <form action={createPostAction} className="submit-form">
-            <div className="field">
-              <label htmlFor="title">Title</label>
-              <input
-                id="title"
-                name="title"
-                type="text"
-                required
-                minLength={3}
-                maxLength={300}
-                placeholder="e.g. New mangrove planting near Sundarbans"
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="body">Body</label>
-              <textarea
-                id="body"
-                name="body"
-                required
-                minLength={10}
-                maxLength={10000}
-                rows={4}
-                placeholder="Share details, links, or observations…"
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="districtId">District (optional)</label>
-              <DistrictSelect districts={districts} />
-            </div>
+          <ListPagination
+            pathname="/community"
+            page={postsRes.page}
+            pageSize={postsRes.pageSize}
+            total={postsRes.total}
+            query={{ tab: 'posts', districtId }}
+          />
+        </>
+      )}
 
-            {(user.role === 'ADMIN' || user.role === 'MODERATOR') && (
-              <fieldset
-                style={{
-                  border: '1px solid var(--border)',
-                  borderRadius: 6,
-                  padding: '12px 16px',
-                  marginTop: 8,
-                }}
-              >
-                <legend style={{ padding: '0 6px', fontSize: '0.875rem', fontWeight: 600 }}>
-                  Poll (optional)
-                </legend>
+      {/* ── Polls tab ─────────────────────────────────────────────────── */}
+      {tab === 'polls' && (
+        <>
+          {canCreatePoll && (
+            <article className="panel">
+              <div className="panel-header">
+                <div>
+                  <h2>Create a poll</h2>
+                  <p>Ask the community a question and collect structured responses.</p>
+                </div>
+              </div>
+              <form action={createPostAction} className="submit-form">
                 <div className="field">
-                  <label htmlFor="pollQuestion">Poll question</label>
+                  <label htmlFor="pollQuestion">Question *</label>
                   <input
                     id="pollQuestion"
                     name="pollQuestion"
                     type="text"
+                    required
                     maxLength={500}
                     placeholder="e.g. How often do you observe plastic waste near waterways?"
                   />
                 </div>
+
                 {[0, 1, 2, 3].map((i) => (
                   <div className="field" key={i}>
                     <label htmlFor={`pollOption${i}`}>
-                      Option {i + 1}
-                      {i < 2 ? ' *' : ' (optional)'}
+                      Option {i + 1}{i < 2 ? ' *' : ' (optional)'}
                     </label>
                     <input
                       id={`pollOption${i}`}
@@ -124,50 +209,95 @@ export default async function CommunityPage({
                     />
                   </div>
                 ))}
-              </fieldset>
+
+                {/* Hidden title — derived from question on the server action */}
+                <input type="hidden" name="title" value="" />
+
+                <div className="poll-create-meta">
+                  <div className="field">
+                    <label htmlFor="pollEndsAt">Closes at (optional)</label>
+                    <input
+                      id="pollEndsAt"
+                      name="pollEndsAt"
+                      type="datetime-local"
+                    />
+                  </div>
+                  <div className="field">
+                    <label htmlFor="districtId">District (optional)</label>
+                    <DistrictSelect districts={districts} />
+                  </div>
+                </div>
+
+                <button className="button" type="submit">Create poll</button>
+              </form>
+            </article>
+          )}
+
+          {!canCreatePoll && user && (
+            <p className="access-note">
+              Only moderators and admins can create polls.
+            </p>
+          )}
+
+          <ListResultToolbar total={postsRes.total} label="polls" />
+
+          <div className="table poll-table" role="table" aria-label="Community polls">
+            <div className="table-row table-head" role="row">
+              <span>Question</span>
+              <span>Author</span>
+              <span>Votes</span>
+              <span>Status</span>
+              <span>Posted</span>
+            </div>
+            {postsRes.data.map((p) => {
+              const isClosed =
+                !!p.poll?.endsAt && new Date() > new Date(p.poll.endsAt);
+              return (
+                <Link
+                  key={p.id}
+                  className="table-row table-row-link"
+                  role="row"
+                  href={`/community/${p.id}`}
+                >
+                  <span>
+                    <strong>{p.title}</strong>
+                    {p.poll?.question && (
+                      <span className="poll-question-preview">{p.poll.question}</span>
+                    )}
+                  </span>
+                  <span>{p.author.displayName}</span>
+                  <span>{p._count.comments} comment{p._count.comments !== 1 ? 's' : ''}</span>
+                  <span>
+                    {isClosed ? (
+                      <span className="tag muted">Closed</span>
+                    ) : p.poll?.endsAt ? (
+                      <span className="tag success">Closes {relativeTime(p.poll.endsAt)}</span>
+                    ) : (
+                      <span className="tag info">Open</span>
+                    )}
+                  </span>
+                  <span>{relativeTime(p.createdAt)}</span>
+                </Link>
+              );
+            })}
+            {postsRes.data.length === 0 && (
+              <div className="empty-state">
+                {canCreatePoll
+                  ? 'No polls yet. Create the first one above.'
+                  : 'No polls yet.'}
+              </div>
             )}
+          </div>
 
-            <button className="button" type="submit">
-              Create post
-            </button>
-          </form>
-        </article>
+          <ListPagination
+            pathname="/community"
+            page={postsRes.page}
+            pageSize={postsRes.pageSize}
+            total={postsRes.total}
+            query={{ tab: 'polls', districtId }}
+          />
+        </>
       )}
-
-      <ListResultToolbar total={postsRes.total} label="community posts" />
-
-      <div className="table" role="table" aria-label="Community posts">
-        <div className="table-row table-head" role="row">
-          <span>Post</span>
-          <span>Author</span>
-          <span>District</span>
-          <span>Activity</span>
-          <span>Posted</span>
-        </div>
-        {postsRes.data.map((p) => (
-          <Link
-            key={p.id}
-            className="table-row table-row-link"
-            role="row"
-            href={`/community/${p.id}`}
-          >
-            <strong>
-              {p.title}
-              {p.poll && <span className="tag muted" style={{ marginLeft: 6 }}>Poll</span>}
-            </strong>
-            <span>{p.author.displayName}</span>
-            <span>{p.district?.name ?? '—'}</span>
-            <span>
-              {p._count.comments} comment{p._count.comments !== 1 ? 's' : ''}
-            </span>
-            <span>{relativeTime(p.createdAt)}</span>
-          </Link>
-        ))}
-        {postsRes.data.length === 0 && (
-          <div className="empty-state">No posts yet. Be the first to post!</div>
-        )}
-      </div>
-      <ListPagination pathname="/community" page={postsRes.page} pageSize={postsRes.pageSize} total={postsRes.total} query={{ districtId }} />
     </>
   );
 }
