@@ -30,7 +30,7 @@ Current implemented capabilities per domain. `✓` = permitted, `—` = not perm
 | Add comment to report | — | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | **Observations** | | | | | | | |
 | View public (RESEARCH_GRADE/COMMUNITY) observations | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Submit observation | — | perm | perm | perm | perm | — | ✓ |
+| Submit observation | — | — | perm | perm | perm | — | ✓ |
 | Verify/change trust level | — | — | perm | — | — | — | ✓ |
 | Delete observation | — | — | — | — | — | perm | ✓ |
 | Add measurement to observation | — | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
@@ -122,7 +122,7 @@ Named permissions seeded on first boot (13 total):
 | `alerts.manage` | Create, update, and cancel environmental alerts | GOVERNMENT, MODERATOR |
 | `restoration.create` | Register restoration projects | ORGANIZATION_ADMIN |
 | `restoration.join` | Join restoration projects as a participant | CITIZEN, RESEARCHER, ORGANIZATION_ADMIN, GOVERNMENT, MODERATOR |
-| `observations.create` | Log wildlife and environmental observations | CITIZEN, RESEARCHER, ORGANIZATION_ADMIN, GOVERNMENT |
+| `observations.create` | Log wildlife and environmental observations | RESEARCHER, ORGANIZATION_ADMIN, GOVERNMENT |
 | `observations.verify` | Change trust level on observations | RESEARCHER |
 | `observations.delete` | Permanently delete observations | MODERATOR |
 | `organizations.access` | View own organization memberships | ORGANIZATION_ADMIN |

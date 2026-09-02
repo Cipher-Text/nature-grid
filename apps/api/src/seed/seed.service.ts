@@ -1,5 +1,5 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { OrganizationType, UserRole } from '@prisma/client';
+import { EmissionUnit, OrganizationType, PollutantType, PollutionSourceType, UserRole } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../database/prisma.service';
 
@@ -136,6 +136,7 @@ export class SeedService implements OnModuleInit {
     await this.seedUsers();
     await this.seedOrganization();
     await this.seedRealOrganizations();
+    await this.seedPollutionSources();
   }
 
   /**
@@ -244,5 +245,164 @@ export class SeedService implements OnModuleInit {
       }
     }
     this.logger.log(`Real organizations seeded: ${SEED_ORGANIZATIONS.length} records`);
+  }
+
+  private async seedPollutionSources() {
+    const admin = await this.prisma.user.findUnique({
+      where: { email: 'admin@naturegrid.bd' },
+      select: { id: true },
+    });
+    if (!admin) return;
+
+    const districts = await this.prisma.district.findMany({
+      where: {
+        name: {
+          in: ['Dhaka', 'Chattogram', 'Dinajpur', 'Brahmanbaria', 'Narayanganj', 'Patuakhali', 'Gazipur'],
+        },
+      },
+      select: { id: true, name: true },
+    });
+    const byName: Record<string, string> = Object.fromEntries(districts.map((d) => [d.name, d.id]));
+
+    const SEED_SOURCES: {
+      name: string;
+      type: PollutionSourceType;
+      description: string;
+      districtKey: string;
+      lat: number;
+      lng: number;
+      entries: { pollutant: PollutantType; value: number; unit: EmissionUnit; periodStart: string; periodEnd: string }[];
+    }[] = [
+      {
+        name: 'Hazaribagh Tannery Complex',
+        type: 'FACTORY',
+        description: 'Cluster of leather tanneries historically operating along the Buriganga riverbank. Responsible for significant chromium and organic effluent discharge.',
+        districtKey: 'Dhaka',
+        lat: 23.7210,
+        lng: 90.3875,
+        entries: [
+          { pollutant: 'CO2', value: 12400, unit: 'TONS_PER_YEAR', periodStart: '2024-01-01', periodEnd: '2024-12-31' },
+          { pollutant: 'SOX', value: 320, unit: 'TONS_PER_YEAR', periodStart: '2024-01-01', periodEnd: '2024-12-31' },
+        ],
+      },
+      {
+        name: 'Ghorashal Combined Cycle Power Plant',
+        type: 'POWER_PLANT',
+        description: 'Large natural-gas-fired combined-cycle power station supplying electricity to Dhaka and surrounding regions.',
+        districtKey: 'Brahmanbaria',
+        lat: 23.9982,
+        lng: 90.7140,
+        entries: [
+          { pollutant: 'CO2', value: 980000, unit: 'TONS_PER_YEAR', periodStart: '2024-01-01', periodEnd: '2024-12-31' },
+          { pollutant: 'NOX', value: 1850, unit: 'TONS_PER_YEAR', periodStart: '2024-01-01', periodEnd: '2024-12-31' },
+        ],
+      },
+      {
+        name: 'Barapukuria Coal Power Station',
+        type: 'POWER_PLANT',
+        description: 'Coal-fired thermal power plant adjacent to the Barapukuria coal mine, one of the largest coal power sources in northern Bangladesh.',
+        districtKey: 'Dinajpur',
+        lat: 25.4512,
+        lng: 88.9921,
+        entries: [
+          { pollutant: 'CO2', value: 2100000, unit: 'TONS_PER_YEAR', periodStart: '2024-01-01', periodEnd: '2024-12-31' },
+          { pollutant: 'PM25', value: 4200, unit: 'TONS_PER_YEAR', periodStart: '2024-01-01', periodEnd: '2024-12-31' },
+          { pollutant: 'SOX', value: 7800, unit: 'TONS_PER_YEAR', periodStart: '2024-01-01', periodEnd: '2024-12-31' },
+        ],
+      },
+      {
+        name: 'Narayanganj Textile & Dyeing Cluster',
+        type: 'FACTORY',
+        description: 'Dense concentration of ready-made garment dyeing and finishing factories discharging dye effluents and chemical waste into the Shitalakkhya river.',
+        districtKey: 'Narayanganj',
+        lat: 23.6230,
+        lng: 90.4983,
+        entries: [
+          { pollutant: 'NOX', value: 85, unit: 'TONS_PER_YEAR', periodStart: '2024-01-01', periodEnd: '2024-12-31' },
+          { pollutant: 'VOC', value: 460, unit: 'TONS_PER_YEAR', periodStart: '2024-01-01', periodEnd: '2024-12-31' },
+        ],
+      },
+      {
+        name: 'Payra Coal Power Plant',
+        type: 'POWER_PLANT',
+        description: 'Large ultra-supercritical coal-fired power plant located on the coast of Patuakhali, operational since 2022. 1,320 MW installed capacity.',
+        districtKey: 'Patuakhali',
+        lat: 21.9653,
+        lng: 90.2800,
+        entries: [
+          { pollutant: 'CO2', value: 7500000, unit: 'TONS_PER_YEAR', periodStart: '2024-01-01', periodEnd: '2024-12-31' },
+          { pollutant: 'PM25', value: 9600, unit: 'TONS_PER_YEAR', periodStart: '2024-01-01', periodEnd: '2024-12-31' },
+          { pollutant: 'SOX', value: 15200, unit: 'TONS_PER_YEAR', periodStart: '2024-01-01', periodEnd: '2024-12-31' },
+          { pollutant: 'NOX', value: 8400, unit: 'TONS_PER_YEAR', periodStart: '2024-01-01', periodEnd: '2024-12-31' },
+        ],
+      },
+      {
+        name: 'Chittagong Steel Re-rolling Mills',
+        type: 'FACTORY',
+        description: 'Group of steel re-rolling mills processing imported scrap metal and ship-breaking steel, operating along the Karnaphuli river industrial corridor.',
+        districtKey: 'Chattogram',
+        lat: 22.3410,
+        lng: 91.8283,
+        entries: [
+          { pollutant: 'CO2', value: 340000, unit: 'TONS_PER_YEAR', periodStart: '2024-01-01', periodEnd: '2024-12-31' },
+          { pollutant: 'PM10', value: 2100, unit: 'TONS_PER_YEAR', periodStart: '2024-01-01', periodEnd: '2024-12-31' },
+        ],
+      },
+      {
+        name: 'Gazipur Brick Kiln Belt',
+        type: 'FACTORY',
+        description: 'Dense concentration of Fixed Chimney Bull Trench Kilns (FCBTK) producing fired clay bricks for Dhaka metropolitan construction. Seasonal operation October–May.',
+        districtKey: 'Gazipur',
+        lat: 24.0028,
+        lng: 90.4180,
+        entries: [
+          { pollutant: 'PM25', value: 1800, unit: 'TONS_PER_YEAR', periodStart: '2024-10-01', periodEnd: '2025-05-31' },
+          { pollutant: 'CO2', value: 580000, unit: 'TONS_PER_YEAR', periodStart: '2024-10-01', periodEnd: '2025-05-31' },
+          { pollutant: 'CO', value: 3400, unit: 'TONS_PER_YEAR', periodStart: '2024-10-01', periodEnd: '2025-05-31' },
+        ],
+      },
+    ];
+
+    let created = 0;
+    for (const s of SEED_SOURCES) {
+      const districtId = byName[s.districtKey];
+      if (!districtId) continue;
+
+      const existing = await this.prisma.pollutionSource.findFirst({ where: { name: s.name } });
+      if (existing) continue;
+
+      const source = await this.prisma.pollutionSource.create({
+        data: {
+          name: s.name,
+          type: s.type,
+          description: s.description,
+          districtId,
+          lat: s.lat,
+          lng: s.lng,
+          isActive: true,
+          createdById: admin.id,
+        },
+      });
+
+      for (const e of s.entries) {
+        await this.prisma.emissionEntry.create({
+          data: {
+            sourceId: source.id,
+            pollutant: e.pollutant,
+            value: e.value,
+            unit: e.unit,
+            periodStart: new Date(e.periodStart),
+            periodEnd: new Date(e.periodEnd),
+            reportedById: admin.id,
+          },
+        });
+      }
+
+      created++;
+    }
+
+    if (created > 0) {
+      this.logger.log(`Pollution sources seeded: ${created} sources with emission entries`);
+    }
   }
 }
