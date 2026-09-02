@@ -84,11 +84,15 @@ export default async function CommunityPostDetailPage({
           <article className="panel">
             <h2>Poll</h2>
             <p><strong>{poll.question}</strong></p>
-            {poll.endsAt && (
-              <p className="muted-text">
-                {isClosed ? 'Poll closed' : `Closes ${relativeTime(poll.endsAt)}`}
-              </p>
-            )}
+
+            {/* Status line */}
+            <p className="muted-text">
+              {isClosed
+                ? `Closed · ${totalVotes} vote${totalVotes !== 1 ? 's' : ''}`
+                : poll.endsAt
+                  ? `Closes ${relativeTime(poll.endsAt)} · ${totalVotes} vote${totalVotes !== 1 ? 's' : ''}`
+                  : `${totalVotes} vote${totalVotes !== 1 ? 's' : ''}`}
+            </p>
 
             {searchParams.voted && <p className="form-success">Vote recorded.</p>}
 
@@ -103,7 +107,7 @@ export default async function CommunityPostDetailPage({
                       <div className="poll-option-label">
                         <span>{isMyVote ? <strong>{opt.text}</strong> : opt.text}</span>
                         {isMyVote && <span className="poll-your-vote">Your vote</span>}
-                        <span className="poll-pct">{pct}% ({opt._count.votes})</span>
+                        <span className="poll-pct">{pct}%</span>
                       </div>
                       <div className="poll-bar-track">
                         <div className="poll-bar-fill" style={{ width: `${pct}%` }} />
@@ -111,27 +115,24 @@ export default async function CommunityPostDetailPage({
                     </div>
                   );
                 })}
-                <p className="muted-text" style={{ marginTop: 12, marginBottom: 0 }}>
-                  {totalVotes} vote{totalVotes !== 1 ? 's' : ''}
-                </p>
+
+                {/* Change vote — compact select, not a repeated list */}
                 {hasVoted && !isClosed && user && (
-                  /* Allow changing vote */
                   <form action={castVoteAction.bind(null, post.id)} className="poll-change-vote">
-                    <fieldset className="poll-radio-group">
-                      <legend className="poll-radio-legend">Change your vote</legend>
-                      {poll.options.map((opt) => (
-                        <label key={opt.id} className="poll-radio-label">
-                          <input
-                            type="radio"
-                            name="optionId"
-                            value={opt.id}
-                            defaultChecked={poll.userVotedOptionId === opt.id}
-                          />
-                          {opt.text}
-                        </label>
-                      ))}
-                    </fieldset>
-                    <button className="button" type="submit">Change vote</button>
+                    <label htmlFor="optionId" className="poll-radio-legend">Change your vote</label>
+                    <div className="poll-change-vote-row">
+                      <select
+                        id="optionId"
+                        name="optionId"
+                        className="select-field"
+                        defaultValue={poll.userVotedOptionId ?? ''}
+                      >
+                        {poll.options.map((opt) => (
+                          <option key={opt.id} value={opt.id}>{opt.text}</option>
+                        ))}
+                      </select>
+                      <button className="button" type="submit">Update</button>
+                    </div>
                   </form>
                 )}
               </div>

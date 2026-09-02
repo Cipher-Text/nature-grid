@@ -2377,6 +2377,17 @@ a {
   border-top: 1px solid var(--border);
 }
 
+.poll-change-vote-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 6px;
+}
+
+.poll-change-vote-row .select-field {
+  flex: 1;
+}
+
 /* ── Restoration participants cell (count + optional join button) ── */
 .restoration-participants-cell {
   display: flex;
