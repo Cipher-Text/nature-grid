@@ -292,24 +292,21 @@ Fetches 11 daily wave/swell/wind-wave variables for all 64 districts. OpenMeteo 
 
 ## emissions ✓
 
-Owns source-level pollution tracking — distinct from ambient `HourlyAirQuality` readings. Models pollution facilities and per-source emission measurements.
+Ingests national GHG data from the World Bank Climate Change API (`api.worldbank.org/v2/country/BGD/indicator/{code}`). All read endpoints are `@Public()`. No user-input write paths exist.
 
-Source types: `FACTORY | POWER_PLANT | VEHICLE_FLEET | AGRICULTURE | CONSTRUCTION | WASTE_FACILITY | OTHER`
+**Indicators synced:** `EN.GHG.ALL.MT.CE.AR5` (Total GHG), `EN.GHG.CO2.MT.CE.AR5` (CO₂), `EN.GHG.CH4.MT.CE.AR5` (CH₄), `EN.GHG.N2O.MT.CE.AR5` (N₂O). Values in Mt CO₂e, annual, 1976–2024.
 
-Pollutants: `CO2 | CH4 | N2O | PM25 | PM10 | NOX | SOX | VOC | CO | OTHER`
+**Client:** `WorldBankClient` — paginates through API responses (2 pages × 50 records), 3-attempt retry, 30 s timeout per request.
 
-Units: `TONS_PER_YEAR | KG_PER_DAY | GRAMS_PER_HOUR | MG_PER_M3 | OTHER`
+**Scheduler:** `EmissionsScheduler` — `@Cron('0 0 3 * * 0')` (weekly Sunday 3am); triggers initial sync on empty table via `onModuleInit`.
+
+**Storage:** `NationalEmissionReading` — one row per `(year, indicatorCode)`; upserts in a single `$transaction` per indicator. Null-value rows (e.g. 2025 projection) are skipped.
 
 | Method | Path | Access |
 | --- | --- | --- |
-| GET | `/emissions/sources` | Public (`?type`, `?districtId`, `?isActive`, `?page`, `?pageSize`) |
-| GET | `/emissions/sources/:id` | Public — includes district, org, entry count |
-| POST | `/emissions/sources` | `emissions.manage` |
-| PATCH | `/emissions/sources/:id` | `emissions.manage` + creator-or-admin check |
-| GET | `/emissions/sources/:sourceId/entries` | Public (`?pollutant`, `?page`, `?pageSize`) |
-| POST | `/emissions/sources/:sourceId/entries` | `emissions.report` |
-
-Every create writes an audit event (`EMISSION_SOURCE_CREATE` or `EMISSION_ENTRY_CREATE`).
+| GET | `/emissions` | Public (`?indicator=`, `?from=`, `?to=`) |
+| GET | `/emissions/indicators` | Public — distinct codes in DB |
+| GET | `/emissions/:year` | Public — all indicators for a year |
 
 ## metrics ✓
 
@@ -340,11 +337,11 @@ Env vars required for storage: `STORAGE_ENDPOINT`, `STORAGE_ACCESS_KEY`, `STORAG
 
 Owns provider job visibility for scheduled external data fetches, using the `IngestionJob` model (`QUEUED | RUNNING | SUCCEEDED | FAILED | CANCELLED`).
 
-Status: implemented service + read controller. `WeatherScheduler`, `BiodiversityScheduler`, `FloodScheduler`, `RadiationScheduler`, `MarineScheduler`, and `LocationClimateScheduler` all call `IngestionService.startJob`, `completeJob`, and `failJob`; successful jobs update `Dataset.lastSyncedAt` for matching dataset categories. Admin/moderator routes expose `GET /ingestion/jobs` and `GET /ingestion/jobs/:id`. There is no queue worker, manual trigger endpoint, or retry endpoint; recurring cron jobs are the retry mechanism.
+Status: implemented service + read controller. `WeatherScheduler`, `BiodiversityScheduler`, `FloodScheduler`, `RadiationScheduler`, `MarineScheduler`, `EmissionsScheduler`, and `LocationClimateScheduler` all call `IngestionService.startJob`, `completeJob`, and `failJob`; successful jobs update `Dataset.lastSyncedAt` for matching dataset categories. Admin/moderator routes expose `GET /ingestion/jobs` and `GET /ingestion/jobs/:id`. There is no queue worker, manual trigger endpoint, or retry endpoint; recurring cron jobs are the retry mechanism.
 
 ## permissions ✓
 
-Owns the DB-backed permission model: `Permission` (key, description) and `RolePermission` (role → permission join). Seeds 11 named permissions and default grants for all non-ADMIN roles on first boot.
+Owns the DB-backed permission model: `Permission` (key, description) and `RolePermission` (role → permission join). Seeds 11 named permissions and default grants for all non-ADMIN roles on first boot. (`emissions.manage` and `emissions.report` were removed in 2026-09-02 when the emissions module was converted to API ingestion.)
 
 | Method | Path | Access |
 | --- | --- | --- |
@@ -354,7 +351,7 @@ Owns the DB-backed permission model: `Permission` (key, description) and `RolePe
 
 `PermissionsService.getPermissionsForRole(role)` is the runtime path; results are cached per role for 5 minutes. `ADMIN` always receives every permission regardless of DB state. Grant and revoke each write `PERMISSION_GRANT` / `PERMISSION_REVOKE` audit events.
 
-Named permissions (13): `reports.create`, `reports.moderate`, `alerts.manage`, `restoration.create`, `restoration.join`, `observations.create`, `observations.verify`, `observations.delete`, `organizations.access`, `organizations.manage`, `users.manage`, `emissions.manage`, `emissions.report`.
+Named permissions (11): `reports.create`, `reports.moderate`, `alerts.manage`, `restoration.create`, `restoration.join`, `observations.create`, `observations.verify`, `observations.delete`, `organizations.access`, `organizations.manage`, `users.manage`.
 
 ## analytics ✓
 
@@ -438,7 +435,7 @@ Services that write audit events:
 | `restoration` | `RESTORATION_PROJECT_CREATE`, `RESTORATION_PROJECT_UPDATE`, `RESTORATION_PROJECT_JOIN`, `RESTORATION_TARGET_ADD`, `RESTORATION_ACTIVITY_ADD`, `RESTORATION_METRIC_ADD` |
 | `datasets` | `DATASET_ACCESS`, `DATASET_DOWNLOAD`, `DATASET_UPDATE`, `DATASET_VERSION_PUBLISH`, `DATASET_ACCESS_DECISION` |
 | `permissions` | `PERMISSION_GRANT`, `PERMISSION_REVOKE` |
-| `emissions` | `EMISSION_SOURCE_CREATE`, `EMISSION_ENTRY_CREATE` |
+| `emissions` | *(none — no user-initiated writes; all data ingested by scheduler)* |
 | `community` | `COMMUNITY_POST_CREATE`, `COMMUNITY_POST_DELETE`, `COMMUNITY_COMMENT_ADD`, `COMMUNITY_COMMENT_DELETE`, `COMMUNITY_POLL_VOTE` |
 
 `AuditAction` declares 38 values. All are written by a service.

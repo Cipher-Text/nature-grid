@@ -87,9 +87,9 @@ Schema: `packages/database/prisma/schema.prisma` — 54 models, 31 enums. 8 migr
 
 Seeding happens in service `onModuleInit()` hooks (idempotent upserts):
 - `LocationsService` — seeds 8 divisions, 64 districts (all with GeoJSON boundary), 494 upazilas, 4,540 unions — all with lat/lng. Hardcoded in `apps/api/src/locations/seed/bangladesh.ts` (no runtime file reads). This file is the source of truth — edit it directly if location data needs updating.
-- `ProvidersService` — seeds OpenMeteo + GBIF provider records
+- `ProvidersService` — seeds OpenMeteo, GBIF, and World Bank provider records
 - `DatasetsService` — seeds 9 dataset catalog records (OpenMeteo Weather, OpenMeteo Flood, District Air Quality Index, Water Body Registry, Biodiversity Occurrences, Sundarbans Monitoring, Emissions Inventory, OpenMeteo Marine Weather, OpenMeteo Satellite Radiation)
-- `PermissionsService` — seeds 13 named permissions (`reports.create`, `reports.moderate`, `alerts.manage`, `restoration.create`, `restoration.join`, `observations.create`, `observations.verify`, `observations.delete`, `organizations.access`, `organizations.manage`, `users.manage`, `emissions.manage`, `emissions.report`) and default role grants
+- `PermissionsService` — seeds 11 named permissions (`reports.create`, `reports.moderate`, `alerts.manage`, `restoration.create`, `restoration.join`, `observations.create`, `observations.verify`, `observations.delete`, `organizations.access`, `organizations.manage`, `users.manage`) and default role grants
 - `SeedService` — seeds 6 dev user accounts (one per role, password `NatureGrid123!`) and a seed organization for local development
 
 Every mutation writes an `AuditEvent` record (action, userId, entityType, entityId, meta, ipAddress).
@@ -101,7 +101,7 @@ Notable schema decisions:
 - All 4 geography models (`Division`, `District`, `Upazila`, `Union`) carry 11 climate columns (`avgTemp30d`, `minTemp30d`, `maxTemp30d`, `avgHumidity30d`, `totalPrecip30d`, `avgWindSpeed30d`, `avgCloudCover30d`, `avgPm25_30d`, `avgPm10_30d`, `avgUvIndex30d`, `climateUpdatedAt`) — populated nightly by `LocationClimateModule`
 - `UnionDailyClimate` — raw daily history per union; the source for 30-day rolling averages
 - `UserProfile.earnedBadges` (String[]) + `UserProfile.contributionPoints` (Int) — gamification data stored on the profile model; no separate Badge model
-- `PollutionSource` + `EmissionEntry` — emissions tracking with enums `PollutionSourceType`, `PollutantType`, `EmissionUnit`
+- `NationalEmissionReading` — annual national GHG readings ingested from the World Bank Climate Change API; unique constraint on `(year, indicatorCode)`; 4 indicators tracked (Total GHG, CO₂, CH₄, N₂O)
 - `ObservationMeasurement` — quantitative measurements per observation using `MeasurementParameter`, `MeasurementUnit`, and `QualityFlag` enums (water/air/biodiversity/soil parameters)
 - `ProjectTarget` + `ProjectActivity` + `ProjectMetric` — restoration project sub-resources for tracking measurable goals, activity logs, and metric readings using `RestorationTargetMetric` enum
 - `AlertType` enum (11 values) — distinguishes FLOOD, FLASH_FLOOD, CYCLONE, STORM_SURGE, HEATWAVE, AIR_QUALITY, WATER_POLLUTION, LANDSLIDE, DROUGHT, WILDFIRE, OTHER
@@ -130,7 +130,7 @@ Fetch helpers: `apiGet` (cached), `apiGetAuthed`, `apiPost`, `apiPostAuthed` (ne
 
 `apps/web` depends on `@nature-grid/contracts` for route constants and DTOs. `apps/api` has `@nature-grid/contracts` as a **devDependency only** — it is never imported in production code, but `apps/api/src/common/contract-types.typecheck.ts` uses it for compile-time contract enforcement: every service return type is asserted against its contract type via `tsc --noEmit` in CI. A service dropping a required field or changing a field type will produce a `TS2322` error and fail the build.
 
-**Contracts gap:** `packages/contracts/src/index.ts` does not yet list routes for `radiation`, `marine`, or `emissions` — these API endpoints exist but the web app does not consume them yet. Add contract entries before building frontend pages for those features.
+**Contracts gap:** `packages/contracts/src/index.ts` does not yet list routes for `radiation` or `marine` — these API endpoints exist but the web app does not consume them yet. Add contract entries before building frontend pages for those features.
 
 ### Admin Console (apps/admin)
 
@@ -159,17 +159,16 @@ These modules handle external data ingestion. All use `IngestionService` (import
 
 ### Emissions module
 
-`apps/api/src/emissions/` — tracks industrial pollution sources and emission log entries.
+`apps/api/src/emissions/` — ingests national GHG emissions data from the World Bank Climate Change API. No user input — read-only automated pipeline matching the radiation/marine pattern.
 
-- **Enums** (all in `packages/shared`): `PollutionSourceType` (FACTORY, POWER_PLANT, VEHICLE_FLEET, AGRICULTURE, CONSTRUCTION, WASTE_FACILITY, OTHER), `PollutantType` (CO2, CH4, N2O, PM25, PM10, NOX, SOX, VOC, CO, OTHER), `EmissionUnit` (TONS_PER_YEAR, KG_PER_DAY, GRAMS_PER_HOUR, MG_PER_M3, OTHER)
-- **Endpoints:**
-  - `GET /emissions/sources` — public list, pagination + filters (type, districtId, isActive)
-  - `GET /emissions/sources/:id` — public detail
-  - `POST /emissions/sources` — requires `emissions.manage` permission
-  - `PATCH /emissions/sources/:id` — creator or ADMIN only
-  - `GET /emissions/sources/:sourceId/entries` — public paginated entries
-  - `POST /emissions/sources/:sourceId/entries` — requires `emissions.report` permission
-- Audit actions: `EMISSION_SOURCE_CREATE`, `EMISSION_ENTRY_CREATE`
+- **Client** (`world-bank.client.ts`) — fetches `https://api.worldbank.org/v2/country/BGD/indicator/{CODE}?format=json&page=N&per_page=50`; paginates all pages; 3-attempt retry (500 ms, 1500 ms); 30-second `AbortController` timeout. Response shape: `[metadata, records[]]` where `records[].value` is `number | null` and `records[].date` is a string year.
+- **Four indicators**: `EN.GHG.ALL.MT.CE.AR5` (Total GHG), `EN.GHG.CO2.MT.CE.AR5` (CO₂), `EN.GHG.CH4.MT.CE.AR5` (CH₄), `EN.GHG.N2O.MT.CE.AR5` (N₂O) — all in Mt CO₂e; ~66 annual records per indicator (1976–present).
+- **Scheduler** (`EmissionsScheduler`) — weekly cron (`0 0 3 * * 0`, Sunday 3am); advisory lock via `CRON_LOCK_KEYS.EMISSIONS`; initial sync on boot if table is empty; writes `IngestionJob` records via `IngestionService`.
+- **Endpoints** (all `@Public()`):
+  - `GET /emissions` — `?indicator`, `?from`, `?to` year filters; ordered year DESC
+  - `GET /emissions/indicators` — distinct indicator codes + names
+  - `GET /emissions/:year` — all indicators for a given year; 404 if no data
+- **Frontend page** (`apps/web/app/(app)/emissions/page.tsx`) — time-series table grouped by year × indicator, indicator dropdown filter, from/to year inputs, World Bank source attribution.
 
 ### Water Bodies module
 

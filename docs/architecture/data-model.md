@@ -35,10 +35,7 @@ Current state: **54 models, 31 enums, 8 migrations applied.**
 | `IngestionStatus` | `QUEUED RUNNING SUCCEEDED FAILED CANCELLED` |
 | `NotificationChannel` | `EMAIL` |
 | `DeliveryStatus` | `PENDING SENT FAILED` |
-| `PollutionSourceType` | `FACTORY POWER_PLANT VEHICLE_FLEET AGRICULTURE CONSTRUCTION WASTE_FACILITY OTHER` |
-| `PollutantType` | `CO2 CH4 N2O PM25 PM10 NOX SOX VOC CO OTHER` |
-| `EmissionUnit` | `TONS_PER_YEAR KG_PER_DAY GRAMS_PER_HOUR MG_PER_M3 OTHER` |
-| `AuditAction` | `USER_REGISTER USER_LOGIN USER_LOGIN_FAILED USER_LOGOUT USER_ROLE_CHANGE USER_DEACTIVATE REPORT_SUBMIT REPORT_STATUS_CHANGE REPORT_COMMENT_ADD REPORT_MEDIA_ADD ALERT_CREATE ALERT_STATUS_CHANGE DATASET_ACCESS DATASET_DOWNLOAD DATASET_UPDATE DATASET_VERSION_PUBLISH DATASET_ACCESS_DECISION OBSERVATION_SUBMIT OBSERVATION_TRUST_CHANGE OBSERVATION_UPDATE OBSERVATION_DELETE OBSERVATION_MEASUREMENT_ADD OBSERVATION_MEASUREMENT_DELETE RESTORATION_PROJECT_CREATE RESTORATION_PROJECT_UPDATE RESTORATION_PROJECT_JOIN RESTORATION_TARGET_ADD RESTORATION_ACTIVITY_ADD RESTORATION_METRIC_ADD PERMISSION_GRANT PERMISSION_REVOKE EMISSION_SOURCE_CREATE EMISSION_ENTRY_CREATE` |
+| `AuditAction` | `USER_REGISTER USER_LOGIN USER_LOGIN_FAILED USER_LOGOUT USER_ROLE_CHANGE USER_DEACTIVATE REPORT_SUBMIT REPORT_STATUS_CHANGE REPORT_COMMENT_ADD REPORT_MEDIA_ADD ALERT_CREATE ALERT_STATUS_CHANGE DATASET_ACCESS DATASET_DOWNLOAD DATASET_UPDATE DATASET_VERSION_PUBLISH DATASET_ACCESS_DECISION OBSERVATION_SUBMIT OBSERVATION_TRUST_CHANGE OBSERVATION_UPDATE OBSERVATION_DELETE OBSERVATION_MEASUREMENT_ADD OBSERVATION_MEASUREMENT_DELETE RESTORATION_PROJECT_CREATE RESTORATION_PROJECT_UPDATE RESTORATION_PROJECT_JOIN RESTORATION_TARGET_ADD RESTORATION_ACTIVITY_ADD RESTORATION_METRIC_ADD PERMISSION_GRANT PERMISSION_REVOKE` |
 
 All 33 `AuditAction` values are written by services. See the `audit` section in [modules.md](modules.md) for which services write what.
 
@@ -173,10 +170,9 @@ All 4 weather tables are keyed by `districtId`, not raw `lat`/`lng` proximity ma
 
 | Model | Key Fields | Relations |
 | --- | --- | --- |
-| `PollutionSource` | `id`, `name`, `type PollutionSourceType`, `districtId?`, `lat?`, `lng?`, `organizationId?`, `createdById`, `isActive Boolean default true`, `description?` | → `District?`, `Organization?`, `User` (creator), `EmissionEntry[]` |
-| `EmissionEntry` | `id`, `sourceId`, `pollutant PollutantType`, `value Float`, `unit EmissionUnit`, `measurementMethod?`, `periodStart DateTime?`, `periodEnd DateTime?`, `notes?`, `reportedById?` | → `PollutionSource`, `User?` |
+| `NationalEmissionReading` | `id`, `year Int`, `indicatorCode String`, `indicatorName String`, `value Float?`, `unit String default "Mt CO2e"`, `ingestionJobId?` | none — flat table; `@@unique([year, indicatorCode])` |
 
-`PollutionSource` records factory, power plant, vehicle fleet, and other anthropogenic emission points. `EmissionEntry` captures per-source pollutant measurements with unit, measurement method, and optional reporting period. Both write audit events (`EMISSION_SOURCE_CREATE`, `EMISSION_ENTRY_CREATE`). Gated by `emissions.manage` (create/update sources, requires GOVERNMENT or RESEARCHER) and `emissions.report` (log emission entries, additionally available to ORGANIZATION_ADMIN). Implemented in `apps/api/src/emissions/`; dataset catalog entry: "Emissions Inventory" (AIR_QUALITY / PUBLIC).
+`NationalEmissionReading` stores annual national GHG data fetched from the World Bank Climate Change API. One row per `(year, indicatorCode)` combination. Four indicators are synced: Total GHG, CO₂, CH₄, and N₂O. Values are in Mt CO₂e, excluding land-use change (LULUCF). Data covers 1976–2024 (66 records per indicator; 2025 is null and skipped). Populated weekly by `EmissionsScheduler` and on first boot. No user-input write paths. Implemented in `apps/api/src/emissions/`. Dataset catalog entry: "Emissions Inventory" (AIR_QUALITY / PUBLIC).
 
 Note `carbonMonoxide` on `HourlyAirQuality` is an OpenMeteo air-quality pollutant reading. It is unrelated to carbon accounting or footprint tracking, which Nature Grid does not model yet — that is roadmap Phase 7.
 
@@ -228,7 +224,7 @@ Future candidates for proper geometry fields:
 
 `Observation`, `Species`, `RestorationProject`, and `WaterBody` were previously listed here and are now in the schema.
 
-Advanced domain models — climate forecasts, carbon footprint, research publications, structured surveys — are planned for Phase 7 and get their schema when that phase starts. Emissions tracking (`PollutionSource`, `EmissionEntry`) shipped in Phase 7 as the first domain (2026-08-28). See `docs/roadmap.md` Phase 7 and `docs/architecture/feature-map.md`.
+Advanced domain models — climate forecasts, carbon footprint, research publications, structured surveys — are planned for Phase 7 and get their schema when that phase starts. Emissions tracking (`NationalEmissionReading`) shipped in Phase 7 as the first domain, initially as user-input (2026-08-28) then rewritten to World Bank API ingestion (2026-09-02). See `docs/roadmap.md` Phase 7 and `docs/architecture/feature-map.md`.
 
 ## Status Workflows
 
@@ -290,7 +286,7 @@ pnpm run db:studio            # Open Prisma Studio at localhost:5555
 
 | Migration | Adds |
 | --- | --- |
-| `20260826150548_init` | Full base schema — 39 tables, 23 enums (includes `SatelliteRadiationReading`, `MarineForecast`, `PollutionSource`, `EmissionEntry`) |
+| `20260826150548_init` | Full base schema — 39 tables, 23 enums (includes `SatelliteRadiationReading`, `MarineForecast`) |
 | `20260828000000_gamification` | Gamification columns on `UserProfile` |
 | `20260828010000_auth_tokens` | `PasswordResetToken`, `EmailVerificationToken` |
 | `20260831000000_water_bodies_and_stations` | `WaterBody`, `LoticWaterBodyDetails`, `LenticWaterBodyDetails`, `WaterBodyUpazila`, `WaterLevelStation`, `WaterBodyStation`, `StationFloodForecast`, `WaterLevelReading`; `DatasetVersion`; `ObservationMeasurement`; `ProjectTarget`, `ProjectActivity`, `ProjectMetric`; `AlertArea`; new enums: `AlertType`, `WaterBodyType`, `HydrologicalClass`, `WaterLevelTrend`, `MeasurementParameter`, `MeasurementUnit`, `QualityFlag`, `RestorationTargetMetric`; new `AuditAction` values |
@@ -298,7 +294,9 @@ pnpm run db:studio            # Open Prisma Studio at localhost:5555
 | `20260831020000_remove_water_body_upazila_district_id` | Removes that FK (schema refinement) |
 | `20260831030000_water_level_station_fk` | Updates `WaterLevelStation` to use proper FK references for district and upazila |
 | `20260901000000_postgis_geometry` | Adds `District.geom geography(Point, 4326)` — PostGIS point geometry now active; adds `coastLat`/`coastLng` to `District`; adds gauge threshold columns to `WaterLevelStation`; adds upazila FK relations to `CitizenReport`, `Observation`, `RestorationProject`, `AlertArea` |
+| `20260902000000_schema_drift_catch_up` | Schema drift catch-up |
+| `20260902010000_world_bank_emissions` | Drops `PollutionSource`, `EmissionEntry`, and 3 related enums; removes `emissions.manage`/`emissions.report` permission rows; creates `NationalEmissionReading` |
 
-54 tables live.
+55 tables live.
 
-The `LocationsService`, `DatasetsService`, `ProvidersService`, `PermissionsService`, and `SeedService` auto-seed data on first boot via `OnModuleInit`. `LocationsService` seeds 8 divisions, 64 districts (all with GeoJSON boundary), 494 upazilas, and 4,540 unions — all with lat/lng. All coordinates are hardcoded in `apps/api/src/locations/seed/bangladesh.ts`; no runtime file reads are required. This file is the source of truth — edit it directly if location data needs updating. `DatasetsService` seeds 9 catalog records (OpenMeteo Weather, OpenMeteo Flood, District Air Quality Index, Water Body Registry, Biodiversity Occurrences, Sundarbans Monitoring, Emissions Inventory, OpenMeteo Marine Weather, OpenMeteo Satellite Radiation). `ProvidersService` seeds both the OpenMeteo and GBIF provider records. `PermissionsService` seeds 13 named permissions and default role grants. `SeedService` seeds 6 dev user accounts (one per role) and a seed organization for local development. No separate seed script is required for those tables.
+The `LocationsService`, `DatasetsService`, `ProvidersService`, `PermissionsService`, and `SeedService` auto-seed data on first boot via `OnModuleInit`. `LocationsService` seeds 8 divisions, 64 districts (all with GeoJSON boundary), 494 upazilas, and 4,540 unions — all with lat/lng. All coordinates are hardcoded in `apps/api/src/locations/seed/bangladesh.ts`; no runtime file reads are required. This file is the source of truth — edit it directly if location data needs updating. `DatasetsService` seeds 9 catalog records (OpenMeteo Weather, OpenMeteo Flood, District Air Quality Index, Water Body Registry, Biodiversity Occurrences, Sundarbans Monitoring, Emissions Inventory, OpenMeteo Marine Weather, OpenMeteo Satellite Radiation). `ProvidersService` seeds the OpenMeteo, GBIF, and World Bank provider records. `PermissionsService` seeds 11 named permissions and default role grants. `SeedService` seeds 6 dev user accounts (one per role) and a seed organization for local development. No separate seed script is required for those tables.

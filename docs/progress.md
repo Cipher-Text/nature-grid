@@ -1,6 +1,6 @@
 # Progress
 
-Last updated: 2026-09-02 (E2E test suite — 45 tests across 4 spec files; CI e2e job with postgres service container; docs updated — roadmap Phase 6/7/8 status, roles-and-permissions expanded with role-feature matrix and planned Phase 7/8 permissions. Previously: Community module — `CommunityModule`, 5 models, full CRUD + poll vote, `/community` and `/community/:id` pages; Phase 5 closed. PostGIS point geometry on District; Water Bodies module; flood module refactored to station-based; observation measurements; restoration sub-resources; AlertType enum + AlertArea; DatasetVersion; water level readings. 2026-08-29 BullMQ, Gamification module, Media module; 2026-08-28 OpenMeteo audit, Radiation, Marine, Emissions.)
+Last updated: 2026-09-02 (World Bank emissions rewrite — `emissions/` module converted from user-input (`PollutionSource`/`EmissionEntry`) to World Bank Climate Change API ingestion; `NationalEmissionReading` model; 4 GHG indicators; weekly scheduler; `/emissions` frontend page showing time-series table. Previously: E2E test suite — 45 tests across 4 spec files; CI e2e job with postgres service container; docs updated — roadmap Phase 6/7/8 status, roles-and-permissions expanded with role-feature matrix and planned Phase 7/8 permissions. Community module — `CommunityModule`, 5 models, full CRUD + poll vote, `/community` and `/community/:id` pages; Phase 5 closed. PostGIS point geometry on District; Water Bodies module; flood module refactored to station-based; observation measurements; restoration sub-resources; AlertType enum + AlertArea; DatasetVersion; water level readings. 2026-08-29 BullMQ, Gamification module, Media module; 2026-08-28 OpenMeteo audit, Radiation, Marine, Emissions.)
 
 ## Status Legend
 
@@ -57,7 +57,7 @@ Last updated: 2026-09-02 (E2E test suite — 45 tests across 4 spec files; CI e2
 | Flood ingestion (OpenMeteo/GloFAS) | Done | Refactored to station-based: `StationFloodForecast` per water level station, replacing earlier district-level model. Station readings via `GET /flood/stations/:stationId/readings|/latest`. Six-hour scheduler. — see "OpenMeteo Flood" and "2026-08-31 Water Bodies & Schema Expansion" below |
 | Satellite radiation ingestion (OpenMeteo) | Done | 2026-08-28 — `radiation/` module; daily at 1am; 3 daily variables per district; `SatelliteRadiationReading` model. See "2026-08-28 Integrations" below. |
 | Marine weather ingestion (OpenMeteo) | Done | 2026-08-28 — `marine/` module; daily at 2am; 11 wave/swell/wind-wave variables; coastal districts only; `MarineForecast` model. See "2026-08-28 Integrations" below. |
-| Emissions tracking | Done | 2026-08-28 — `emissions/` module; `PollutionSource` + `EmissionEntry` models; `emissions.manage` / `emissions.report` permissions; `EMISSION_SOURCE_CREATE` / `EMISSION_ENTRY_CREATE` audit events. See "2026-08-28 Integrations" below. |
+| Emissions tracking | Done | 2026-08-28 initial (user-input); **rewritten 2026-09-02** — World Bank Climate Change API ingestion; `NationalEmissionReading` model; 4 GHG indicators (Total GHG, CO₂, CH₄, N₂O); weekly scheduler; `/emissions` frontend page. See "2026-09-02 World Bank Emissions Rewrite" and "2026-08-28 Integrations" below. |
 | OpenMeteo integration audit | Done | 2026-08-28 — HTTP timeout (AbortController, 30 s) on all 4 fetch clients; flood batch $transaction replacing loop upserts; UTC date fix (setUTCHours); aggregation transaction in climate sync; ingestion tracking for LocationClimateScheduler. See "2026-08-28 OpenMeteo Audit Fixes" below. |
 | Ingestion module (generic) | Done | 2026-08-24 — `IngestionService` + `IngestionController` implemented; weather and GBIF schedulers now write `IngestionJob` records per run (RUNNING → SUCCEEDED/FAILED); `Dataset.lastSyncedAt` updated on every successful sync; GBIF provider seeded; admin ingestion dashboard live at `/ingestion`. See "Ingestion Module + Dataset Access" below. |
 | Environmental monitoring model | Planned | OGC SensorThings-style or simplified internal model — decision pending |
@@ -68,10 +68,49 @@ Last updated: 2026-09-02 (E2E test suite — 45 tests across 4 spec files; CI e2
 | Admin frontend — M12 | Done | Full console at port 3002: login/logout, report moderation, user management, alert management, dataset management, and organization management. The Organizations menu and API use the RBAC permission `organizations.manage`; users can be attached to multiple organizations as `ADMIN` or `MEMBER`. |
 | Consumer detail pages + profile activity | Done | 2026-08-23 — detail pages for reports, alerts, observations, restoration projects, and biodiversity species; all list pages now have clickable rows; `GET /reports/mine` + `GET /observations/mine` authenticated endpoints; profile page shows live report/observation history. See "Consumer Frontend" below. |
 | Data worker | Planned | Python skeleton; no active jobs |
-| Permissions module | Done | DB-backed `Permission`/`RolePermission` models, `PermissionsGuard`, 13 named permissions (11 original + `emissions.manage` + `emissions.report`), default role grants, admin grant/revoke endpoints (`POST/DELETE /admin/permissions/roles`), audited (`PERMISSION_GRANT`/`PERMISSION_REVOKE`). |
+| Permissions module | Done | DB-backed `Permission`/`RolePermission` models, `PermissionsGuard`, 11 named permissions, default role grants, admin grant/revoke endpoints (`POST/DELETE /admin/permissions/roles`), audited (`PERMISSION_GRANT`/`PERMISSION_REVOKE`). |
 | Analytics module | Done | Role-scoped dashboard endpoints: admin, moderator, government, researcher, org admin — each returns aggregated stats relevant to that role. |
 | Seed service | Done | `SeedService` registered in `AppModule`; seeds 6 dev user accounts (one per role, password `NatureGrid123!`) and 1 seed organization on first boot. |
 | Users reactivate endpoint | Done | `PATCH /users/:id/reactivate` re-enables deactivated accounts. |
+
+## 2026-09-02 World Bank Emissions Rewrite
+
+The `emissions/` module was fully redesigned from user-input source tracking to an automated World Bank Climate Change API ingestion pipeline, following the same pattern as `radiation/` and `marine/`.
+
+**What was removed:**
+- `PollutionSource` + `EmissionEntry` Prisma models and all 3 related enums (`PollutionSourceType`, `PollutantType`, `EmissionUnit`)
+- `emissions.manage` and `emissions.report` permissions (removed from seed + `Permission` type)
+- `seedPollutionSources()` in `SeedService`
+- Old DTOs: `create-pollution-source.dto.ts`, `update-pollution-source.dto.ts`, `create-emission-entry.dto.ts`
+- `/emissions/[id]` frontend detail page; "Emissions" tab on district detail page
+
+**What was added:**
+- `NationalEmissionReading` Prisma model — `(year Int, indicatorCode String)` unique, stores Mt CO₂e values
+- `WorldBankClient` — HTTP client with 3-attempt retry + 30 s timeout; pages through World Bank API (`/v2/country/BGD/indicator/{code}?format=json`)
+- `EmissionsScheduler` — `@Cron('0 0 3 * * 0')` weekly Sunday 3am; initial sync on empty table
+- `EmissionsService` — `syncAll`, `syncIndicator`, `getAll`, `getByYear`, `getIndicators`
+- `WorldBankClient` seeded as a `WORLD_BANK` provider; `EMISSIONS: 1_009` cron lock key added
+
+**Indicators synced (4):**
+| Code | Description |
+| --- | --- |
+| `EN.GHG.ALL.MT.CE.AR5` | Total GHG emissions excl. LULUCF |
+| `EN.GHG.CO2.MT.CE.AR5` | CO₂ only |
+| `EN.GHG.CH4.MT.CE.AR5` | Methane (CH₄) |
+| `EN.GHG.N2O.MT.CE.AR5` | Nitrous oxide (N₂O) |
+
+**Endpoints (3, all `@Public()`):**
+| Method | Path | Notes |
+| --- | --- | --- |
+| `GET` | `/emissions` | All readings; `?indicator=`, `?from=`, `?to=` filters |
+| `GET` | `/emissions/indicators` | Distinct indicator codes in DB |
+| `GET` | `/emissions/:year` | All indicators for a specific year |
+
+**Frontend:** `/emissions` page rewritten — time-series table grouped by year × indicator, year/indicator filter bar. Source: World Bank Climate Change API, last updated 2026-07-13, 66 annual records (1976–2024).
+
+**Migration:** `20260902010000_world_bank_emissions` — drops old tables/enums, removes orphaned permission rows, creates `NationalEmissionReading`.
+
+---
 
 ## 2026-09-02 E2E Test Suite
 
@@ -234,38 +273,9 @@ Three new domains implemented in a single pass.
 - **Dataset catalog:** "OpenMeteo Marine Weather" (WATER / PUBLIC)
 - **SST / ocean currents:** not stored — `sea_surface_temperature` and ocean current variables are hourly-only in the Marine API; deferred to a future hourly table
 
-### Emissions Tracking (`apps/api/src/emissions/`)
+### Emissions Tracking — initial implementation (`apps/api/src/emissions/`)
 
-Source-level pollution measurement — distinct from the ambient air-quality readings in `HourlyAirQuality`.
-
-**New schema models:**
-- `PollutionSource` — name, type (`FACTORY | POWER_PLANT | VEHICLE_FLEET | AGRICULTURE | CONSTRUCTION | WASTE_FACILITY | OTHER`), districtId?, lat?, lng?, organizationId?, createdById, isActive, description?
-- `EmissionEntry` — sourceId, pollutant (`CO2 | CH4 | N2O | PM25 | PM10 | NOX | SOX | VOC | CO | OTHER`), value Float ≥ 0, unit (`TONS_PER_YEAR | KG_PER_DAY | GRAMS_PER_HOUR | MG_PER_M3 | OTHER`), measurementMethod?, periodStart?, periodEnd?, notes?, reportedById?
-
-**New enums (3):** `PollutionSourceType`, `PollutantType`, `EmissionUnit`
-
-**New permissions (2):**
-- `emissions.manage` — create and update pollution sources; granted to GOVERNMENT and RESEARCHER by default
-- `emissions.report` — log emission entries against sources; additionally granted to ORGANIZATION_ADMIN
-
-**Audit events (2):** `EMISSION_SOURCE_CREATE`, `EMISSION_ENTRY_CREATE`
-
-**Endpoints (6):**
-
-| Method | Path | Permission | Notes |
-| --- | --- | --- | --- |
-| `POST` | `/emissions/sources` | `emissions.manage` | Create pollution source |
-| `GET` | `/emissions/sources` | Public | List all sources |
-| `GET` | `/emissions/sources/:id` | Public | Source detail + entries |
-| `PATCH` | `/emissions/sources/:id` | `emissions.manage` | Update (creator or ADMIN) |
-| `POST` | `/emissions/sources/:id/entries` | `emissions.report` | Log emission measurement |
-| `GET` | `/emissions/sources/:id/entries` | Public | List entries for a source |
-
-**Dataset catalog:** "Emissions Inventory" (AIR_QUALITY / PUBLIC) — seeded 2026-08-28.
-
-**Files created:** `dto/create-pollution-source.dto.ts`, `dto/update-pollution-source.dto.ts`, `dto/create-emission-entry.dto.ts`, `emissions.service.ts`, `emissions.controller.ts`, `emissions.module.ts`.
-
-**Files modified:** `packages/shared/src/index.ts` (added `'emissions.manage'` + `'emissions.report'` to `Permission` type union), `apps/api/src/permissions/permissions.service.ts` (13 permissions total, new default grants), `apps/api/src/datasets/seed/catalog.ts` (9 catalog records total), `apps/api/src/app.module.ts` (added `RadiationModule`, `MarineModule`, `EmissionsModule`).
+Initial design used user-input source-level tracking (`PollutionSource` + `EmissionEntry` models, `emissions.manage` / `emissions.report` permissions). This design was **superseded on 2026-09-02** — see "2026-09-02 World Bank Emissions Rewrite" below for the current implementation.
 
 ---
 

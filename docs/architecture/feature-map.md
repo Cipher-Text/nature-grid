@@ -82,7 +82,7 @@ Legend: **Done** | **Partial** | *Planned* | ~~Deferred~~
 | Feature | Module / App | Status |
 | --- | --- | --- |
 | Live platform metrics | `metrics` | **Done** |
-| Emissions source tracking (factories, vehicles, industrial sites) | `emissions` | **Done** — `PollutionSource` + `EmissionEntry` models; `emissions.manage` / `emissions.report` permissions |
+| National GHG emissions (World Bank Climate Change API) | `emissions` | **Done** — `NationalEmissionReading` model; 4 GHG indicators (Total GHG, CO₂, CH₄, N₂O); weekly scheduler; `/emissions` frontend page |
 | Climate forecasting and ML predictions | `data-worker` | *Planned* (Phase 7) |
 | Carbon footprint accounting | — | *Planned* (Phase 7) |
 

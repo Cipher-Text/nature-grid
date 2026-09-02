@@ -65,7 +65,7 @@ Legend: ✓ Implemented
 | Users and roles | `users` | 6 roles (CITIZEN → ADMIN), role updates, deactivation, reactivation, audit event listing |
 | Organizations | `organizations` | Org records + memberships (ADMIN/MEMBER) linked to providers and restoration projects |
 | Geography | `locations`, `locations/climate` | 8 divisions, 64 districts, 494 upazilas, 4,540 unions — auto-seeded; nightly union-level climate pipeline + 30d rolling averages |
-| Environmental data | `datasets`, `weather`, `flood`, `radiation`, `marine`, `emissions` | Dataset catalog, access policy, download enforcement, OpenMeteo weather/AQ, Flood/GloFAS, satellite radiation, marine forecasts, and emissions source tracking |
+| Environmental data | `datasets`, `weather`, `flood`, `radiation`, `marine`, `emissions` | Dataset catalog, access policy, download enforcement, OpenMeteo weather/AQ, Flood/GloFAS, satellite radiation, marine forecasts, and national GHG emissions (World Bank API) |
 | Biodiversity | `biodiversity` | GBIF species and occurrence records, daily sync |
 | Citizen engagement | `reports`, `observations`, `restoration` | Reports (status workflow + comments + media), observations (trust levels), restoration projects |
 | Alerts and notifications | `alerts`, `notifications` | Severity-tiered alerts, email delivery, subscription by district/nationwide |

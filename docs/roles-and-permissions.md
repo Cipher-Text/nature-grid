@@ -55,9 +55,7 @@ Current implemented capabilities per domain. `✓` = permitted, `—` = not perm
 | Delete any post / comment (moderation) | — | — | — | — | — | ✓ | ✓ |
 | Vote on poll | — | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | **Emissions** | | | | | | | |
-| View pollution sources and entries | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Register / update pollution source | — | — | perm | — | perm | — | ✓ |
-| Log emission entry | — | — | perm | perm | perm | — | ✓ |
+| View national GHG data | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | **Datasets** | | | | | | | |
 | View public dataset summaries | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Download PUBLIC dataset | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
@@ -94,9 +92,6 @@ What the code enforces today (`@Roles`, `@RequirePermissions`, service-layer own
 | `PATCH /observations/:id/trust` | `RESEARCHER`, `ADMIN` — **not** moderator (trust is domain-expertise judgment, not content moderation) |
 | `POST /restoration/projects` | `ORGANIZATION_ADMIN`, `ADMIN` (also requires `restoration.create` permission) |
 | `PATCH /restoration/projects/:id` | any authenticated user at the guard; creator-or-`ADMIN` enforced inside the service |
-| `POST /emissions/sources` | `emissions.manage` permission (GOVERNMENT, RESEARCHER by default) |
-| `PATCH /emissions/sources/:id` | creator-or-`ADMIN` enforced in service |
-| `POST /emissions/sources/:id/entries` | `emissions.report` permission (GOVERNMENT, RESEARCHER, ORGANIZATION_ADMIN by default) |
 | All `/users/*` routes | `ADMIN` (controller-level `@Roles('ADMIN')`) |
 | `POST /reports`, `POST /observations`, `POST /restoration/projects/:id/join` | any authenticated user |
 | `/admin/organizations*` | `organizations.manage` permission (via `PermissionsGuard`) |
@@ -114,7 +109,7 @@ Everything else public-facing uses `@Public()`. Dataset downloads and access req
 
 `PermissionsGuard` checks DB-backed permission grants for routes decorated with `@RequirePermissions(...)`. Results are cached per role for 5 minutes. `ADMIN` bypasses every check regardless of DB state.
 
-Named permissions seeded on first boot (13 total):
+Named permissions seeded on first boot (11 total):
 
 | Permission key | Purpose | Default role holders |
 | --- | --- | --- |
@@ -129,8 +124,6 @@ Named permissions seeded on first boot (13 total):
 | `organizations.access` | View own organization memberships | ORGANIZATION_ADMIN |
 | `organizations.manage` | Full organization CRUD in admin console | *(none — ADMIN bypasses guard)* |
 | `users.manage` | Manage user roles and deactivate accounts | *(none — ADMIN bypasses guard)* |
-| `emissions.manage` | Register and update pollution sources | GOVERNMENT, RESEARCHER |
-| `emissions.report` | Log emission measurements against pollution sources | GOVERNMENT, RESEARCHER, ORGANIZATION_ADMIN |
 
 Admins can grant or revoke any permission from any role via `POST/DELETE /admin/permissions/roles` — audited, runtime-configurable, no redeploy needed.
 
@@ -175,4 +168,4 @@ Analytics endpoints use exact role checks (`@Roles('MODERATOR')`) rather than hi
 Government users hold `alerts.manage` by default, allowing them to issue public alerts directly without moderator approval. This matches Bangladesh's regulatory structure where government agencies (DoE, BWDB, Bangladesh Meteorological Department) are the authoritative sources for environmental alerts. Per-agency or per-district scoping of this permission is a future configurable option before production use.
 
 **ORGANIZATION_ADMIN dual nature**
-`ORGANIZATION_ADMIN` covers two distinct real-world actors: a factory operator logging emissions, and an NGO manager running restoration projects. Both are `ORGANIZATION_ADMIN` at the platform level and linked to their respective organizations via `OrganizationMembership`. Phase 8's industrial facility model will link facilities to organizations, preserving this design through the org ownership relationship.
+`ORGANIZATION_ADMIN` covers two distinct real-world actors: an NGO manager running restoration projects and an organization representative creating content on behalf of their org. Both are `ORGANIZATION_ADMIN` at the platform level and linked to their respective organizations via `OrganizationMembership`. Phase 8's industrial facility model will link facilities to organizations via org ownership.
