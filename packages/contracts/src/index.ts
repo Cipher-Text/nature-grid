@@ -190,6 +190,14 @@ export const routes = {
     indicators: `${apiPrefix}/emissions/indicators`,
   },
 
+  industrialSites: {
+    list: `${apiPrefix}/industrial-sites`,
+    detail: (id: string) => `${apiPrefix}/industrial-sites/${id}`,
+    create: `${apiPrefix}/industrial-sites`,
+    update: (id: string) => `${apiPrefix}/industrial-sites/${id}`,
+    delete: (id: string) => `${apiPrefix}/industrial-sites/${id}`,
+  },
+
   users: {
     list: `${apiPrefix}/users`,
     detail: (id: string) => `${apiPrefix}/users/${id}`,
@@ -1030,6 +1038,53 @@ export interface SatelliteRadiationReading {
   readingDate: string;
   shortwaveRadiationSum: number | null;
   district?: { id: string; name: string };
+}
+
+// ─── Facilities ───────────────────────────────────────────────────────────────
+
+export type FacilityType =
+  | 'GARMENT' | 'TANNERY' | 'BRICK_FIELD' | 'POWER_PLANT' | 'SHIPBREAKING'
+  | 'TEXTILE' | 'CEMENT' | 'STEEL' | 'CHEMICAL' | 'PHARMACEUTICAL'
+  | 'FERTILIZER' | 'PAPER_MILL' | 'FOOD_PROCESSING' | 'OIL_REFINERY' | 'OTHER';
+
+export type ComplianceStatus = 'COMPLIANT' | 'NON_COMPLIANT' | 'UNDER_REVIEW' | 'UNKNOWN';
+
+export interface FacilitySummary {
+  id: string;
+  name: string;
+  bnName: string | null;
+  facilityType: FacilityType;
+  complianceStatus: ComplianceStatus;
+  operatorName: string | null;
+  isActive: boolean;
+  lat: number | null;
+  lng: number | null;
+  districtId: string;
+  upazilaId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  district: { id: string; name: string };
+  upazila: { id: string; name: string } | null;
+}
+
+export interface FacilityDetail extends FacilitySummary {
+  description: string | null;
+  unionId: string | null;
+  union: { id: string; name: string } | null;
+  reports: Array<{
+    id: string;
+    title: string;
+    status: ReportStatus;
+    category: ReportCategory;
+    createdAt: string;
+  }>;
+}
+
+export interface FacilityPagedResponse {
+  data: FacilitySummary[];
+  total: number;
+  page: number;
+  pageSize: number;
 }
 
 // ─── Community ────────────────────────────────────────────────────────────────

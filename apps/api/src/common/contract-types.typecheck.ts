@@ -39,6 +39,8 @@ import type {
   GovernmentDashboard,
   ResearcherDashboard,
   OrgAdminDashboard,
+  FacilityPagedResponse,
+  FacilityDetail,
 } from '@nature-grid/contracts';
 
 import type { ReportsService } from '../reports/reports.service';
@@ -50,6 +52,7 @@ import type { BiodiversityService } from '../biodiversity/biodiversity.service';
 import type { WeatherService } from '../weather/weather.service';
 import type { MetricsService } from '../metrics/metrics.service';
 import type { AnalyticsService } from '../analytics/analytics.service';
+import type { FacilitiesService } from '../facilities/facilities.service';
 
 // ─── Jsonified utility ────────────────────────────────────────────────────────
 //
@@ -140,3 +143,11 @@ const _checkResearcherDashboard: ResearcherDashboard = _researcherDashboard;
 
 declare const _orgAdminDashboard: Jsonified<Awaited<ReturnType<AnalyticsService['getOrgAdminDashboard']>>>;
 const _checkOrgAdminDashboard: OrgAdminDashboard = _orgAdminDashboard;
+
+// ─── Facilities ────────────────────────────────────────────────────────────────
+
+declare const _facilityList: Jsonified<Awaited<ReturnType<FacilitiesService['list']>>>;
+const _checkFacilityList: FacilityPagedResponse = _facilityList;
+
+declare const _facilityDetail: Jsonified<Awaited<ReturnType<FacilitiesService['getById']>>>;
+const _checkFacilityDetail: FacilityDetail = _facilityDetail;
