@@ -48,31 +48,30 @@ export default async function CommunityPostDetailPage({
       </Link>
 
       <div className="post-detail-header">
-        <h1>{post.title}</h1>
-        <div className="post-detail-meta">
-          <span>By {post.author.displayName}</span>
-          {post.district && <span>{post.district.name}</span>}
-          <span>{relativeTime(post.createdAt)}</span>
+        <div>
+          <h1>{post.title}</h1>
+          <div className="post-detail-meta">
+            <span>By {post.author.displayName}</span>
+            {post.district && <span>{post.district.name}</span>}
+            <span>{relativeTime(post.createdAt)}</span>
+          </div>
         </div>
+        {canDeletePost && (
+          <form action={deletePostAction.bind(null, post.id, !!post.poll)}>
+            <button className="button danger small" type="submit">Delete</button>
+          </form>
+        )}
       </div>
 
       {searchParams.error && (
         <p className="form-error">{decodeURIComponent(searchParams.error)}</p>
       )}
 
-      {/* Post body */}
-      <article className="panel">
-        <p style={{ whiteSpace: 'pre-wrap' }}>{post.body}</p>
-      </article>
-
-      {canDeletePost && (
-        <div className="post-actions">
-          <form action={deletePostAction.bind(null, post.id, !!post.poll)}>
-            <button className="button danger small" type="submit">
-              Delete post
-            </button>
-          </form>
-        </div>
+      {/* Post body — only render if there is actual content */}
+      {post.body?.trim() && (
+        <article className="panel">
+          <p style={{ whiteSpace: 'pre-wrap' }}>{post.body}</p>
+        </article>
       )}
 
       {/* Poll */}
@@ -80,15 +79,14 @@ export default async function CommunityPostDetailPage({
         const poll = post.poll!;
         const isClosed = !!poll.endsAt && new Date() > new Date(poll.endsAt);
         const hasVoted = !!poll.userVotedOptionId;
-        const showResults = hasVoted || isClosed || !user;
         const totalVotes = poll.options.reduce((s, o) => s + o._count.votes, 0);
+        const canVote = user && !hasVoted && !isClosed;
+        const canChangeVote = user && hasVoted && !isClosed;
 
         return (
           <article className="panel">
             <h2>Poll</h2>
-            <p><strong>{poll.question}</strong></p>
 
-            {/* Status line */}
             <p className="poll-status">
               {isClosed
                 ? `Closed · ${totalVotes} vote${totalVotes !== 1 ? 's' : ''}`
@@ -99,51 +97,31 @@ export default async function CommunityPostDetailPage({
 
             {searchParams.voted && <p className="form-success">Vote recorded.</p>}
 
-            {showResults ? (
-              /* ── Results view ── */
-              <div className="poll-results">
-                {poll.options.map((opt) => {
-                  const pct = totalVotes > 0 ? Math.round((opt._count.votes / totalVotes) * 100) : 0;
-                  const isMyVote = poll.userVotedOptionId === opt.id;
-                  return (
-                    <div key={opt.id} className="poll-option-result">
-                      <div className="poll-option-label">
-                        <span>{isMyVote ? <strong>{opt.text}</strong> : opt.text}</span>
-                        {isMyVote && <span className="poll-your-vote">Your vote</span>}
-                        <span className="poll-pct">{pct}%</span>
-                      </div>
-                      <div className="poll-bar-track">
-                        <div className="poll-bar-fill" style={{ width: `${pct}%` }} />
-                      </div>
+            {/* ── Results — always visible ── */}
+            <div className="poll-results">
+              {poll.options.map((opt) => {
+                const pct = totalVotes > 0 ? Math.round((opt._count.votes / totalVotes) * 100) : 0;
+                const isMyVote = poll.userVotedOptionId === opt.id;
+                return (
+                  <div key={opt.id} className="poll-option-result">
+                    <div className="poll-option-label">
+                      <span>{isMyVote ? <strong>{opt.text}</strong> : opt.text}</span>
+                      {isMyVote && <span className="poll-your-vote">Your vote</span>}
+                      <span className="poll-pct">{pct}%</span>
                     </div>
-                  );
-                })}
+                    <div className="poll-bar-track">
+                      <div className="poll-bar-fill" style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
 
-                {/* Change vote — compact select, not a repeated list */}
-                {hasVoted && !isClosed && user && (
-                  <form action={castVoteAction.bind(null, post.id)} className="poll-change-vote">
-                    <label htmlFor="optionId" className="poll-radio-legend">Change your vote</label>
-                    <div className="poll-change-vote-row">
-                      <select
-                        id="optionId"
-                        name="optionId"
-                        className="select-field"
-                        defaultValue={poll.userVotedOptionId ?? ''}
-                      >
-                        {poll.options.map((opt) => (
-                          <option key={opt.id} value={opt.id}>{opt.text}</option>
-                        ))}
-                      </select>
-                      <button className="button" type="submit">Update</button>
-                    </div>
-                  </form>
-                )}
-              </div>
-            ) : (
-              /* ── Voting view (authenticated, not yet voted, poll open) ── */
+            {/* ── Cast vote (not yet voted, poll open) ── */}
+            {canVote && (
               <form action={castVoteAction.bind(null, post.id)} className="poll-vote-form">
                 <fieldset className="poll-radio-group">
-                  <legend className="poll-radio-legend">Select an option</legend>
+                  <legend className="poll-radio-legend">Cast your vote</legend>
                   {poll.options.map((opt) => (
                     <label key={opt.id} className="poll-radio-label">
                       <input type="radio" name="optionId" value={opt.id} required />
@@ -152,6 +130,26 @@ export default async function CommunityPostDetailPage({
                   ))}
                 </fieldset>
                 <button className="button" type="submit">Vote</button>
+              </form>
+            )}
+
+            {/* ── Change vote (already voted, poll open) ── */}
+            {canChangeVote && (
+              <form action={castVoteAction.bind(null, post.id)} className="poll-change-vote">
+                <label htmlFor="optionId" className="poll-radio-legend">Change your vote</label>
+                <div className="poll-change-vote-row">
+                  <select
+                    id="optionId"
+                    name="optionId"
+                    className="select-field"
+                    defaultValue={poll.userVotedOptionId ?? ''}
+                  >
+                    {poll.options.map((opt) => (
+                      <option key={opt.id} value={opt.id}>{opt.text}</option>
+                    ))}
+                  </select>
+                  <button className="button" type="submit">Update</button>
+                </div>
               </form>
             )}
 

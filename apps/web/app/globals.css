@@ -2259,6 +2259,10 @@ a {
 
 /* ── Community post detail header ── */
 .post-detail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
   margin-bottom: 24px;
 }
 
@@ -2302,13 +2306,6 @@ a {
   }
 }
 
-/* ── Post actions bar (delete, etc.) — separated from post body ── */
-.post-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-bottom: 16px;
-}
 
 /* ── Poll ── */
 .poll-status {

@@ -252,6 +252,8 @@ export default async function CommunityPage({
             {postsRes.data.map((p) => {
               const isClosed =
                 !!p.poll?.endsAt && new Date() > new Date(p.poll.endsAt);
+              const totalVotes =
+                p.poll?.options.reduce((s, o) => s + o._count.votes, 0) ?? 0;
               return (
                 <Link
                   key={p.id}
@@ -266,7 +268,7 @@ export default async function CommunityPage({
                     )}
                   </span>
                   <span>{p.author.displayName}</span>
-                  <span>{p._count.comments} comment{p._count.comments !== 1 ? 's' : ''}</span>
+                  <span>{totalVotes} vote{totalVotes !== 1 ? 's' : ''}</span>
                   <span>
                     {isClosed ? (
                       <span className="tag muted">Closed</span>

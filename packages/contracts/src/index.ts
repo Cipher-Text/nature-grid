@@ -1074,7 +1074,12 @@ export interface CommunityPostSummary {
   author: { id: string; displayName: string };
   district: { id: string; name: string } | null;
   _count: { comments: number };
-  poll: { id: string; question: string; endsAt: string | null } | null;
+  poll: {
+    id: string;
+    question: string;
+    endsAt: string | null;
+    options: { _count: { votes: number } }[];
+  } | null;
 }
 
 export interface PollOptionWithCount {

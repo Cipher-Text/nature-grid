@@ -23,7 +23,14 @@ const POST_LIST_SELECT = {
   author: { select: { id: true, displayName: true } },
   district: { select: { id: true, name: true } },
   _count: { select: { comments: true } },
-  poll: { select: { id: true, question: true, endsAt: true } },
+  poll: {
+    select: {
+      id:       true,
+      question: true,
+      endsAt:   true,
+      options:  { select: { _count: { select: { votes: true } } } },
+    },
+  },
 } as const;
 
 const COMMENT_SELECT = {
