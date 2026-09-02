@@ -74,6 +74,55 @@ jobs:
       - name: Build all apps
         run: pnpm build
 
+  e2e:
+    name: E2E tests (API)
+    runs-on: ubuntu-latest
+    needs: verify
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci?schema=public
+      # Minimum 32-character secret; not a real secret — CI only.
+      JWT_SECRET: ci-test-jwt-secret-exactly-32-chars!
+      REDIS_URL: redis://localhost:6379
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm --filter @nature-grid/database run db:generate
+
+      - name: Apply migrations
+        run: pnpm exec prisma migrate deploy
+        working-directory: packages/database
+
+      - name: Run E2E tests
+        run: pnpm exec jest --config jest.e2e.config.js --runInBand --ci
+        working-directory: apps/api
+
   docker-build:
     name: Docker build (API)
     runs-on: ubuntu-latest

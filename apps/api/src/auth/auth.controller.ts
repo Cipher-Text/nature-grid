@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Patch, Post, Req } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Patch, Post, Req } from '@nestjs/common';
 import type { Request } from 'express';
 import { AuthService, DeviceMeta } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
@@ -34,6 +34,7 @@ export class AuthController {
   // The brute-force surface. 5 attempts per minute per IP.
   @Throttle({ default: { ttl: 60_000, limit: 5 } })
   @Public()
+  @HttpCode(HttpStatus.OK)
   @Post('login')
   login(@Body() dto: LoginDto, @Req() req: Request) {
     return this.authService.login(dto, deviceMetaFrom(req));
@@ -43,12 +44,14 @@ export class AuthController {
   // still capping token-guessing.
   @Throttle({ default: { ttl: 60_000, limit: 20 } })
   @Public()
+  @HttpCode(HttpStatus.OK)
   @Post('refresh')
   refresh(@Body() dto: RefreshTokenDto, @Req() req: Request) {
     return this.authService.refresh(dto.refreshToken, deviceMetaFrom(req));
   }
 
   @Public()
+  @HttpCode(HttpStatus.OK)
   @Post('logout')
   async logout(@Body() dto: RefreshTokenDto, @Req() req: Request) {
     await this.authService.logout(dto.refreshToken, deviceMetaFrom(req));
@@ -77,6 +80,7 @@ export class AuthController {
   // Throttled tightly — this triggers email delivery and is a prime abuse vector.
   @Throttle({ default: { ttl: 60_000, limit: 3 } })
   @Public()
+  @HttpCode(HttpStatus.OK)
   @Post('forgot-password')
   forgotPassword(@Body() dto: ForgotPasswordDto) {
     return this.authService.forgotPassword(dto);
@@ -84,6 +88,7 @@ export class AuthController {
 
   @Throttle({ default: { ttl: 60_000, limit: 5 } })
   @Public()
+  @HttpCode(HttpStatus.OK)
   @Post('reset-password')
   resetPassword(@Body() dto: ResetPasswordDto, @Req() req: Request) {
     return this.authService.resetPassword(dto, deviceMetaFrom(req));
@@ -96,6 +101,7 @@ export class AuthController {
 
   @Throttle({ default: { ttl: 60_000, limit: 10 } })
   @Public()
+  @HttpCode(HttpStatus.OK)
   @Post('verify-email')
   verifyEmail(@Body() dto: VerifyEmailDto, @Req() req: Request) {
     return this.authService.verifyEmail(dto, deviceMetaFrom(req));
