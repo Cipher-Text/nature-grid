@@ -242,27 +242,19 @@ a {
 
 /* ── Public hero ── */
 .public-hero {
-  padding: clamp(48px, 8vw, 96px) 0 40px;
+  padding: clamp(24px, 4vw, 48px) 0 24px;
   width: 100%;
 }
 
 .public-hero h1 {
-  font-size: clamp(2.7rem, 6.5vw, 5.6rem);
-  line-height: 1;
+  font-size: clamp(1.8rem, 3.5vw, 2.8rem);
+  line-height: 1.15;
   text-wrap: balance;
-  max-width: 900px;
-}
-
-.public-hero > p {
-  margin-top: 20px;
-  max-width: 680px;
-  color: var(--muted);
-  font-size: 1.1rem;
-  line-height: 1.7;
+  max-width: 720px;
 }
 
 .public-hero .button-row {
-  margin-top: 28px;
+  margin-top: 20px;
 }
 
 /* Hero status card */
@@ -3346,7 +3338,7 @@ a {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 10px 14px;
-  margin: 20px 0 24px;
+  margin: 14px 0 0;
   font-size: 0.82rem;
   color: var(--foreground);
 }
@@ -3402,6 +3394,46 @@ a {
   color: var(--primary);
   text-decoration: underline;
   text-underline-offset: 2px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LIVE WEATHER STRIP
+   Hottest / coolest / rain count — between hero and climate band
+   ═══════════════════════════════════════════════════════════════ */
+
+.live-weather-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0;
+  background: var(--surface-2);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 10px clamp(16px, 4vw, 80px);
+  font-size: 0.83rem;
+  color: var(--foreground);
+}
+
+.live-weather-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--success);
+  margin-right: 12px;
+}
+
+.live-weather-stat {
+  padding: 2px 12px;
+  white-space: nowrap;
+}
+
+.live-weather-divider {
+  display: inline-block;
+  width: 1px;
+  height: 14px;
+  background: var(--border);
+  flex-shrink: 0;
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -3533,6 +3565,61 @@ a {
   margin-top: 4px;
 }
 
+/* Report category pill cluster (T10) */
+.civic-category-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.civic-category-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  font-size: 0.77rem;
+  color: var(--muted);
+}
+
+.civic-category-pill strong {
+  color: var(--foreground);
+}
+
+/* Restoration impact stat chips (T11) */
+.civic-restoration-impact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.civic-impact-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.civic-impact-chip strong {
+  color: var(--foreground);
+}
+
+/* Alert type + severity tag pair */
+.civic-record-tags {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
 /* Biodiversity panel layout */
 .civic-bio-panel {
   display: grid;
@@ -3589,6 +3676,50 @@ a {
   font-size: 0.85rem;
   color: var(--muted);
   line-height: 1.5;
+}
+
+.civic-bio-top-species {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.83rem;
+}
+
+.civic-bio-species-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.civic-bio-species-rank {
+  width: 16px;
+  text-align: right;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.civic-bio-species-name {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: baseline;
+}
+
+.civic-bio-species-vernacular {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.civic-bio-species-count {
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  font-size: 0.78rem;
+  flex-shrink: 0;
 }
 
 @media (max-width: 700px) {

@@ -2,6 +2,7 @@ import type {
   UserRole,
   AlertSeverity,
   AlertStatus,
+  AlertType,
   ReportCategory,
   ReportStatus,
   DatasetCategory,
@@ -24,6 +25,7 @@ export type {
   UserRole,
   AlertSeverity,
   AlertStatus,
+  AlertType,
   ReportCategory,
   ReportStatus,
   DatasetCategory,
@@ -446,6 +448,7 @@ export interface Alert {
   id: string;
   title: string;
   description: string;
+  alertType: AlertType | null;
   severity: AlertSeverity;
   status: AlertStatus;
   instructions: string | null;

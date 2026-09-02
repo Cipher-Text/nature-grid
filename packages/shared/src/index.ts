@@ -317,6 +317,13 @@ export interface PlatformMetrics {
   publicDatasets: number;
   researchGradeObservations: number;
   districtsWithResearchGradeObservations: number;
+  // T2+T8
+  activeRestorationProjects: number;
+  // T10
+  reportsByCategory: Array<{ category: ReportCategory; count: number }>;
+  // T11
+  restorationVolunteers: number;
+  restorationAreaHa: number;
 }
 
 // ─── Dataset DTO ──────────────────────────────────────────────────────────────

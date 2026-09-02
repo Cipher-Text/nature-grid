@@ -2,9 +2,8 @@ import Link from 'next/link';
 const NAV_LINKS = [
   { href: '/#dashboard', label: 'Overview' },
   { href: '/map', label: 'Map' },
-  { href: '/#data', label: 'Data' },
   { href: '/#civic', label: 'Reports & Alerts' },
-  { href: '/#biodiversity', label: 'Biodiversity' },
+  { href: '/#data', label: 'Data' },
 ] as const;
 
 export default async function PublicNav() {

@@ -24,15 +24,24 @@ export interface ReportItem {
 export interface AlertItem {
   id: string;
   title: string;
+  alertType: string | null;
   severity: string;
   severityClass: string;
   district: string;
   issuedAt: string;
 }
 
+export interface TopSpecies {
+  id: string;
+  canonicalName: string;
+  vernacularName: string | null;
+  occurrenceCount: number;
+}
+
 export interface BiodiversityStats {
   speciesTotal: number;
   occurrenceTotal: number;
+  topSpecies: TopSpecies[];
 }
 
 export interface ProjectItem {
@@ -43,11 +52,23 @@ export interface ProjectItem {
   summary: string | null;
 }
 
+export interface CategoryCount {
+  label: string;
+  count: number;
+}
+
+export interface RestorationImpact {
+  volunteers: number;
+  areaHa: number;
+}
+
 interface Props {
-  reports:     { items: ReportItem[];  isLive: boolean };
-  alerts:      { items: AlertItem[];   isLive: boolean };
-  biodiversity: BiodiversityStats | null;
-  restoration: { items: ProjectItem[]; isLive: boolean };
+  reports:           { items: ReportItem[];  isLive: boolean };
+  alerts:            { items: AlertItem[];   isLive: boolean };
+  biodiversity:      BiodiversityStats | null;
+  restoration:       { items: ProjectItem[]; isLive: boolean };
+  reportsByCategory: CategoryCount[];
+  restorationImpact: RestorationImpact | null;
 }
 
 type TabKey = 'reports' | 'alerts' | 'biodiversity' | 'restoration';
@@ -59,7 +80,14 @@ const TABS: { key: TabKey; label: string; viewAllHref: string; contributeHref: s
   { key: 'restoration',  label: 'Restoration',      viewAllHref: '/restoration',  contributeHref: '/login', contributeLabel: 'Sign in to participate'        },
 ];
 
-export default function CivicScienceTabs({ reports, alerts, biodiversity, restoration }: Props) {
+export default function CivicScienceTabs({
+  reports,
+  alerts,
+  biodiversity,
+  restoration,
+  reportsByCategory,
+  restorationImpact,
+}: Props) {
   const [active, setActive] = useState<TabKey>('reports');
   const current = TABS.find((t) => t.key === active)!;
 
@@ -130,6 +158,15 @@ export default function CivicScienceTabs({ reports, alerts, biodiversity, restor
             </div>
           ))}
         </div>
+        {reportsByCategory.length > 0 && (
+          <div className="civic-category-pills" aria-label="Report breakdown by category">
+            {reportsByCategory.map((c) => (
+              <span key={c.label} className="civic-category-pill">
+                {c.label} <strong>{c.count.toLocaleString()}</strong>
+              </span>
+            ))}
+          </div>
+        )}
         <Link href={current.contributeHref} className="button ghost civic-contribute-link">
           {current.contributeLabel}
         </Link>
@@ -154,9 +191,14 @@ export default function CivicScienceTabs({ reports, alerts, biodiversity, restor
             <div key={a.id} className="civic-record-item">
               <div className="civic-record-top">
                 <strong className={a.severityClass}>{a.title}</strong>
-                <span className={`civic-record-tag civic-record-tag--${a.severityClass}`}>
-                  {a.severity}
-                </span>
+                <div className="civic-record-tags">
+                  {a.alertType && (
+                    <span className="civic-record-tag">{a.alertType.replace(/_/g, ' ')}</span>
+                  )}
+                  <span className={`civic-record-tag civic-record-tag--${a.severityClass}`}>
+                    {a.severity}
+                  </span>
+                </div>
               </div>
               <span className="civic-record-meta">
                 {[a.district, a.issuedAt].filter(Boolean).join(' · ')}
@@ -196,6 +238,24 @@ export default function CivicScienceTabs({ reports, alerts, biodiversity, restor
                     <span>occurrence records</span>
                   </div>
                 </div>
+                {biodiversity.topSpecies.length > 0 && (
+                  <ol className="civic-bio-top-species">
+                    {biodiversity.topSpecies.map((s, i) => (
+                      <li key={s.id} className="civic-bio-species-row">
+                        <span className="civic-bio-species-rank">{i + 1}</span>
+                        <span className="civic-bio-species-name">
+                          <em>{s.canonicalName}</em>
+                          {s.vernacularName && (
+                            <span className="civic-bio-species-vernacular">{s.vernacularName}</span>
+                          )}
+                        </span>
+                        <span className="civic-bio-species-count">
+                          {s.occurrenceCount.toLocaleString()}
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                )}
                 <p className="civic-bio-note">
                   Research-grade observations synced daily from GBIF — mangrove, freshwater,
                   and coastal species across Bangladesh.
@@ -244,6 +304,20 @@ export default function CivicScienceTabs({ reports, alerts, biodiversity, restor
             </div>
           ))}
         </div>
+        {restorationImpact && (
+          <div className="civic-restoration-impact">
+            {restorationImpact.volunteers > 0 && (
+              <span className="civic-impact-chip">
+                <strong>{restorationImpact.volunteers.toLocaleString()}</strong> volunteers
+              </span>
+            )}
+            {restorationImpact.areaHa > 0 && (
+              <span className="civic-impact-chip">
+                <strong>{restorationImpact.areaHa.toLocaleString()}</strong> ha restored
+              </span>
+            )}
+          </div>
+        )}
         <Link href={current.contributeHref} className="button ghost civic-contribute-link">
           {current.contributeLabel}
         </Link>

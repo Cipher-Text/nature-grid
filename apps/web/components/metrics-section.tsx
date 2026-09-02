@@ -29,6 +29,11 @@ async function loadMetrics(): Promise<{ metrics: Metric[]; isLive: boolean }> {
         value: m.researchGradeObservations.toLocaleString(),
         note: `Across ${m.districtsWithResearchGradeObservations} districts`,
       },
+      {
+        label: 'Active restoration projects',
+        value: m.activeRestorationProjects.toLocaleString(),
+        note: 'Active or planned across all districts',
+      },
     ] };
   } catch {
     return { isLive: false, metrics: [] };

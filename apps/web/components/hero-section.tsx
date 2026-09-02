@@ -16,11 +16,6 @@ export default async function HeroSection() {
     <section className="public-hero" aria-label="Platform overview">
       <p className="eyebrow">Public Environmental Intelligence · Bangladesh</p>
       <h1>Understand Bangladesh’s environment, place by place.</h1>
-      <p>
-        See what is happening now through live observations, forecasts, rolling climate
-        summaries, verified reports, and biodiversity records — across 8 divisions and
-        64 districts. No login required.
-      </p>
 
       {metrics && (
         <div className="hero-live-bar" role="status" aria-label="Live platform statistics">
@@ -38,17 +33,14 @@ export default async function HeroSection() {
             {metrics.activeAlerts} active alert{metrics.activeAlerts !== 1 ? 's' : ''}
           </span>
           <span className="hero-live-stat hero-live-stat--divider">
-            {metrics.verifiedReports.toLocaleString()} verified reports
-          </span>
-          <span className="hero-live-stat hero-live-stat--divider">
-            {metrics.researchGradeObservations.toLocaleString()} biodiversity records
+            {metrics.districtsWithResearchGradeObservations} district{metrics.districtsWithResearchGradeObservations !== 1 ? 's' : ''} covered
           </span>
         </div>
       )}
 
       <div className="button-row">
-        <Link className="button" href="#map">
-        Explore live map
+        <Link className="button" href="/map">
+          Explore live map
         </Link>
         <Link className="button ghost" href="/alerts">
           View alerts

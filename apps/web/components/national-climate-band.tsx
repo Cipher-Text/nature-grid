@@ -1,16 +1,6 @@
 import { routes, type DivisionWithClimate } from '@nature-grid/contracts';
 import { apiGet } from '../lib/api';
 
-// WHO / Bangladesh-adjusted PM2.5 AQI breakpoints (µg/m³)
-function aqiClass(pm25: number | null): { label: string; css: string; plain: string } {
-  if (pm25 === null) return { label: 'No data', css: 'aqi-none', plain: '' };
-  if (pm25 <= 12)    return { label: 'Good',        css: 'aqi-good',      plain: 'Air is clean' };
-  if (pm25 <= 35.4)  return { label: 'Moderate',    css: 'aqi-moderate',  plain: 'Acceptable air quality' };
-  if (pm25 <= 55.4)  return { label: 'Unhealthy*',  css: 'aqi-sensitive', plain: 'Sensitive groups: limit outdoor activity' };
-  if (pm25 <= 150.4) return { label: 'Unhealthy',   css: 'aqi-unhealthy', plain: 'Reduce prolonged outdoor exertion' };
-  return               { label: 'Hazardous',         css: 'aqi-hazardous', plain: 'Stay indoors' };
-}
-
 function precipIcon(mm: number | null): string {
   if (mm === null) return '';
   if (mm < 20)  return '☀';   // dry
@@ -28,7 +18,7 @@ export default async function NationalClimateBand() {
     isLive = false;
   }
 
-  const hasClimateData = divisions.some((d) => d.avgTemp30d !== null || d.avgPm25_30d !== null);
+  const hasClimateData = divisions.some((d) => d.avgTemp30d !== null || d.totalPrecip30d !== null);
 
   return (
     <section className="climate-band public-section" aria-label="National climate overview by division">
@@ -46,28 +36,18 @@ export default async function NationalClimateBand() {
         </div>
       ) : <div className="division-grid">
         {divisions.map((div) => {
-          const aqi = aqiClass(div.avgPm25_30d);
           const temp = div.avgTemp30d != null ? `${div.avgTemp30d.toFixed(1)}°C` : '—';
           const precip = div.totalPrecip30d;
           const uv = div.avgUvIndex30d;
 
           return (
-            <article key={div.id} className={`division-card ${aqi.css}`}>
+            <article key={div.id} className="division-card">
               <div className="division-card-top">
                 <span className="division-name">{div.name}</span>
                 {div.bnName && <span className="division-bn">{div.bnName}</span>}
               </div>
 
               <div className="division-card-temp">{temp}</div>
-
-              <div className="division-card-aqi">
-                <span className={`aqi-badge ${aqi.css}`}>{aqi.label}</span>
-                {div.avgPm25_30d != null && (
-                  <span className="division-pm25">
-                    PM2.5 {div.avgPm25_30d.toFixed(0)} µg/m³
-                  </span>
-                )}
-              </div>
 
               <div className="division-card-footer">
                 {precip != null && (

@@ -1,9 +1,9 @@
 import EmergencyBanner from '../../components/emergency-banner';
 import FloodRiskStrip from '../../components/flood-risk-strip';
 import HeroSection from '../../components/hero-section';
+import LiveWeatherStrip from '../../components/live-weather-strip';
 import NationalClimateBand from '../../components/national-climate-band';
 import MetricsSection from '../../components/metrics-section';
-import MapSection from '../../components/map-section';
 import CivicScienceSection from '../../components/civic-science-section';
 import AirQualityGrid from '../../components/air-quality-grid';
 import DatasetPreview from '../../components/dataset-preview';
@@ -14,37 +14,30 @@ export default function HomePage() {
   return (
     <main>
       <PublicNav />
-      {/* ── TIER 1: Safety-first header band ───────────────────────────────────
-          Emergency banner + flood strip both render conditionally (null when
-          no active alerts / no at-risk districts). Hero always renders and
-          now carries live platform metrics. */}
+      {/* Safety alerts — both conditional (null when nothing active) */}
       <EmergencyBanner />
       <FloodRiskStrip />
+
+      {/* Hero — compact heading + live stats bar + CTA buttons */}
       <HeroSection />
 
-      {/* 8-division climate snapshot — renders only when climate data is available */}
+      {/* Live weather strip — hottest/coolest/rain right now across 64 districts */}
+      <LiveWeatherStrip />
+
+      {/* 8-division climate snapshot — 30-day rolling averages */}
       <NationalClimateBand />
 
-      {/* Platform-wide counts — anchored at #dashboard for skip-link targets */}
+      {/* Platform counts — anchored at #dashboard */}
       <MetricsSection />
 
-      {/* ── TIER 2: Geo-environmental explorer ─────────────────────────────────
-          Leaflet map (ssr: false) + conditions sidebar, anchored at #map */}
-      <MapSection />
-
-      {/* ── TIER 3: Civic activity & science (tabbed) ──────────────────────────
-          Reports / Alerts / Biodiversity / Restoration in a single compact
-          block — tab state handled client-side, data fetched server-side */}
+      {/* Civic activity & science — tabbed: Reports / Alerts / Biodiversity / Restoration */}
       <CivicScienceSection />
 
-      {/* ── TIER 4: Data transparency ───────────────────────────────────────────
-          PM2.5 district ranking (conditional) then the dataset catalog */}
+      {/* District air quality ranking (PM2.5) + dataset catalog */}
       <AirQualityGrid />
       <DatasetPreview />
 
-      {/* ── TIER 5: Persona-based CTA footer ────────────────────────────────────
-          Citizen / Researcher / NGO onboarding cards replace the generic
-          "Ready to contribute?" strip */}
+      {/* Persona CTAs — Citizen / Researcher / NGO */}
       <PersonaFooter />
     </main>
   );

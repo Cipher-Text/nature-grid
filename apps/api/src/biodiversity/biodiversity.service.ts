@@ -176,7 +176,7 @@ export class BiodiversityService {
     return species.id;
   }
 
-  list(search: string | undefined, rawPage = 1, rawPageSize = 20) {
+  list(search: string | undefined, rawPage = 1, rawPageSize = 20, sortBy?: string) {
     const { page, pageSize } = clampPagination(rawPage, rawPageSize);
     const skip = (page - 1) * pageSize;
     const where = search
@@ -187,12 +187,16 @@ export class BiodiversityService {
           ],
         }
       : {};
+    const orderBy =
+      sortBy === 'occurrences'
+        ? { occurrences: { _count: 'desc' as const } }
+        : { canonicalName: 'asc' as const };
     return Promise.all([
       this.prisma.species.findMany({
         where,
         skip,
         take: pageSize,
-        orderBy: { canonicalName: 'asc' },
+        orderBy,
         select: SPECIES_SELECT,
       }),
       this.prisma.species.count({ where }),

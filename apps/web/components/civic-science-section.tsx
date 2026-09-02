@@ -15,6 +15,7 @@ import {
   type Occurrence,
   type RestorationProject,
   type PaginatedEnvelope,
+  type PlatformMetrics,
 } from '@nature-grid/contracts';
 import { apiGet } from '../lib/api';
 import { titleCase, relativeTime } from '../lib/format';
@@ -22,7 +23,10 @@ import CivicScienceTabs, {
   type ReportItem,
   type AlertItem,
   type BiodiversityStats,
+  type TopSpecies,
   type ProjectItem,
+  type CategoryCount,
+  type RestorationImpact,
 } from './civic-science-tabs';
 
 const SEVERITY_CLASS: Record<string, string> = {
@@ -66,6 +70,7 @@ async function loadAlerts(): Promise<{ items: AlertItem[]; isLive: boolean }> {
       items: res.data.map((a) => ({
         id: a.id,
         title: a.title,
+        alertType: a.alertType ? titleCase(a.alertType) : null,
         severity: titleCase(a.severity),
         severityClass: SEVERITY_CLASS[a.severity] ?? '',
         district: a.district?.name ?? 'Nationwide',
@@ -82,13 +87,21 @@ async function loadAlerts(): Promise<{ items: AlertItem[]; isLive: boolean }> {
 
 async function loadBiodiversity(): Promise<BiodiversityStats | null> {
   try {
-    const [species, occurrences] = await Promise.all([
+    const [speciesPage, occurrencePage, topPage] = await Promise.all([
       apiGet<PaginatedEnvelope<Species>>(`${routes.biodiversity.species}?pageSize=1`),
       apiGet<PaginatedEnvelope<Occurrence>>(`${routes.biodiversity.occurrences}?pageSize=1`),
+      apiGet<PaginatedEnvelope<Species>>(`${routes.biodiversity.species}?pageSize=5&sortBy=occurrences`),
     ]);
+    const topSpecies: TopSpecies[] = topPage.data.map((s) => ({
+      id: s.id,
+      canonicalName: s.canonicalName,
+      vernacularName: s.vernacularName,
+      occurrenceCount: s._count.occurrences,
+    }));
     return {
-      speciesTotal: species.total,
-      occurrenceTotal: occurrences.total,
+      speciesTotal: speciesPage.total,
+      occurrenceTotal: occurrencePage.total,
+      topSpecies,
     };
   } catch {
     return null;
@@ -118,12 +131,37 @@ async function loadRestoration(): Promise<{ items: ProjectItem[]; isLive: boolea
   }
 }
 
+async function loadMetricExtras(): Promise<{
+  reportsByCategory: CategoryCount[];
+  restorationImpact: RestorationImpact | null;
+}> {
+  try {
+    const m = await apiGet<PlatformMetrics>(routes.metrics.platform);
+    return {
+      reportsByCategory: m.reportsByCategory.map((r) => ({
+        label: titleCase(r.category),
+        count: r.count,
+      })),
+      restorationImpact:
+        m.restorationVolunteers > 0 || m.restorationAreaHa > 0
+          ? {
+              volunteers: m.restorationVolunteers,
+              areaHa: Number(m.restorationAreaHa.toFixed(1)),
+            }
+          : null,
+    };
+  } catch {
+    return { reportsByCategory: [], restorationImpact: null };
+  }
+}
+
 export default async function CivicScienceSection() {
-  const [reports, alerts, biodiversity, restoration] = await Promise.all([
+  const [reports, alerts, biodiversity, restoration, metricExtras] = await Promise.all([
     loadReports(),
     loadAlerts(),
     loadBiodiversity(),
     loadRestoration(),
+    loadMetricExtras(),
   ]);
 
   return (
@@ -132,6 +170,8 @@ export default async function CivicScienceSection() {
       alerts={alerts}
       biodiversity={biodiversity}
       restoration={restoration}
+      reportsByCategory={metricExtras.reportsByCategory}
+      restorationImpact={metricExtras.restorationImpact}
     />
   );
 }

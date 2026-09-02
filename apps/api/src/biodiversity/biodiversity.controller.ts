@@ -12,8 +12,9 @@ export class BiodiversityController {
     @Query('search') search?: string,
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
+    @Query('sortBy') sortBy?: string,
   ) {
-    return this.biodiversityService.list(search, Number(page ?? 1), Number(pageSize ?? 20));
+    return this.biodiversityService.list(search, Number(page ?? 1), Number(pageSize ?? 20), sortBy);
   }
 
   @Public()
