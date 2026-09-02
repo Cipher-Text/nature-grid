@@ -25,6 +25,8 @@ const NAV_SECTIONS = [
       { href: '/alerts', label: 'Alerts' },
       { href: '/biodiversity', label: 'Biodiversity' },
       { href: '/water-bodies', label: 'Water Bodies' },
+      { href: '/marine', label: 'Marine' },
+      { href: '/radiation', label: 'Radiation' },
       { href: '/emissions', label: 'Emissions' },
       { href: '/restoration', label: 'Restoration' },
       { href: '/organizations', label: 'Organizations' },
