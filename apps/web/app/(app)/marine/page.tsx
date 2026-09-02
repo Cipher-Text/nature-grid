@@ -27,20 +27,20 @@ export default async function MarinePage({
 }) {
   const { districtId, from, to } = searchParams;
 
+  let marineUrl: string;
+  if (districtId) {
+    const params = new URLSearchParams();
+    if (from) params.set('from', from);
+    if (to) params.set('to', to);
+    const qs = params.toString();
+    marineUrl = `${routes.marine.forecastByDistrict(districtId)}${qs ? `?${qs}` : ''}`;
+  } else {
+    marineUrl = routes.marine.forecast;
+  }
+
   const [districts, forecasts] = await Promise.all([
     apiGet<DistrictSummary[]>(routes.locations.districts, 3600),
-    districtId
-      ? ((): Promise<MarineForecast[]> => {
-          const params = new URLSearchParams();
-          if (from) params.set('from', from);
-          if (to) params.set('to', to);
-          const qs = params.toString();
-          return apiGet<MarineForecast[]>(
-            `${routes.marine.forecastByDistrict(districtId)}${qs ? `?${qs}` : ''}`,
-            300,
-          ).catch(() => []);
-        })()
-      : apiGet<MarineForecast[]>(routes.marine.forecast, 300),
+    apiGet<MarineForecast[]>(marineUrl, 300).catch(() => []),
   ]);
 
   const selectedDistrict = districtId ? districts.find((d) => d.id === districtId) : null;

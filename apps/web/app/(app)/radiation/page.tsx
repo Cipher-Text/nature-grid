@@ -17,20 +17,20 @@ export default async function RadiationPage({
 }) {
   const { districtId, from, to } = searchParams;
 
+  let radiationUrl: string;
+  if (districtId) {
+    const params = new URLSearchParams();
+    if (from) params.set('from', from);
+    if (to) params.set('to', to);
+    const qs = params.toString();
+    radiationUrl = `${routes.radiation.dailyByDistrict(districtId)}${qs ? `?${qs}` : ''}`;
+  } else {
+    radiationUrl = routes.radiation.daily;
+  }
+
   const [districts, readings] = await Promise.all([
     apiGet<DistrictSummary[]>(routes.locations.districts, 3600),
-    districtId
-      ? ((): Promise<SatelliteRadiationReading[]> => {
-          const params = new URLSearchParams();
-          if (from) params.set('from', from);
-          if (to) params.set('to', to);
-          const qs = params.toString();
-          return apiGet<SatelliteRadiationReading[]>(
-            `${routes.radiation.dailyByDistrict(districtId)}${qs ? `?${qs}` : ''}`,
-            300,
-          ).catch(() => []);
-        })()
-      : apiGet<SatelliteRadiationReading[]>(routes.radiation.daily, 300),
+    apiGet<SatelliteRadiationReading[]>(radiationUrl, 300).catch(() => []),
   ]);
 
   const selectedDistrict = districtId ? districts.find((d) => d.id === districtId) : null;
