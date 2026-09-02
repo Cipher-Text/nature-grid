@@ -28,7 +28,7 @@ const NAV_SECTIONS = [
       { href: '/marine', label: 'Marine' },
       { href: '/radiation', label: 'Radiation' },
       { href: '/emissions', label: 'Emissions' },
-      { href: '/industrial-sites', label: 'Industrial Sites' },
+      { href: '/industrial-sites', label: 'Industry' },
       { href: '/restoration', label: 'Restoration' },
       { href: '/organizations', label: 'Organizations' },
       { href: '/community', label: 'Community' },

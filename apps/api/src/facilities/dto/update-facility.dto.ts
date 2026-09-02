@@ -1,5 +1,13 @@
 import { ComplianceStatus } from '@prisma/client';
-import { IsBoolean, IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  IsBoolean,
+  IsEnum,
+  IsNumber,
+  IsOptional,
+  IsString,
+  MaxLength,
+  Min,
+} from 'class-validator';
 
 export class UpdateFacilityDto {
   @IsOptional()
@@ -17,6 +25,19 @@ export class UpdateFacilityDto {
 
   @IsOptional()
   @IsString()
+  companyId?: string;
+
+  @IsOptional()
+  @IsString()
   @MaxLength(200)
-  operatorName?: string;
+  productionCapacity?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  etpInstalled?: boolean;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  etpCapacity?: number;
 }

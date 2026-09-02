@@ -1,20 +1,20 @@
-import { FacilityType } from '@prisma/client';
+import { CompanyType } from '@prisma/client';
 import {
-  IsBoolean,
+  IsEmail,
   IsEnum,
   IsInt,
-  IsNumber,
   IsOptional,
   IsString,
-  Max,
+  IsUrl,
   MaxLength,
   Min,
   MinLength,
+  Max,
 } from 'class-validator';
 
-export class CreateFacilityDto {
+export class CreateCompanyDto {
   @IsString()
-  @MinLength(3)
+  @MinLength(2)
   @MaxLength(200)
   name!: string;
 
@@ -28,12 +28,13 @@ export class CreateFacilityDto {
   @MaxLength(2000)
   description?: string;
 
-  @IsEnum(FacilityType)
-  facilityType!: FacilityType;
+  @IsEnum(CompanyType)
+  companyType!: CompanyType;
 
   @IsOptional()
   @IsString()
-  companyId?: string;
+  @MaxLength(100)
+  registrationNumber?: string;
 
   @IsOptional()
   @IsInt()
@@ -42,40 +43,29 @@ export class CreateFacilityDto {
   establishedYear?: number;
 
   @IsOptional()
-  @IsString()
-  @MaxLength(200)
-  productionCapacity?: string;
+  @IsInt()
+  @Min(1)
+  employeeCount?: number;
 
   @IsOptional()
-  @IsNumber()
-  @Min(0)
-  landArea?: number;
+  @IsUrl()
+  @MaxLength(500)
+  website?: string;
 
   @IsOptional()
-  @IsBoolean()
-  etpInstalled?: boolean;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  etpCapacity?: number;
-
-  @IsOptional()
-  @IsNumber()
-  lat?: number;
-
-  @IsOptional()
-  @IsNumber()
-  lng?: number;
-
-  @IsString()
-  districtId!: string;
+  @IsEmail()
+  contactEmail?: string;
 
   @IsOptional()
   @IsString()
-  upazilaId?: string;
+  @MaxLength(30)
+  contactPhone?: string;
 
   @IsOptional()
   @IsString()
-  unionId?: string;
+  headquarterDistrictId?: string;
+
+  @IsOptional()
+  @IsString()
+  parentCompanyId?: string;
 }

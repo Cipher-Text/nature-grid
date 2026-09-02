@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ComplianceStatus, FacilityType } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { CreateFacilityDto } from './dto/create-facility.dto';
@@ -7,18 +7,29 @@ import type { JwtPayload } from '../common/decorators/current-user.decorator';
 import { clampPagination } from '../common/pagination';
 import { resolveGeoHierarchy } from '../common/validate-district';
 
+const COMPANY_INLINE = {
+  select: {
+    id: true,
+    name: true,
+    bnName: true,
+    companyType: true,
+    website: true,
+  },
+} as const;
+
 const FACILITY_SELECT = {
   id: true,
   name: true,
   bnName: true,
   facilityType: true,
   complianceStatus: true,
-  operatorName: true,
   isActive: true,
   lat: true,
   lng: true,
   districtId: true,
   upazilaId: true,
+  companyId: true,
+  company: COMPANY_INLINE,
   createdAt: true,
   updatedAt: true,
   district: { select: { id: true, name: true } },
@@ -28,6 +39,11 @@ const FACILITY_SELECT = {
 const FACILITY_DETAIL_SELECT = {
   ...FACILITY_SELECT,
   description: true,
+  establishedYear: true,
+  productionCapacity: true,
+  landArea: true,
+  etpInstalled: true,
+  etpCapacity: true,
   unionId: true,
   union: { select: { id: true, name: true } },
   reports: {
@@ -39,6 +55,8 @@ const FACILITY_DETAIL_SELECT = {
 
 @Injectable()
 export class FacilitiesService {
+  private readonly logger = new Logger(FacilitiesService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   list(
@@ -46,6 +64,7 @@ export class FacilitiesService {
     complianceStatus?: ComplianceStatus,
     districtId?: string,
     upazilaId?: string,
+    companyId?: string,
     isActive?: boolean,
     rawPage = 1,
     rawLimit = 20,
@@ -57,6 +76,7 @@ export class FacilitiesService {
       ...(complianceStatus ? { complianceStatus } : {}),
       ...(districtId ? { districtId } : {}),
       ...(upazilaId ? { upazilaId } : {}),
+      ...(companyId ? { companyId } : {}),
       ...(isActive !== undefined ? { isActive } : {}),
     };
 
@@ -91,12 +111,17 @@ export class FacilitiesService {
           bnName: dto.bnName,
           description: dto.description,
           facilityType: dto.facilityType,
-          operatorName: dto.operatorName,
+          companyId: dto.companyId,
           lat: dto.lat,
           lng: dto.lng,
-          districtId: dto.districtId, // required in DTO; geo validates it exists
+          districtId: dto.districtId,
           upazilaId: geo.upazilaId,
           unionId: geo.unionId,
+          establishedYear: dto.establishedYear,
+          productionCapacity: dto.productionCapacity,
+          landArea: dto.landArea,
+          etpInstalled: dto.etpInstalled ?? false,
+          etpCapacity: dto.etpCapacity,
         },
         select: FACILITY_DETAIL_SELECT,
       });
@@ -128,7 +153,10 @@ export class FacilitiesService {
           ...(dto.complianceStatus !== undefined ? { complianceStatus: dto.complianceStatus } : {}),
           ...(dto.description !== undefined ? { description: dto.description } : {}),
           ...(dto.isActive !== undefined ? { isActive: dto.isActive } : {}),
-          ...(dto.operatorName !== undefined ? { operatorName: dto.operatorName } : {}),
+          ...(dto.companyId !== undefined ? { companyId: dto.companyId } : {}),
+          ...(dto.etpInstalled !== undefined ? { etpInstalled: dto.etpInstalled } : {}),
+          ...(dto.etpCapacity !== undefined ? { etpCapacity: dto.etpCapacity } : {}),
+          ...(dto.productionCapacity !== undefined ? { productionCapacity: dto.productionCapacity } : {}),
         },
         select: FACILITY_DETAIL_SELECT,
       }),

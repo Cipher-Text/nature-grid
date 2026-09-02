@@ -185,6 +185,8 @@ enum AuditAction {
   FACILITY_CREATE
   FACILITY_UPDATE
   FACILITY_DELETE
+  COMPANY_CREATE
+  COMPANY_UPDATE
 }
 
 enum DatasetAccessRequestStatus {
@@ -227,6 +229,15 @@ enum ComplianceStatus {
   NON_COMPLIANT
   UNDER_REVIEW
   UNKNOWN
+}
+
+enum CompanyType {
+  PRIVATE
+  STATE_OWNED
+  JOINT_VENTURE
+  MULTINATIONAL
+  CONGLOMERATE
+  CLUSTER
 }
 
 enum ProjectStatus {
@@ -593,6 +604,7 @@ model District {
   waterLevelStations         WaterLevelStation[]
   communityPosts             CommunityPost[]
   industrialFacilities       IndustrialFacility[]
+  companiesHQ                Company[]
 
   @@unique([name, divisionId])
   @@index([divisionId])
@@ -1048,6 +1060,37 @@ model RestorationParticipant {
 
 // ─── Industrial Facilities ────────────────────────────────────────────────────
 
+model Company {
+  id                    String      @id @default(cuid())
+  name                  String      @unique
+  bnName                String?
+  description           String?
+  companyType           CompanyType
+  registrationNumber    String?
+  establishedYear       Int?
+  employeeCount         Int?
+  website               String?
+  contactEmail          String?
+  contactPhone          String?
+  isActive              Boolean     @default(true)
+
+  headquarterDistrictId String?
+  headquarterDistrict   District?   @relation(fields: [headquarterDistrictId], references: [id])
+
+  parentCompanyId String?
+  parentCompany   Company?  @relation("CompanySubsidiaries", fields: [parentCompanyId], references: [id])
+  subsidiaries    Company[] @relation("CompanySubsidiaries")
+
+  facilities IndustrialFacility[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyType])
+  @@index([headquarterDistrictId])
+  @@index([parentCompanyId])
+}
+
 model IndustrialFacility {
   id               String           @id @default(cuid())
   name             String
@@ -1055,23 +1098,34 @@ model IndustrialFacility {
   description      String?
   facilityType     FacilityType
   complianceStatus ComplianceStatus @default(UNKNOWN)
-  operatorName     String?
   isActive         Boolean          @default(true)
-  lat              Float?
-  lng              Float?
-  districtId       String
-  district         District         @relation(fields: [districtId], references: [id])
-  upazilaId        String?
-  upazila          Upazila?         @relation(fields: [upazilaId], references: [id])
-  unionId          String?
-  union            Union?           @relation(fields: [unionId], references: [id])
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
+
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id])
+
+  establishedYear    Int?
+  productionCapacity String?
+  landArea           Float?
+  etpInstalled       Boolean @default(false)
+  etpCapacity        Float?
+
+  lat       Float?
+  lng       Float?
+  districtId String
+  district   District  @relation(fields: [districtId], references: [id])
+  upazilaId  String?
+  upazila    Upazila?  @relation(fields: [upazilaId], references: [id])
+  unionId    String?
+  union      Union?    @relation(fields: [unionId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   reports CitizenReport[]
 
   @@index([facilityType])
   @@index([complianceStatus])
+  @@index([companyId])
   @@index([districtId])
   @@index([upazilaId])
   @@index([isActive])

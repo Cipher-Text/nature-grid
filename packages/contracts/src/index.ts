@@ -198,6 +198,13 @@ export const routes = {
     delete: (id: string) => `${apiPrefix}/industrial-sites/${id}`,
   },
 
+  companies: {
+    list: `${apiPrefix}/companies`,
+    detail: (id: string) => `${apiPrefix}/companies/${id}`,
+    create: `${apiPrefix}/companies`,
+    update: (id: string) => `${apiPrefix}/companies/${id}`,
+  },
+
   users: {
     list: `${apiPrefix}/users`,
     detail: (id: string) => `${apiPrefix}/users/${id}`,
@@ -1040,6 +1047,61 @@ export interface SatelliteRadiationReading {
   district?: { id: string; name: string };
 }
 
+// ─── Companies ────────────────────────────────────────────────────────────────
+
+export type CompanyType =
+  | 'PRIVATE' | 'STATE_OWNED' | 'JOINT_VENTURE'
+  | 'MULTINATIONAL' | 'CONGLOMERATE' | 'CLUSTER';
+
+export interface CompanyInline {
+  id: string;
+  name: string;
+  bnName: string | null;
+  companyType: CompanyType;
+  website: string | null;
+}
+
+export interface CompanySummary {
+  id: string;
+  name: string;
+  bnName: string | null;
+  companyType: CompanyType;
+  registrationNumber: string | null;
+  establishedYear: number | null;
+  employeeCount: number | null;
+  website: string | null;
+  isActive: boolean;
+  headquarterDistrictId: string | null;
+  headquarterDistrict: { id: string; name: string } | null;
+  parentCompanyId: string | null;
+  parentCompany: { id: string; name: string; companyType: CompanyType } | null;
+  _count: { facilities: number; subsidiaries: number };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CompanyDetail extends CompanySummary {
+  description: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  subsidiaries: Array<{ id: string; name: string; companyType: CompanyType; isActive: boolean }>;
+  facilities: Array<{
+    id: string;
+    name: string;
+    facilityType: FacilityType;
+    complianceStatus: ComplianceStatus;
+    isActive: boolean;
+    district: { id: string; name: string };
+  }>;
+}
+
+export interface CompanyPagedResponse {
+  data: CompanySummary[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
 // ─── Facilities ───────────────────────────────────────────────────────────────
 
 export type FacilityType =
@@ -1055,12 +1117,13 @@ export interface FacilitySummary {
   bnName: string | null;
   facilityType: FacilityType;
   complianceStatus: ComplianceStatus;
-  operatorName: string | null;
   isActive: boolean;
   lat: number | null;
   lng: number | null;
   districtId: string;
   upazilaId: string | null;
+  companyId: string | null;
+  company: CompanyInline | null;
   createdAt: string;
   updatedAt: string;
   district: { id: string; name: string };
@@ -1069,6 +1132,11 @@ export interface FacilitySummary {
 
 export interface FacilityDetail extends FacilitySummary {
   description: string | null;
+  establishedYear: number | null;
+  productionCapacity: string | null;
+  landArea: number | null;
+  etpInstalled: boolean;
+  etpCapacity: number | null;
   unionId: string | null;
   union: { id: string; name: string } | null;
   reports: Array<{

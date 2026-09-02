@@ -1,0 +1,352 @@
+import type { CompanyType } from '@prisma/client';
+
+export interface CompanySeedEntry {
+  name: string;
+  bnName?: string;
+  companyType: CompanyType;
+  description?: string;
+  establishedYear?: number;
+  employeeCount?: number;
+  website?: string;
+  headquarterDistrictName?: string;
+  parentCompanyName?: string;
+}
+
+export const COMPANY_SEED_DATA: CompanySeedEntry[] = [
+  // ── State-owned ────────────────────────────────────────────────────────────
+  {
+    name: 'Bangladesh Chemical Industries Corporation (BCIC)',
+    bnName: 'বাংলাদেশ কেমিক্যাল ইন্ডাস্ট্রিজ কর্পোরেশন',
+    companyType: 'STATE_OWNED',
+    description: 'State-owned corporation overseeing chemical, fertilizer, and cement industries. Operates multiple factories across Bangladesh under the Ministry of Industries.',
+    establishedYear: 1976,
+    website: 'https://bcic.gov.bd',
+    headquarterDistrictName: 'Dhaka',
+  },
+  {
+    name: 'Bangladesh Export Processing Zones Authority (BEPZA)',
+    bnName: 'বাংলাদেশ রপ্তানি প্রক্রিয়াকরণ এলাকা কর্তৃপক্ষ',
+    companyType: 'STATE_OWNED',
+    description: 'Government authority responsible for establishing, operating, and developing export processing zones across Bangladesh.',
+    establishedYear: 1980,
+    website: 'https://www.bepza.gov.bd',
+    headquarterDistrictName: 'Dhaka',
+  },
+  {
+    name: 'Bangladesh Power Development Board (BPDB)',
+    bnName: 'বাংলাদেশ বিদ্যুৎ উন্নয়ন বোর্ড',
+    companyType: 'STATE_OWNED',
+    description: 'National power utility responsible for generation, transmission, and distribution of electricity in Bangladesh.',
+    establishedYear: 1972,
+    website: 'https://www.bpdb.gov.bd',
+    headquarterDistrictName: 'Dhaka',
+  },
+  {
+    name: 'Ashuganj Power Station Company (APSCL)',
+    bnName: 'আশুগঞ্জ বিদ্যুৎ কেন্দ্র কোম্পানি লিমিটেড',
+    companyType: 'STATE_OWNED',
+    description: 'State-owned power generation company operating the Ashuganj thermal complex on the Meghna River, one of the largest in Bangladesh.',
+    establishedYear: 2003,
+    headquarterDistrictName: 'Brahmanbaria',
+  },
+  {
+    name: 'North-West Power Generation Company (NWPGCL)',
+    bnName: 'নর্থ-ওয়েস্ট পাওয়ার জেনারেশন কোম্পানি লিমিটেড',
+    companyType: 'STATE_OWNED',
+    description: 'State-owned power generation company supplying electricity to northern and central Bangladesh, operating multiple gas and dual-fuel plants.',
+    establishedYear: 1998,
+    headquarterDistrictName: 'Dhaka',
+  },
+  {
+    name: 'Coal Power Generation Company Bangladesh (CPGCBL)',
+    bnName: 'কোল পাওয়ার জেনারেশন কোম্পানি বাংলাদেশ লিমিটেড',
+    companyType: 'STATE_OWNED',
+    description: 'State-owned entity developing the Matarbari Ultra Super Critical coal plant and deep-sea port in Maheshkhali, Cox\'s Bazar.',
+    headquarterDistrictName: 'Dhaka',
+  },
+  {
+    name: 'Barapukuria Coal Mining Company (BCMCL)',
+    bnName: 'বড়পুকুরিয়া কয়লা খনি কোম্পানি লিমিটেড',
+    companyType: 'STATE_OWNED',
+    description: 'Operates Bangladesh\'s only active underground coal mine at Phulbari, Dinajpur, along with the adjacent Barapukuria Power Station.',
+    establishedYear: 1998,
+    headquarterDistrictName: 'Dinajpur',
+  },
+  {
+    name: 'Nuclear Power Company of Bangladesh (NPCBL)',
+    bnName: 'নিউক্লিয়ার পাওয়ার কোম্পানি অব বাংলাদেশ লিমিটেড',
+    companyType: 'STATE_OWNED',
+    description: 'Government entity overseeing the construction and operation of the Rooppur Nuclear Power Plant, Bangladesh\'s first nuclear facility.',
+    establishedYear: 2017,
+    headquarterDistrictName: 'Dhaka',
+  },
+  {
+    name: 'Ashuganj Fertilizer & Chemical Company (AFCCL)',
+    bnName: 'আশুগঞ্জ সার ও রাসায়নিক কোম্পানি লিমিটেড',
+    companyType: 'STATE_OWNED',
+    description: 'State-owned urea fertilizer manufacturer at Ashuganj, Brahmanbaria, supplying agricultural inputs to northern and central Bangladesh.',
+    headquarterDistrictName: 'Brahmanbaria',
+    parentCompanyName: 'Bangladesh Chemical Industries Corporation (BCIC)',
+  },
+  {
+    name: 'Eastern Refinery (ERL)',
+    bnName: 'ইস্টার্ন রিফাইনারি লিমিটেড',
+    companyType: 'STATE_OWNED',
+    description: 'Bangladesh\'s only crude oil refinery, established in 1968 at Patenga, Chittagong. Operates under the Bangladesh Petroleum Corporation.',
+    establishedYear: 1968,
+    headquarterDistrictName: 'Chattogram',
+  },
+  {
+    name: 'BSCIC',
+    bnName: 'বাংলাদেশ ক্ষুদ্র ও কুটির শিল্প কর্পোরেশন',
+    companyType: 'STATE_OWNED',
+    description: 'Bangladesh Small and Cottage Industries Corporation. Developed and manages the Savar Tannery Estate as the relocation site for Hazaribagh tanneries.',
+    establishedYear: 1957,
+    website: 'https://www.bscic.gov.bd',
+    headquarterDistrictName: 'Dhaka',
+  },
+  {
+    name: 'Bangladesh Army',
+    bnName: 'বাংলাদেশ সেনাবাহিনী',
+    companyType: 'STATE_OWNED',
+    description: 'Operates the Bangladesh Machine Tools Factory (BMTF) at Gazipur Cantonment for defense engineering and heavy manufacturing.',
+    headquarterDistrictName: 'Dhaka',
+  },
+
+  // ── Joint Ventures ─────────────────────────────────────────────────────────
+  {
+    name: 'Bangladesh-India Friendship Power Company (BIFPCL)',
+    bnName: 'বাংলাদেশ-ইন্ডিয়া ফ্রেন্ডশিপ পাওয়ার কোম্পানি লিমিটেড',
+    companyType: 'JOINT_VENTURE',
+    description: 'Joint venture between Bangladesh (BPDB) and India (NTPC) operating the 1,320 MW Rampal coal power plant near the Sundarbans.',
+    establishedYear: 2012,
+    headquarterDistrictName: 'Dhaka',
+  },
+  {
+    name: 'Bangladesh-China Power Company (BCPCL)',
+    bnName: 'বাংলাদেশ-চায়না পাওয়ার কোম্পানি লিমিটেড',
+    companyType: 'JOINT_VENTURE',
+    description: 'Joint venture between Bangladesh and China\'s CMC operating the 1,320 MW Payra coal power plant at Kalapara, Patuakhali.',
+    establishedYear: 2016,
+    headquarterDistrictName: 'Dhaka',
+  },
+  {
+    name: 'Karnaphuli Fertilizer Company (KAFCO)',
+    bnName: 'কর্ণফুলী ফার্টিলাইজার কোম্পানি লিমিটেড',
+    companyType: 'JOINT_VENTURE',
+    description: 'Bangladesh-Japan joint venture urea fertilizer plant at Rangadia, Anwara, Chittagong. Covers 100 acres on the southern bank of the Karnaphuli River.',
+    establishedYear: 1989,
+    headquarterDistrictName: 'Chattogram',
+  },
+
+  // ── Multinationals ─────────────────────────────────────────────────────────
+  {
+    name: 'LafargeHolcim Bangladesh',
+    bnName: 'লাফার্জহোলসিম বাংলাদেশ লিমিটেড',
+    companyType: 'MULTINATIONAL',
+    description: 'Subsidiary of LafargeHolcim (Switzerland). Operates Bangladesh\'s only fully integrated limestone cement plant at Chhatak, Sunamganj.',
+    website: 'https://www.lafargecement.com.bd',
+    headquarterDistrictName: 'Dhaka',
+  },
+  {
+    name: 'Unilever Bangladesh',
+    bnName: 'ইউনিলিভার বাংলাদেশ লিমিটেড',
+    companyType: 'MULTINATIONAL',
+    description: 'Bangladesh subsidiary of Unilever (UK/Netherlands). Manufactures personal care, home care, and food products. Holds ISO environmental certifications.',
+    website: 'https://www.unilever.com.bd',
+    headquarterDistrictName: 'Dhaka',
+  },
+  {
+    name: 'British American Tobacco Bangladesh',
+    bnName: 'ব্রিটিশ আমেরিকান টোব্যাকো বাংলাদেশ',
+    companyType: 'MULTINATIONAL',
+    description: 'Bangladesh subsidiary of British American Tobacco (UK). Operates leaf processing and cigarette manufacturing in Dhaka and Kushtia.',
+    website: 'https://www.batbangladesh.com',
+    headquarterDistrictName: 'Dhaka',
+  },
+
+  // ── Conglomerates ──────────────────────────────────────────────────────────
+  {
+    name: 'Bashundhara Group',
+    bnName: 'বসুন্ধরা গ্রুপ',
+    companyType: 'CONGLOMERATE',
+    description: 'One of Bangladesh\'s largest private conglomerates. Interests span cement, paper, real estate, LPG, tissue, and media.',
+    website: 'https://www.bashundhara-group.com',
+    headquarterDistrictName: 'Dhaka',
+  },
+  {
+    name: 'PRAN-RFL Group',
+    bnName: 'প্রাণ-আরএফএল গ্রুপ',
+    companyType: 'CONGLOMERATE',
+    description: 'Leading agro-processing and plastics conglomerate in Bangladesh. Exports food and beverages to 145+ countries.',
+    website: 'https://www.pranfoods.net',
+    headquarterDistrictName: 'Dhaka',
+  },
+  {
+    name: 'Akij Group',
+    bnName: 'আকিজ গ্রুপ',
+    companyType: 'CONGLOMERATE',
+    description: 'Diversified Bangladeshi conglomerate with interests in food & beverage, cement, textiles, tobacco, and healthcare.',
+    headquarterDistrictName: 'Dhaka',
+  },
+  {
+    name: 'Walton Group',
+    bnName: 'ওয়ালটন গ্রুপ',
+    companyType: 'CONGLOMERATE',
+    description: 'Bangladesh\'s largest consumer electronics and appliance manufacturer. Listed on the Dhaka Stock Exchange (DSE).',
+    website: 'https://www.waltonbd.com',
+    headquarterDistrictName: 'Gazipur',
+  },
+
+  // ── Private Companies ──────────────────────────────────────────────────────
+  {
+    name: 'Bangladesh Steel Re-Rolling Mills (BSRM)',
+    bnName: 'বাংলাদেশ স্টিল রি-রোলিং মিলস লিমিটেড',
+    companyType: 'PRIVATE',
+    description: 'Bangladesh\'s largest steel manufacturer. Produces TMT rebar using electric arc furnace technology from scrap steel.',
+    website: 'https://www.bsrm.com',
+    establishedYear: 1952,
+    headquarterDistrictName: 'Chattogram',
+  },
+  {
+    name: 'Kabir Steel Rolling Mills (KSRM)',
+    bnName: 'কবির স্টিল রি-রোলিং মিলস লিমিটেড',
+    companyType: 'PRIVATE',
+    description: 'Major steel manufacturer at Sitakunda, Chittagong. Produces billets, rods, and angles. Leverages scrap from adjacent shipbreaking yards.',
+    website: 'https://www.ksrm.com.bd',
+    headquarterDistrictName: 'Chattogram',
+  },
+  {
+    name: 'GPH Ispat',
+    bnName: 'জিপিএইচ ইস্পাত লিমিটেড',
+    companyType: 'PRIVATE',
+    description: 'One of Bangladesh\'s top five steel producers. Manufactures billets and TMT rebar at Sitakunda using induction furnace technology.',
+    website: 'https://www.gphispat.com.bd',
+    headquarterDistrictName: 'Chattogram',
+  },
+  {
+    name: 'Crown Cement',
+    bnName: 'ক্রাউন সিমেন্ট পিএলসি',
+    companyType: 'PRIVATE',
+    description: 'Major cement producer at West Mukterpur, Munshiganj. Listed on the Dhaka and Chittagong stock exchanges.',
+    website: 'https://www.crowncement.com',
+    headquarterDistrictName: 'Munshiganj',
+  },
+  {
+    name: 'Bashundhara Paper Mills',
+    bnName: 'বসুন্ধরা পেপার মিলস লিমিটেড',
+    companyType: 'PRIVATE',
+    description: 'Integrated paper and packaging materials manufacturer under the Bashundhara Group, based at Meghna Ghat, Munshiganj.',
+    headquarterDistrictName: 'Munshiganj',
+    parentCompanyName: 'Bashundhara Group',
+  },
+  {
+    name: 'Square Pharmaceuticals',
+    bnName: 'স্কয়ার ফার্মাসিউটিক্যালস পিএলসি',
+    companyType: 'PRIVATE',
+    description: 'Bangladesh\'s largest pharmaceutical company. WHO GMP, UK MHRA, and EU GMP certified. Exports to 40+ countries.',
+    website: 'https://www.squarepharma.com.bd',
+    establishedYear: 1958,
+    headquarterDistrictName: 'Dhaka',
+  },
+  {
+    name: 'Incepta Pharmaceuticals',
+    bnName: 'ইনসেপ্টা ফার্মাসিউটিক্যালস লিমিটেড',
+    companyType: 'PRIVATE',
+    description: 'One of Bangladesh\'s top five pharma exporters. WHO GMP and UK MHRA approved. Operates plants at Savar and Dhamrai.',
+    website: 'https://www.incepta.com',
+    headquarterDistrictName: 'Dhaka',
+  },
+  {
+    name: 'Beximco Pharmaceuticals',
+    bnName: 'বেক্সিমকো ফার্মাসিউটিক্যালস লিমিটেড',
+    companyType: 'PRIVATE',
+    description: 'Major pharmaceutical and API manufacturer. WHO GMP certified. Exports to 50+ countries from Beximco Industrial Park, Gazipur.',
+    website: 'https://www.beximcopharma.com',
+    headquarterDistrictName: 'Dhaka',
+  },
+  {
+    name: 'Summit Power International',
+    bnName: 'সামিট পাওয়ার ইন্টারন্যাশনাল',
+    companyType: 'PRIVATE',
+    description: 'Bangladesh\'s largest independent power producer. Operates combined-cycle gas and dual-fuel plants supplying the national grid.',
+    website: 'https://summitpowerintl.com',
+    headquarterDistrictName: 'Dhaka',
+  },
+  {
+    name: 'Envoy Group',
+    bnName: 'এনভয় গ্রুপ',
+    companyType: 'PRIVATE',
+    description: 'Operates Envoy Textiles at Valuka, Mymensingh — the world\'s first LEED Platinum-certified denim mill with zero liquid discharge technology.',
+    headquarterDistrictName: 'Dhaka',
+  },
+  {
+    name: 'DBL Group',
+    bnName: 'ডিবিএল গ্রুপ',
+    companyType: 'PRIVATE',
+    description: 'Vertically integrated textile and garment conglomerate. Operates eco-friendly dyeing lines and rooftop solar arrays at Kashimpur, Gazipur.',
+    website: 'https://www.dbl-group.com',
+    headquarterDistrictName: 'Dhaka',
+  },
+  {
+    name: 'Viyellatex Group',
+    bnName: 'ভায়ালেটেক্স গ্রুপ',
+    companyType: 'PRIVATE',
+    description: 'Sustainable garment and apparel manufacturer at Gazipur. Certified for rainwater harvesting, low-carbon processes, and waste minimisation.',
+    headquarterDistrictName: 'Gazipur',
+  },
+  {
+    name: 'Renata Limited',
+    bnName: 'রেনাটা লিমিটেড',
+    companyType: 'PRIVATE',
+    description: 'Pharmaceutical and animal health products manufacturer. Complies with UK MHRA and WHO GMP. Listed on the Dhaka Stock Exchange.',
+    website: 'https://www.renata-ltd.com',
+    headquarterDistrictName: 'Dhaka',
+  },
+  {
+    name: 'ACME Laboratories',
+    bnName: 'দি এসিএমই ল্যাবরেটরিজ লিমিটেড',
+    companyType: 'PRIVATE',
+    description: 'Produces oral solids, injectables, and herbal medicines under international GMP protocols at Dhamrai, Dhaka.',
+    website: 'https://www.theacmelaboratories.com',
+    headquarterDistrictName: 'Dhaka',
+  },
+
+  // ── Clusters (multi-operator zones) ───────────────────────────────────────
+  {
+    name: 'Private Tannery Operators (Hazaribagh)',
+    companyType: 'CLUSTER',
+    description: 'Collective designation for the 150+ private tannery operators historically based in the Hazaribagh area of Dhaka, now subject to mandatory relocation to Savar.',
+    headquarterDistrictName: 'Dhaka',
+  },
+  {
+    name: 'Private Ship Recycling Operators (Sitakunda)',
+    companyType: 'CLUSTER',
+    description: 'Approximately 100 active private ship-recycling yards along the 18 km Sitakunda coast, collectively dismantling ~38% of global end-of-life vessels.',
+    headquarterDistrictName: 'Chattogram',
+  },
+  {
+    name: 'Multiple RMG Manufacturers (Ashulia)',
+    companyType: 'CLUSTER',
+    description: 'High-density cluster of 1,700+ readymade garment factories in Ashulia, Savar supplying global fashion brands.',
+    headquarterDistrictName: 'Dhaka',
+  },
+  {
+    name: 'Multiple RMG Manufacturers (Gazipur)',
+    companyType: 'CLUSTER',
+    description: 'Bangladesh\'s densest garment district with 1,900+ active factories. Key employers include Viyellatex, DBL Group, and Ha-Meem Group.',
+    headquarterDistrictName: 'Gazipur',
+  },
+  {
+    name: 'Multiple Textile & Dyeing Manufacturers (Narayanganj)',
+    companyType: 'CLUSTER',
+    description: 'Dense cluster of knitwear, hosiery, and dyeing mills in Narayanganj, known as the "Dundee of Bangladesh".',
+    headquarterDistrictName: 'Narayanganj',
+  },
+  {
+    name: 'Private Brick Kiln Operators (Keraniganj)',
+    companyType: 'CLUSTER',
+    description: 'Dense cluster of fixed-chimney and bull\'s-trench kilns on the Keraniganj river floodplain. A leading source of winter PM2.5 in Dhaka.',
+    headquarterDistrictName: 'Dhaka',
+  },
+];
