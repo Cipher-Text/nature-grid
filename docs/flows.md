@@ -106,6 +106,34 @@ API creates ingestion/processing job
   -> API exposes results through datasets/alerts/observations
 ```
 
+## Google OAuth Sign-in Flow
+
+```text
+User clicks "Continue with Google" on /login or /register
+  -> browser navigates to Next.js /auth/google (Route Handler)
+  -> Next.js Route Handler redirects to API GET /api/v1/auth/google
+  -> Passport intercepts, redirects browser to Google's consent screen
+  -> user approves, Google redirects to API GET /api/v1/auth/google/callback
+  -> Passport validates profile; AuthService.handleGoogleUser():
+       - finds user by googleId       → link and return
+       - no match, finds by email     → auto-link account (sets googleId + GOOGLE provider)
+       - no match at all              → create new user (isEmailVerified: true, passwordHash: null)
+  -> AuthService.createExchangeCode() issues a 30-second single-use opaque code
+  -> API redirects browser to APP_URL/auth/callback?code=<code>
+  -> Next.js Route Handler POSTs code to POST /api/v1/auth/exchange (server-side)
+  -> API redeems code, issues access + refresh tokens
+  -> Route Handler sets httpOnly cookies, redirects to /reports
+```
+
+Why the exchange code? The OAuth callback lands on the NestJS API (port 3001). Setting
+httpOnly cookies on the Next.js origin (port 3000) from a server-side redirect requires an
+intermediary step — the 30-second exchange code is that bridge. It never travels to the client
+as a cookie or localStorage value.
+
+Google users have `authProvider = GOOGLE` and `passwordHash = null`. They cannot use the
+`POST /auth/login` (email/password) endpoint. Password reset, change-password, and
+forgot-password endpoints all reject `GOOGLE` provider accounts.
+
 ## Frontend Integration Flow
 
 ```text

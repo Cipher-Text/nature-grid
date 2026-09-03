@@ -194,10 +194,10 @@ Exit criteria:
 - ~~No secret falls back to a hardcoded default.~~ **Met** (2026-08-21) — see 6a.
 - ~~Auth and RBAC have automated test coverage, and CI runs on every PR.~~ **Met** (2026-08-21) — pending a git remote for CI to actually execute.
 - ~~Brute-force attempts leave a visible audit trail.~~ **Met** (2026-08-21) — `USER_LOGIN_FAILED` written on every rejected login; see 6a.
-- An `EMERGENCY` alert reaches a subscribed user, and a failed delivery is visible. — **Not met.** See 6c.
+- ~~An `EMERGENCY` alert reaches a subscribed user, and a failed delivery is visible.~~ **Met** (2026-08-22) — `NotificationDelivery` records track PENDING→SENT/FAILED per user per alert; `EmailProcessor` writes status on success/failure; BullMQ retries up to 4 times with exponential backoff.
 - Public and authenticated flows are tested. — **Met** (2026-09-02). 153 unit tests (11 spec files) + 45 e2e tests (4 spec files) covering public endpoints, auth token lifecycle, and CITIZEN/RESEARCHER/MODERATOR/ADMIN role + permission flows against a real database. `apps/web` and `apps/admin` still have no tests.
 - Sensitive actions are auditable. — **Met** (complete as of 2026-08-27). All 25 `AuditAction` values are written. Every implemented mutating endpoint audits.
-- Deployment and operations are repeatable. — **Not met.** No container image or deployment path exists.
+- ~~Deployment and operations are repeatable.~~ **Met** (2026-08-22) — multi-stage Dockerfiles for all three apps; `docker-compose.yml` with Mailpit, Redis, API, web, and admin services; healthcheck-gated startup; `prisma migrate deploy` entrypoint in the API container.
 
 ---
 

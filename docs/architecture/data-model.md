@@ -2,7 +2,7 @@
 
 Nature Grid uses PostgreSQL as the primary database. The Prisma schema lives at `packages/database/prisma/schema.prisma`. The Prisma client is regenerated via `pnpm run db:generate` from the `packages/database` directory.
 
-Current state: **60 models, 31 enums, 11 migrations applied.**
+Current state: **61 models, 32 enums, 12 migrations applied.**
 
 ## Enums
 
@@ -30,6 +30,7 @@ Current state: **60 models, 31 enums, 11 migrations applied.**
 | `FacilityType` | `GARMENT TANNERY BRICK_FIELD POWER_PLANT SHIPBREAKING TEXTILE CEMENT STEEL CHEMICAL PHARMACEUTICAL FERTILIZER PAPER_MILL FOOD_PROCESSING OIL_REFINERY OTHER` |
 | `ComplianceStatus` | `COMPLIANT NON_COMPLIANT UNDER_REVIEW UNKNOWN` |
 | `CompanyType` | `PRIVATE STATE_OWNED JOINT_VENTURE MULTINATIONAL CONGLOMERATE CLUSTER` |
+| `AuthProvider` | `EMAIL GOOGLE` |
 | `DatasetCategory` | `WEATHER AIR_QUALITY WATER BIODIVERSITY REPORTS MONITORING GEOSPATIAL` |
 | `DatasetAccessPolicy` | `PUBLIC LOGIN_REQUIRED RESEARCHER APPROVED GOVERNMENT` |
 | `DatasetAccessRequestStatus` | `PENDING APPROVED REJECTED` |
@@ -46,12 +47,15 @@ All 48 `AuditAction` values are written by services (`EMISSION_SOURCE_CREATE` an
 
 | Model | Key Fields | Relations |
 | --- | --- | --- |
-| `User` | `id cuid`, `email unique`, `displayName`, `passwordHash`, `role UserRole`, `isActive`, `lastLoginAt?` | → `CitizenReport[]`, `Observation[]`, `AuditEvent[]`, `RefreshToken[]`, `RestorationProject[]` (created), `RestorationParticipant[]`, `DatasetAccessRequest[]` (as requester and as decider) |
+| `User` | `id cuid`, `email unique`, `displayName`, `passwordHash?` (nullable — Google-only users have none), `googleId? unique`, `authProvider AuthProvider @default(EMAIL)`, `role UserRole`, `isActive`, `lastLoginAt?` | → `CitizenReport[]`, `Observation[]`, `AuditEvent[]`, `RefreshToken[]`, `OAuthExchangeCode[]`, `RestorationProject[]` (created), `RestorationParticipant[]`, `DatasetAccessRequest[]` (as requester and as decider) |
 | `UserProfile` | `userId unique`, contact/professional fields, location, profile/contact/link visibility | → `User` |
 | `UserSocialLink` | `userId`, `platform`, `url`, unique `(userId, platform)` | → `User` |
 | `RefreshToken` | `id`, `userId`, `tokenHash unique`, `expiresAt`, `revokedAt?`, `deviceId?`, `ipAddress?`, `userAgent?` | → `User` |
+| `OAuthExchangeCode` | `id`, `userId`, `code unique`, `expiresAt` (30 s TTL), `usedAt?` | → `User` |
 
 `RefreshToken` stores a SHA-256 hash, never the raw token. Tokens are opaque random strings (not JWTs) so they can only be redeemed via `POST /auth/refresh`. Refresh rotates: the old row is revoked and a new pair issued. See `docs/progress.md` "Auth Refresh/Logout" for the rationale (Postgres rather than Redis).
+
+`OAuthExchangeCode` is the bridge between Google's OAuth callback (which arrives at the NestJS API) and the Next.js Route Handler that sets httpOnly cookies. The API issues a 30-second single-use opaque code, redirects the browser to Next.js `/auth/callback?code=…`, which POSTs the code to `POST /auth/exchange` (server-side) and sets the resulting token pair as httpOnly cookies. Google-authenticated users have `authProvider = GOOGLE`, `passwordHash = null`, and `isEmailVerified = true` (Google already verified the address). They cannot log in via the email/password endpoint.
 
 ## Organizations & Providers
 

@@ -18,13 +18,22 @@ Legend: ✓ Implemented | ~ Stub / planned | ✗ Not started
 
 | Method | Path | Access | Status | Purpose |
 | --- | --- | --- | --- | --- |
-| POST | `/auth/register` | Public | ✓ | Create account (bcrypt, JWT) |
-| POST | `/auth/login` | Public | ✓ | Login and issue token pair |
+| POST | `/auth/register` | Public | ✓ | Create account (bcrypt, JWT); auto-queues verification email |
+| POST | `/auth/login` | Public | ✓ | Login and issue token pair (`EMAIL` provider only) |
 | POST | `/auth/refresh` | Public + refresh token | ✓ | Rotate token pair; old refresh token revoked |
 | POST | `/auth/logout` | Public + refresh token | ✓ | Revoke refresh token; idempotent |
 | GET  | `/auth/profile` | Authenticated | ✓ | Current user from DB |
+| PATCH | `/auth/profile` | Authenticated | ✓ | Update display name, bio, phone, and profile fields |
+| PATCH | `/auth/password` | Authenticated | ✓ | Change password (`EMAIL` provider only); revokes all sessions |
+| POST | `/auth/forgot-password` | Public | ✓ | Enqueues password-reset email; always returns 200 (enumeration-proof) |
+| POST | `/auth/reset-password` | Public | ✓ | Redeems reset token, sets new password, revokes all sessions |
+| POST | `/auth/send-verification` | Authenticated | ✓ | (Re)sends email verification link; throttled 3/min |
+| POST | `/auth/verify-email` | Public | ✓ | Marks email verified via token; throttled 10/min |
+| GET  | `/auth/google` | Public | ✓ | Initiates Google OAuth 2.0 (Passport redirects to Google) |
+| GET  | `/auth/google/callback` | Public | ✓ | Google consent callback; issues 30s exchange code → redirects to `APP_URL/auth/callback?code=…` |
+| POST | `/auth/exchange` | Public | ✓ | Redeems 30s exchange code; returns access + refresh token pair (consumed server-side by Next.js) |
 
-Refresh tokens are opaque, Postgres-backed, and rotated on use — not Redis, not JWTs. Register/login/logout each write an audit event with the caller's IP.
+Refresh tokens are opaque, Postgres-backed, and rotated on use — not Redis, not JWTs. Register/login/logout each write an audit event with the caller's IP. Google OAuth users have `authProvider = GOOGLE` and cannot use the email/password login or password-management endpoints. See `docs/flows.md` "Google OAuth Sign-in Flow" for the exchange code pattern.
 
 ## Users
 
@@ -119,6 +128,32 @@ Source: OpenMeteo Flood API, persisted as `StationFloodForecast` (station-based,
 | GET | `/water-bodies` | Public | ✓ | Water body registry with type/class filters |
 | GET | `/water-bodies/stations` | Public | ✓ | All water level monitoring stations |
 | GET | `/water-bodies/:id` | Public | ✓ | Water body detail including stations and upazila coverage |
+
+## Companies and Industrial Facilities
+
+| Method | Path | Access | Status | Purpose |
+| --- | --- | --- | --- | --- |
+| GET | `/companies` | Public | ✓ | List companies (`?type=CompanyType`, `?page`, `?pageSize`) |
+| GET | `/companies/:id` | Public | ✓ | Company detail + subsidiaries |
+| POST | `/companies` | Government / Admin | ✓ | Create company (audited `COMPANY_CREATE`) |
+| PATCH | `/companies/:id` | Government / Admin | ✓ | Update company (audited `COMPANY_UPDATE`) |
+| GET | `/facilities` | Public | ✓ | List industrial facilities (`?type=FacilityType`, `?complianceStatus`, `?districtId`) |
+| GET | `/facilities/:id` | Public | ✓ | Facility detail + linked company |
+| POST | `/facilities` | Government / Admin | ✓ | Create facility (audited `FACILITY_CREATE`) |
+| PATCH | `/facilities/:id` | Government / Admin | ✓ | Update facility (audited `FACILITY_UPDATE`) |
+| DELETE | `/facilities/:id` | Admin | ✓ | Delete facility (audited `FACILITY_DELETE`) |
+
+42 companies (including conglomerate/subsidiary tree) and 44 facilities are seeded on boot by `CompaniesService.onModuleInit` (two-pass: parents before subsidiaries). `Company.name` is unique — facility seeds look up companies by name.
+
+## Emissions
+
+| Method | Path | Access | Status | Purpose |
+| --- | --- | --- | --- | --- |
+| GET | `/emissions` | Public | ✓ | National GHG readings (`?indicator`, `?from`, `?to` year filters); ordered year DESC |
+| GET | `/emissions/indicators` | Public | ✓ | Distinct indicator codes + display names |
+| GET | `/emissions/:year` | Public | ✓ | All 4 indicators for a specific year; 404 if no data |
+
+Source: World Bank Climate Change API (`EN.GHG.ALL`, `EN.GHG.CO2`, `EN.GHG.CH4`, `EN.GHG.N2O` — all in Mt CO₂e). Weekly scheduler (Sunday 3am); initial sync on empty table. See `docs/architecture/modules.md` "emissions" for design notes.
 
 ## Reports
 

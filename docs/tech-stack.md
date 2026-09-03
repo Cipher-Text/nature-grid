@@ -23,7 +23,7 @@
 | --- | --- |
 | NestJS | Modular API framework |
 | PostgreSQL | Primary transactional database |
-| PostGIS | Docker image provides it, but **not yet enabled** — no migration enables the extension; all geography fields use plain `Float` lat/lng for now |
+| PostGIS | **Enabled** (2026-09-01) — `District.geom geography(Point, 4326)` added via migration `20260901000000_postgis_geometry`. Other geography fields still use plain `Float` lat/lng; polygon geometry (alert zones, full district boundaries) remains planned. |
 | Prisma | Database schema, migrations, typed client |
 | `@nestjs/schedule` | Cron scheduling for weather, GBIF, Flood, location-climate, and token cleanup jobs |
 | BullMQ (`bullmq`, `@nestjs/bullmq`) | Job queues for async processing: `email` queue (password-reset, email-verification, alert-notification jobs with 4-attempt exponential backoff) and `gamification` queue (badge evaluation, deduped by userId). `BullModule.forRootAsync` in AppModule parses `REDIS_URL` for connection. |
@@ -61,3 +61,15 @@
 | Redis | Container runs locally; consumed by BullMQ queues (`email` and `gamification`) via `REDIS_URL` |
 
 Kafka and Kubernetes are explicitly later-stage choices, not part of the initial architecture.
+
+## Local Port Reference
+
+| Service | Port | Notes |
+| --- | --- | --- |
+| `apps/web` | 3000 | Next.js public frontend |
+| `apps/api` | 3001 | NestJS backend API |
+| `apps/admin` | 3002 | Next.js admin console |
+| PostgreSQL | 5432 | Local only — not in docker-compose (use `localhost:5432`; containers use `host.docker.internal:5432`) |
+| Redis | 6379 | Docker container; consumed by BullMQ |
+| Mailpit (SMTP) | 1025 | Local dev SMTP server — catches all outbound email |
+| Mailpit (UI) | 8025 | Web UI to inspect caught emails: http://localhost:8025 |

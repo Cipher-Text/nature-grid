@@ -31,6 +31,15 @@ Owns registration, login, token refresh, session lifecycle, and authentication g
 | POST | `/auth/refresh` | Public — redeems an opaque refresh token |
 | POST | `/auth/logout` | Public — revokes a refresh token, idempotent |
 | GET | `/auth/profile` | Authenticated |
+| PATCH | `/auth/profile` | Authenticated — update display name, bio, phone, etc. |
+| PATCH | `/auth/password` | Authenticated (`EMAIL` provider only) |
+| POST | `/auth/forgot-password` | Public — enqueues password-reset email (enumeration-proof) |
+| POST | `/auth/reset-password` | Public — redeems reset token, revokes all sessions |
+| POST | `/auth/send-verification` | Authenticated — (re)sends email verification link |
+| POST | `/auth/verify-email` | Public — marks email as verified via token |
+| GET | `/auth/google` | Public — initiates Google OAuth 2.0 flow (Passport redirect) |
+| GET | `/auth/google/callback` | Public — Google consent callback; issues a 30-second `OAuthExchangeCode` and redirects browser to `APP_URL/auth/callback?code=…` |
+| POST | `/auth/exchange` | Public — redeems a 30-second exchange code; returns access + refresh tokens (used by the Next.js route handler to set httpOnly cookies) |
 
 `JWT_SECRET` is required: `common/env.validation.ts` validates it at boot via `ConfigModule.forRoot({ validate })`, and both `auth.module.ts` and `jwt.strategy.ts` read it with `getOrThrow` — there is no fallback value. A missing, placeholder, or under-32-character secret aborts startup before the database is touched.
 

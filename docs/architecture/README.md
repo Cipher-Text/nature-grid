@@ -16,7 +16,7 @@ Nature Grid is a modular environmental platform. It starts as a monorepo with in
 | Component | Purpose |
 | --- | --- |
 | PostgreSQL | Primary relational database |
-| PostGIS | Docker image provides it, but **not yet enabled** — no migration enables the extension; all geography fields use plain `Float` lat/lng for now |
+| PostGIS | **Enabled** (2026-09-01) — `District.geom geography(Point, 4326)` added via migration `20260901000000_postgis_geometry`. Other geography fields still use plain `Float` lat/lng; polygon geometry remains planned. |
 | Redis | In use — `REDIS_URL` is consumed by BullMQ (`BullModule.forRootAsync` in `AppModule`). Refresh tokens remain in Postgres; Redis is used only for job queues. |
 | BullMQ (`bullmq`, `@nestjs/bullmq`) | In use — `email` queue (password-reset, email-verification, alert-notification; `EmailProcessor` with 4-attempt exponential backoff) and `gamification` queue (badge evaluation; `GamificationProcessor` with dedup by `jobId: badge-eval:{userId}`). |
 
