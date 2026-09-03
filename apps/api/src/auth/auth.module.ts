@@ -5,6 +5,7 @@ import { PassportModule } from '@nestjs/passport';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './jwt.strategy';
+import { GoogleStrategy } from './google.strategy';
 import { RefreshTokenCleanupScheduler } from './refresh-token-cleanup.scheduler';
 import { GamificationModule } from '../gamification/gamification.module';
 import { NotificationsModule } from '../notifications/notifications.module';
@@ -24,7 +25,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
     NotificationsModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, RefreshTokenCleanupScheduler],
+  providers: [AuthService, JwtStrategy, GoogleStrategy, RefreshTokenCleanupScheduler],
   exports: [JwtModule],
 })
 export class AuthModule {}

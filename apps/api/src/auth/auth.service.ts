@@ -27,6 +27,7 @@ const SALT_ROUNDS = 12;
 const REFRESH_TOKEN_TTL_DAYS = 7;
 const PASSWORD_RESET_TTL_MINUTES = 60;
 const EMAIL_VERIFICATION_TTL_HOURS = 24;
+const OAUTH_EXCHANGE_CODE_TTL_SECONDS = 30;
 
 export interface DeviceMeta {
   deviceId?: string;
@@ -64,6 +65,11 @@ export class AuthService {
 
     await this.recordAuthEvent('USER_REGISTER', user.id, deviceMeta);
 
+    // Fire-and-forget — registration must never fail because SMTP is unavailable.
+    this.sendVerificationEmail(user.id).catch((err: unknown) => {
+      this.logger.warn(`Failed to queue verification email for new user ${user.id}: ${String(err)}`);
+    });
+
     const tokens = await this.issueTokens(
       { sub: user.id, email: user.email, role: user.role },
       deviceMeta,
@@ -79,6 +85,12 @@ export class AuthService {
       // spray across many unknown accounts is still visible.
       await this.recordFailedLogin(user?.id, email, deviceMeta);
       throw new UnauthorizedException('Invalid credentials');
+    }
+
+    // Google-only accounts have no password hash — direct login not permitted.
+    if (!user.passwordHash) {
+      await this.recordFailedLogin(user.id, email, deviceMeta);
+      throw new UnauthorizedException('This account uses Google sign-in. Please use "Sign in with Google".');
     }
 
     const valid = await bcrypt.compare(dto.password, user.passwordHash);
@@ -112,6 +124,7 @@ export class AuthService {
         email: true,
         displayName: true,
         role: true,
+        authProvider: true,
         createdAt: true,
         lastLoginAt: true,
         organizationMemberships: {
@@ -169,6 +182,13 @@ export class AuthService {
   /** Changes password for an authenticated user after verifying their current password. */
   async changePassword(userId: string, dto: ChangePasswordDto, deviceMeta: DeviceMeta = {}) {
     const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
+
+    if (user.authProvider !== 'EMAIL' || !user.passwordHash) {
+      throw new BadRequestException(
+        'Password management is not available for accounts signed in with Google.',
+      );
+    }
+
     const valid = await bcrypt.compare(dto.currentPassword, user.passwordHash);
     if (!valid) throw new BadRequestException('Current password is incorrect');
 
@@ -194,7 +214,9 @@ export class AuthService {
     const email = dto.email.toLowerCase().trim();
     const user = await this.prisma.user.findUnique({ where: { email } });
 
-    if (user && user.isActive) {
+    // Google-only accounts have no password — silently skip so the response
+    // remains identical to the "email not found" case (enumeration-proof).
+    if (user && user.isActive && user.authProvider === 'EMAIL') {
       const token = generateRefreshToken();
       const tokenHash = hashRefreshToken(token);
       const expiresAt = new Date(Date.now() + PASSWORD_RESET_TTL_MINUTES * 60 * 1000);
@@ -334,6 +356,106 @@ export class AuthService {
     if (record && count > 0) {
       await this.recordAuthEvent('USER_LOGOUT', record.userId, deviceMeta);
     }
+  }
+
+  // ── Google OAuth ─────────────────────────────────────────────────────────────
+
+  /**
+   * Finds or creates a user from a validated Google profile.
+   *
+   * - Existing Google user (matched by googleId): return as-is.
+   * - Existing email/password user (matched by email): link their Google ID
+   *   automatically (Google has already verified ownership of the address).
+   * - No match: create a new GOOGLE-provider account with `isEmailVerified: true`.
+   */
+  async handleGoogleUser(profile: {
+    email: string;
+    googleId: string;
+    displayName: string;
+  }) {
+    const email = profile.email.toLowerCase().trim();
+
+    // 1. Look up by googleId — the fastest path for returning users.
+    let user = await this.prisma.user.findUnique({ where: { googleId: profile.googleId } });
+    if (user) {
+      if (!user.isActive) throw new UnauthorizedException('Account is deactivated');
+      return user;
+    }
+
+    // 2. Look up by email — may be an existing email/password account.
+    const byEmail = await this.prisma.user.findUnique({ where: { email } });
+    if (byEmail) {
+      if (!byEmail.isActive) throw new UnauthorizedException('Account is deactivated');
+      // Link the Google ID to the existing account. Subsequent logins go via path 1.
+      user = await this.prisma.user.update({
+        where: { id: byEmail.id },
+        data: { googleId: profile.googleId },
+      });
+      await this.recordAuthEvent('USER_LOGIN', user.id, {});
+      return user;
+    }
+
+    // 3. Brand new user — create a Google-provider account.
+    user = await this.prisma.user.create({
+      data: {
+        email,
+        displayName: profile.displayName,
+        googleId: profile.googleId,
+        authProvider: 'GOOGLE',
+        isEmailVerified: true, // Google already verified the address
+        passwordHash: null,
+      },
+    });
+    await this.recordAuthEvent('USER_REGISTER', user.id, {});
+    return user;
+  }
+
+  /**
+   * Issues a short-lived (30 s) one-time exchange code after Google OAuth
+   * succeeds. The Next.js callback page redeems it for a real token pair via
+   * `POST /auth/exchange`. Codes are purged by the daily cleanup cron.
+   */
+  async createExchangeCode(userId: string): Promise<string> {
+    const code = generateRefreshToken(); // 48 bytes of crypto-random hex
+    const expiresAt = new Date(Date.now() + OAUTH_EXCHANGE_CODE_TTL_SECONDS * 1_000);
+    await this.prisma.oAuthExchangeCode.create({ data: { userId, code, expiresAt } });
+    return code;
+  }
+
+  /**
+   * Redeems an exchange code and issues a full access+refresh token pair.
+   * The code is marked used on first call; replays are rejected.
+   */
+  async redeemExchangeCode(code: string, deviceMeta: DeviceMeta = {}) {
+    const record = await this.prisma.oAuthExchangeCode.findUnique({ where: { code } });
+    if (!record || record.usedAt || record.expiresAt < new Date()) {
+      throw new BadRequestException('Exchange code is invalid or has expired');
+    }
+
+    const user = await this.prisma.user.findUnique({ where: { id: record.userId } });
+    if (!user || !user.isActive) throw new UnauthorizedException('Account not found or inactive');
+
+    await this.prisma.$transaction([
+      this.prisma.oAuthExchangeCode.update({
+        where: { id: record.id },
+        data: { usedAt: new Date() },
+      }),
+      this.prisma.user.update({
+        where: { id: user.id },
+        data: { lastLoginAt: new Date() },
+      }),
+    ]);
+
+    await this.recordAuthEvent('USER_LOGIN', user.id, deviceMeta);
+
+    const tokens = await this.issueTokens(
+      { sub: user.id, email: user.email, role: user.role },
+      deviceMeta,
+    );
+    return {
+      user: { id: user.id, email: user.email, displayName: user.displayName, role: user.role },
+      ...tokens,
+    };
   }
 
   /**

@@ -1228,6 +1228,46 @@ a {
   font-weight: 700;
 }
 
+/* "or" separator between the Google button and the email form */
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin: 2px 0;
+}
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* Sign in with Google button */
+.button-google {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 16px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--foreground);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.15s, border-color 0.15s;
+}
+.button-google:hover {
+  border-color: var(--muted);
+  background: color-mix(in srgb, var(--surface) 90%, var(--border) 10%);
+}
+
 .nav-user {
   display: flex;
   align-items: center;

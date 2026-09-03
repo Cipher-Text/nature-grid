@@ -20,5 +20,15 @@ export class RefreshTokenCleanupScheduler {
     if (count > 0) {
       this.logger.log(`Cleaned up ${count} expired refresh tokens`);
     }
+
+    // OAuth exchange codes have a 30-second TTL. Anything older than 1 hour
+    // is definitely stale — purge it regardless of usedAt.
+    const exchangeCutoff = new Date(Date.now() - 60 * 60 * 1000);
+    const { count: exchangeCount } = await this.prisma.oAuthExchangeCode.deleteMany({
+      where: { createdAt: { lt: exchangeCutoff } },
+    });
+    if (exchangeCount > 0) {
+      this.logger.log(`Cleaned up ${exchangeCount} stale OAuth exchange codes`);
+    }
   }
 }

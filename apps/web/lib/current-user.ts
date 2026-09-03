@@ -8,6 +8,7 @@ export interface CurrentUser {
   email: string;
   displayName: string;
   role: string;
+  authProvider: 'EMAIL' | 'GOOGLE';
   createdAt: string;
   lastLoginAt: string | null;
   permissions: string[];

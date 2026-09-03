@@ -76,6 +76,10 @@ export const routes = {
     resetPassword: `${apiPrefix}/auth/reset-password`,
     sendVerification: `${apiPrefix}/auth/send-verification`,
     verifyEmail: `${apiPrefix}/auth/verify-email`,
+    // OAuth — browser navigates directly to this API path (not a fetch call)
+    google: `${apiPrefix}/auth/google`,
+    // Exchange code redemption — POSTed by the Next.js /auth/callback route handler
+    exchange: `${apiPrefix}/auth/exchange`,
   },
 
   locations: {
@@ -326,6 +330,10 @@ export interface ResetPasswordRequest {
 
 export interface VerifyEmailRequest {
   token: string;
+}
+
+export interface ExchangeCodeRequest {
+  code: string;
 }
 
 // ─── Geography ────────────────────────────────────────────────────────────────

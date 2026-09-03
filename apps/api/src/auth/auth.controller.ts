@@ -1,9 +1,12 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Patch, Post, Req } from '@nestjs/common';
-import type { Request } from 'express';
+import { Body, Controller, Get, HttpCode, HttpStatus, Patch, Post, Req, Res, UseGuards } from '@nestjs/common';
+import type { Request, Response } from 'express';
+import { AuthGuard } from '@nestjs/passport';
+import { ConfigService } from '@nestjs/config';
 import { AuthService, DeviceMeta } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { ExchangeCodeDto } from './dto/exchange-code.dto';
 import { CurrentUser, JwtPayload } from '../common/decorators/current-user.decorator';
 import { Public } from '../common/decorators/roles.decorator';
 import { Throttle } from '@nestjs/throttler';
@@ -12,6 +15,7 @@ import { ChangePasswordDto } from './dto/change-password.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
+import type { User } from '@prisma/client';
 
 function deviceMetaFrom(req: Request): DeviceMeta {
   return {
@@ -22,7 +26,10 @@ function deviceMetaFrom(req: Request): DeviceMeta {
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly config: ConfigService,
+  ) {}
 
   @Throttle({ default: { ttl: 60_000, limit: 5 } })
   @Public()
@@ -105,5 +112,53 @@ export class AuthController {
   @Post('verify-email')
   verifyEmail(@Body() dto: VerifyEmailDto, @Req() req: Request) {
     return this.authService.verifyEmail(dto, deviceMetaFrom(req));
+  }
+
+  // ── Google OAuth ──────────────────────────────────────────────────────────────
+
+  /** Step 1 — redirect the browser to Google's consent screen. */
+  @Public()
+  @Get('google')
+  @UseGuards(AuthGuard('google'))
+  googleAuth() {
+    // Passport intercepts this and issues the redirect — the method body is
+    // never reached.
+  }
+
+  /**
+   * Step 2 — Google redirects here after the user consents.
+   * Passport validates the code, calls GoogleStrategy.validate, and sets
+   * req.user. We then issue a 30-second exchange code and redirect the browser
+   * to the Next.js /auth/callback page which redeems it for real tokens.
+   *
+   * On failure Passport throws, which results in a 401 response — the user
+   * can navigate back to /login and try again.
+   */
+  @Public()
+  @Get('google/callback')
+  @UseGuards(AuthGuard('google'))
+  async googleCallback(@Req() req: Request & { user: User }, @Res() res: Response) {
+    try {
+      const code = await this.authService.createExchangeCode(req.user.id);
+      const appUrl = this.config.get<string>('APP_URL') ?? 'http://localhost:3000';
+      return res.redirect(`${appUrl}/auth/callback?code=${encodeURIComponent(code)}`);
+    } catch {
+      const appUrl = this.config.get<string>('APP_URL') ?? 'http://localhost:3000';
+      return res.redirect(
+        `${appUrl}/login?error=${encodeURIComponent('Sign in with Google failed')}`,
+      );
+    }
+  }
+
+  /**
+   * Step 3 — the Next.js /auth/callback page POSTs the exchange code here.
+   * Returns the same {accessToken, refreshToken, user} shape as /login.
+   */
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
+  @Public()
+  @HttpCode(HttpStatus.OK)
+  @Post('exchange')
+  exchange(@Body() dto: ExchangeCodeDto, @Req() req: Request) {
+    return this.authService.redeemExchangeCode(dto.code, deviceMetaFrom(req));
   }
 }

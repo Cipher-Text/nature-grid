@@ -66,6 +66,17 @@ export function validateEnv(config: Record<string, unknown>): Record<string, unk
     );
   }
 
+  // ── Google OAuth (optional) ──────────────────────────────────────────────────
+  // Both vars are required together — one without the other is a misconfiguration.
+  const hasGoogleId = !!config.GOOGLE_CLIENT_ID;
+  const hasGoogleSecret = !!config.GOOGLE_CLIENT_SECRET;
+  if (hasGoogleId !== hasGoogleSecret) {
+    errors.push(
+      'GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must both be set (or both omitted). ' +
+        'Only one is currently configured.',
+    );
+  }
+
   if (errors.length > 0) {
     throw new Error(
       `Invalid environment configuration:\n${errors.map((e) => `  - ${e}`).join('\n')}\n` +

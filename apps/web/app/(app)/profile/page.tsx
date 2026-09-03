@@ -742,50 +742,57 @@ export default async function ProfilePage({
 
           <h3>Change password</h3>
 
-          {searchParams.pwError && (
-            <div className="flash flash-error" role="alert">{searchParams.pwError}</div>
+          {user?.authProvider === 'GOOGLE' ? (
+            <div className="access-note">
+              <p>Your account is signed in with Google. Password management is handled by Google.</p>
+            </div>
+          ) : (
+            <>
+              {searchParams.pwError && (
+                <div className="flash flash-error" role="alert">{searchParams.pwError}</div>
+              )}
+              <form action={changePasswordAction} className="profile-form">
+                <div className="profile-form-grid">
+                  <label>
+                    Current password
+                    <input
+                      name="currentPassword"
+                      type="password"
+                      required
+                      autoComplete="current-password"
+                    />
+                  </label>
+                  <div />
+                  <label>
+                    New password
+                    <input
+                      name="newPassword"
+                      type="password"
+                      required
+                      autoComplete="new-password"
+                      minLength={8}
+                      maxLength={128}
+                    />
+                    <small className="field-hint">At least 8 characters</small>
+                  </label>
+                  <label>
+                    Confirm new password
+                    <input
+                      name="confirmPassword"
+                      type="password"
+                      required
+                      autoComplete="new-password"
+                      minLength={8}
+                      maxLength={128}
+                    />
+                  </label>
+                </div>
+                <div className="profile-save-bar">
+                  <button className="button" type="submit">Change password</button>
+                </div>
+              </form>
+            </>
           )}
-
-          <form action={changePasswordAction} className="profile-form">
-            <div className="profile-form-grid">
-              <label>
-                Current password
-                <input
-                  name="currentPassword"
-                  type="password"
-                  required
-                  autoComplete="current-password"
-                />
-              </label>
-              <div />
-              <label>
-                New password
-                <input
-                  name="newPassword"
-                  type="password"
-                  required
-                  autoComplete="new-password"
-                  minLength={8}
-                  maxLength={128}
-                />
-                <small className="field-hint">At least 8 characters</small>
-              </label>
-              <label>
-                Confirm new password
-                <input
-                  name="confirmPassword"
-                  type="password"
-                  required
-                  autoComplete="new-password"
-                  minLength={8}
-                  maxLength={128}
-                />
-              </label>
-            </div>
-            <div className="profile-save-bar">
-              <button className="button" type="submit">Change password</button>
-            </div>
-          </form>
         </article>
       )}
 
