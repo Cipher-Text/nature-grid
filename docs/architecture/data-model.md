@@ -2,7 +2,7 @@
 
 Nature Grid uses PostgreSQL as the primary database. The Prisma schema lives at `packages/database/prisma/schema.prisma`. The Prisma client is regenerated via `pnpm run db:generate` from the `packages/database` directory.
 
-Current state: **54 models, 31 enums, 8 migrations applied.**
+Current state: **60 models, 31 enums, 11 migrations applied.**
 
 ## Enums
 
@@ -27,6 +27,9 @@ Current state: **54 models, 31 enums, 8 migrations applied.**
 | `WaterBodyType` | `RIVER CANAL LAKE HAOR BEEL POND ESTUARY RESERVOIR OTHER` |
 | `HydrologicalClass` | `PERENNIAL SEASONAL EPHEMERAL` |
 | `WaterLevelTrend` | `RISING FALLING STEADY` |
+| `FacilityType` | `GARMENT TANNERY BRICK_FIELD POWER_PLANT SHIPBREAKING TEXTILE CEMENT STEEL CHEMICAL PHARMACEUTICAL FERTILIZER PAPER_MILL FOOD_PROCESSING OIL_REFINERY OTHER` |
+| `ComplianceStatus` | `COMPLIANT NON_COMPLIANT UNDER_REVIEW UNKNOWN` |
+| `CompanyType` | `PRIVATE STATE_OWNED JOINT_VENTURE MULTINATIONAL CONGLOMERATE CLUSTER` |
 | `DatasetCategory` | `WEATHER AIR_QUALITY WATER BIODIVERSITY REPORTS MONITORING GEOSPATIAL` |
 | `DatasetAccessPolicy` | `PUBLIC LOGIN_REQUIRED RESEARCHER APPROVED GOVERNMENT` |
 | `DatasetAccessRequestStatus` | `PENDING APPROVED REJECTED` |
@@ -35,9 +38,9 @@ Current state: **54 models, 31 enums, 8 migrations applied.**
 | `IngestionStatus` | `QUEUED RUNNING SUCCEEDED FAILED CANCELLED` |
 | `NotificationChannel` | `EMAIL` |
 | `DeliveryStatus` | `PENDING SENT FAILED` |
-| `AuditAction` | `USER_REGISTER USER_LOGIN USER_LOGIN_FAILED USER_LOGOUT USER_ROLE_CHANGE USER_DEACTIVATE REPORT_SUBMIT REPORT_STATUS_CHANGE REPORT_COMMENT_ADD REPORT_MEDIA_ADD ALERT_CREATE ALERT_STATUS_CHANGE DATASET_ACCESS DATASET_DOWNLOAD DATASET_UPDATE DATASET_VERSION_PUBLISH DATASET_ACCESS_DECISION OBSERVATION_SUBMIT OBSERVATION_TRUST_CHANGE OBSERVATION_UPDATE OBSERVATION_DELETE OBSERVATION_MEASUREMENT_ADD OBSERVATION_MEASUREMENT_DELETE RESTORATION_PROJECT_CREATE RESTORATION_PROJECT_UPDATE RESTORATION_PROJECT_JOIN RESTORATION_TARGET_ADD RESTORATION_ACTIVITY_ADD RESTORATION_METRIC_ADD PERMISSION_GRANT PERMISSION_REVOKE` |
+| `AuditAction` | `USER_REGISTER USER_LOGIN USER_LOGIN_FAILED USER_LOGOUT USER_ROLE_CHANGE USER_DEACTIVATE PASSWORD_CHANGE PASSWORD_RESET_REQUEST PASSWORD_RESET EMAIL_VERIFICATION_SENT EMAIL_VERIFIED REPORT_SUBMIT REPORT_STATUS_CHANGE REPORT_COMMENT_ADD REPORT_MEDIA_ADD ALERT_CREATE ALERT_STATUS_CHANGE DATASET_ACCESS DATASET_DOWNLOAD DATASET_UPDATE DATASET_VERSION_PUBLISH DATASET_ACCESS_DECISION OBSERVATION_SUBMIT OBSERVATION_TRUST_CHANGE OBSERVATION_UPDATE OBSERVATION_DELETE OBSERVATION_MEASUREMENT_ADD OBSERVATION_MEASUREMENT_DELETE RESTORATION_PROJECT_CREATE RESTORATION_PROJECT_UPDATE RESTORATION_PROJECT_JOIN RESTORATION_TARGET_ADD RESTORATION_ACTIVITY_ADD RESTORATION_METRIC_ADD PERMISSION_GRANT PERMISSION_REVOKE EMISSION_SOURCE_CREATE EMISSION_ENTRY_CREATE COMMUNITY_POST_CREATE COMMUNITY_POST_DELETE COMMUNITY_COMMENT_ADD COMMUNITY_COMMENT_DELETE COMMUNITY_POLL_VOTE FACILITY_CREATE FACILITY_UPDATE FACILITY_DELETE COMPANY_CREATE COMPANY_UPDATE` |
 
-All 33 `AuditAction` values are written by services. See the `audit` section in [modules.md](modules.md) for which services write what.
+All 48 `AuditAction` values are written by services (`EMISSION_SOURCE_CREATE` and `EMISSION_ENTRY_CREATE` are stale holdovers from the old emissions schema — no service writes them; they will be removed in a future migration). See the `audit` section in [modules.md](modules.md) for which services write what.
 
 ## Users & Auth
 
@@ -176,6 +179,17 @@ All 4 weather tables are keyed by `districtId`, not raw `lat`/`lng` proximity ma
 
 Note `carbonMonoxide` on `HourlyAirQuality` is an OpenMeteo air-quality pollutant reading. It is unrelated to carbon accounting or footprint tracking, which Nature Grid does not model yet — that is roadmap Phase 7.
 
+## Industrial Sites
+
+| Model | Key Fields | Relations |
+| --- | --- | --- |
+| `Company` | `id`, `name unique`, `bnName?`, `description?`, `companyType CompanyType`, `registrationNumber?`, `establishedYear?`, `employeeCount?`, `website?`, `contactEmail?`, `contactPhone?`, `isActive Boolean`, `headquarterDistrictId?`, `parentCompanyId?` | → `District?` (HQ), `Company?` (parent), `Company[]` (subsidiaries), `IndustrialFacility[]` |
+| `IndustrialFacility` | `id`, `name`, `bnName?`, `description?`, `facilityType FacilityType`, `complianceStatus ComplianceStatus default UNKNOWN`, `companyId?`, `isActive Boolean`, `lat?`, `lng?`, `districtId`, `upazilaId?`, `unionId?`, `establishedYear?`, `productionCapacity?`, `landArea Float?`, `etpInstalled Boolean`, `etpCapacity Float?` | → `Company?`, `District`, `Upazila?`, `Union?`, `CitizenReport[]` |
+
+`Company` represents the legal entity that owns or operates one or more physical sites. `name` has a `@unique` constraint (used by the seed lookup). Self-referential `parentCompanyId` allows modelling conglomerates and subsidiaries in a single table. `IndustrialFacility` is the physical site — one company may have many facilities. `etpInstalled` flags whether an Effluent Treatment Plant is installed; `complianceStatus` tracks DoE regulatory status. Seeded on boot via `CompaniesService.onModuleInit()`: first creates companies (two-pass — parents then subsidiaries), then facilities (looks up company by name). Audit events: `COMPANY_CREATE`, `COMPANY_UPDATE`, `FACILITY_CREATE`, `FACILITY_UPDATE`, `FACILITY_DELETE`.
+
+Exposed in `apps/web` via the tabbed `/industrial-sites` page (URL param `?tab=companies` switches to company list; default = sites list). Company detail at `/industrial-sites/companies/:id`; facility detail at `/industrial-sites/:id`.
+
 ## Water Bodies
 
 | Model | Key Fields | Relations |
@@ -282,7 +296,7 @@ pnpm run db:generate          # Regenerate Prisma client after schema changes
 pnpm run db:studio            # Open Prisma Studio at localhost:5555
 ```
 
-**Migrations applied (8):**
+**Migrations applied (11):**
 
 | Migration | Adds |
 | --- | --- |
@@ -296,7 +310,8 @@ pnpm run db:studio            # Open Prisma Studio at localhost:5555
 | `20260901000000_postgis_geometry` | Adds `District.geom geography(Point, 4326)` — PostGIS point geometry now active; adds `coastLat`/`coastLng` to `District`; adds gauge threshold columns to `WaterLevelStation`; adds upazila FK relations to `CitizenReport`, `Observation`, `RestorationProject`, `AlertArea` |
 | `20260902000000_schema_drift_catch_up` | Schema drift catch-up |
 | `20260902010000_world_bank_emissions` | Drops `PollutionSource`, `EmissionEntry`, and 3 related enums; removes `emissions.manage`/`emissions.report` permission rows; creates `NationalEmissionReading` |
+| `20260902181219_add_company_model` | Creates `Company` table + `CompanyType` enum; creates `IndustrialFacility` table (with `companyId FK`, `establishedYear`, `productionCapacity`, `landArea`, `etpInstalled`, `etpCapacity`); adds `COMPANY_CREATE`, `COMPANY_UPDATE`, `FACILITY_CREATE`, `FACILITY_UPDATE`, `FACILITY_DELETE` to `AuditAction`; adds `companiesHQ` back-relation on `District` |
 
-55 tables live.
+60 tables live.
 
-The `LocationsService`, `DatasetsService`, `ProvidersService`, `PermissionsService`, and `SeedService` auto-seed data on first boot via `OnModuleInit`. `LocationsService` seeds 8 divisions, 64 districts (all with GeoJSON boundary), 494 upazilas, and 4,540 unions — all with lat/lng. All coordinates are hardcoded in `apps/api/src/locations/seed/bangladesh.ts`; no runtime file reads are required. This file is the source of truth — edit it directly if location data needs updating. `DatasetsService` seeds 9 catalog records (OpenMeteo Weather, OpenMeteo Flood, District Air Quality Index, Water Body Registry, Biodiversity Occurrences, Sundarbans Monitoring, Emissions Inventory, OpenMeteo Marine Weather, OpenMeteo Satellite Radiation). `ProvidersService` seeds the OpenMeteo, GBIF, and World Bank provider records. `PermissionsService` seeds 11 named permissions and default role grants. `SeedService` seeds 6 dev user accounts (one per role) and a seed organization for local development. No separate seed script is required for those tables.
+The `LocationsService`, `DatasetsService`, `ProvidersService`, `PermissionsService`, `CompaniesService`, and `SeedService` auto-seed data on first boot via `OnModuleInit`. `LocationsService` seeds 8 divisions, 64 districts (all with GeoJSON boundary), 494 upazilas, and 4,540 unions — all with lat/lng. All coordinates are hardcoded in `apps/api/src/locations/seed/bangladesh.ts`; no runtime file reads are required. This file is the source of truth — edit it directly if location data needs updating. `DatasetsService` seeds 9 catalog records (OpenMeteo Weather, OpenMeteo Flood, District Air Quality Index, Water Body Registry, Biodiversity Occurrences, Sundarbans Monitoring, Emissions Inventory, OpenMeteo Marine Weather, OpenMeteo Satellite Radiation). `ProvidersService` seeds the OpenMeteo, GBIF, and World Bank provider records. `PermissionsService` seeds 11 named permissions and default role grants. `CompaniesService` seeds 42 company records (two-pass: parents first, then subsidiaries) and 44 industrial facility records (looks up company by name via `@unique` constraint) on first boot — see `apps/api/src/companies/companies.seed.ts` and `apps/api/src/facilities/facilities.seed.ts`. `SeedService` seeds 6 dev user accounts (one per role) and a seed organization for local development. No separate seed script is required for those tables.

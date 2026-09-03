@@ -77,6 +77,18 @@ Legend: **Done** | **Partial** | *Planned* | ~~Deferred~~
 
 ---
 
+## Industrial Sites
+
+| Feature | Module / App | Status |
+| --- | --- | --- |
+| Company registry (legal entities, subsidiaries, HQ district) | `companies` | **Done** (2026-09-02) — `Company` model with self-referential parent/subsidiary; 42 seed records |
+| Industrial facility registry (type, compliance, ETP, capacity) | `companies` (seeded via `CompaniesService.onModuleInit`) | **Done** (2026-09-02) — `IndustrialFacility` model; 44 seed records; linked to company via FK |
+| Public tabbed Industry page (sites + companies, URL-param tabs) | `apps/web /industrial-sites` | **Done** (2026-09-02) — `?tab=companies` switches views; filter forms preserve tab; `/industrial-sites/companies/:id` and `/industrial-sites/:id` detail pages |
+| DoE compliance status tracking | `companies` | **Partial** — `ComplianceStatus` field exists; no automated sync with DoE data |
+| Facility emission / discharge records | — | *Planned* (Phase 7) |
+
+---
+
 ## Platform Intelligence
 
 | Feature | Module / App | Status |
@@ -146,4 +158,7 @@ Legend: **Done** | **Partial** | *Planned* | ~~Deferred~~
 | `/community` | `GET /community/posts` | **Done** — post list table with poll tag, create form, optional district filter |
 | `/community/:id` | `GET /community/posts/:id` | **Done** — post body, poll with vote bars + vote form, flat comment list, add/delete comment |
 | `/profile` | `GET /auth/profile`, `GET /reports/mine`, `GET /observations/mine`, `GET /notifications/subscriptions` | **Done** — live report + observation history; alert subscription management |
+| `/industrial-sites` | `GET /facilities`, `GET /companies` | **Done** (2026-09-02) — tabbed: sites tab (filter by type, compliance, district) + companies tab (filter by type, district); `?tab=companies` switches views |
+| `/industrial-sites/:id` | `GET /facilities/:id` | **Done** — compliance badge, facility details grid, linked citizen reports, OpenStreetMap link |
+| `/industrial-sites/companies/:id` | `GET /companies/:id` | **Done** — company type badge, subsidiaries table, facilities table |
 | `/login`, `/register` | `POST /auth/login`, `POST /auth/register` | **Done** |

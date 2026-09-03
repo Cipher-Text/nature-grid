@@ -6,7 +6,7 @@ Global prefix is `/api/v1` (see `packages/contracts/src/index.ts` for the canoni
 
 Legend: ✓ Implemented | ~ Stub only | ✗ Not started
 
-Registered in `app.module.ts`: `database`, `auth`, `users`, `organizations`, `locations`, `locations/climate`, `providers`, `datasets`, `reports`, `alerts`, `biodiversity`, `observations`, `restoration`, `media`, `ingestion`, `weather`, `flood`, `marine`, `radiation`, `emissions`, `metrics`, `notifications`, `permissions`, `analytics`, `water-bodies`, `gamification`, `community`. `SeedService` is also registered directly in `AppModule` (not its own module) and seeds dev users + a seed organization on first boot.
+Registered in `app.module.ts`: `database`, `auth`, `users`, `organizations`, `locations`, `locations/climate`, `providers`, `datasets`, `reports`, `alerts`, `biodiversity`, `observations`, `restoration`, `media`, `ingestion`, `weather`, `flood`, `marine`, `radiation`, `emissions`, `companies`, `metrics`, `notifications`, `permissions`, `analytics`, `water-bodies`, `gamification`, `community`. `SeedService` is also registered directly in `AppModule` (not its own module) and seeds dev users + a seed organization on first boot.
 
 ## database ✓
 
@@ -308,6 +308,24 @@ Ingests national GHG data from the World Bank Climate Change API (`api.worldbank
 | GET | `/emissions/indicators` | Public — distinct codes in DB |
 | GET | `/emissions/:year` | Public — all indicators for a year |
 
+## companies ✓
+
+Owns legal entities (companies) and their physical industrial sites (facilities). `CompaniesService.onModuleInit()` seeds both on first boot: 42 company records in two passes (parents before subsidiaries), then 44 facility records (lookup by `Company.name @unique`). This means no separate seed script is needed.
+
+| Method | Path | Access |
+| --- | --- | --- |
+| GET | `/companies` | Public (`?companyType`, `?districtId`, `?isActive`, `?page`, `?limit`) |
+| GET | `/companies/:id` | Public — includes subsidiaries and facilities list |
+| POST | `/companies` | Government / Admin |
+| PATCH | `/companies/:id` | Government / Admin |
+| GET | `/facilities` | Public (`?facilityType`, `?complianceStatus`, `?districtId`, `?upazilaId`, `?companyId`, `?isActive`, `?page`, `?limit`) |
+| GET | `/facilities/:id` | Public — includes linked company, recent citizen reports |
+| POST | `/facilities` | Government / Admin |
+| PATCH | `/facilities/:id` | Government / Admin |
+| DELETE | `/facilities/:id` | Admin |
+
+`CompaniesModule` exports `CompaniesService` so that `FacilitiesService` can resolve company seeds during `onModuleInit`. Mutations write `COMPANY_CREATE`, `COMPANY_UPDATE`, `FACILITY_CREATE`, `FACILITY_UPDATE`, `FACILITY_DELETE` audit events. Public web surface: `/industrial-sites` (tabbed — `?tab=companies` switches to company list), `/industrial-sites/companies/:id` (company detail with subsidiaries and sites table), `/industrial-sites/:id` (facility detail with linked reports).
+
 ## metrics ✓
 
 Owns live platform counters for the public homepage. Built as M13 task 7 (2026-08-19).
@@ -437,8 +455,10 @@ Services that write audit events:
 | `permissions` | `PERMISSION_GRANT`, `PERMISSION_REVOKE` |
 | `emissions` | *(none — no user-initiated writes; all data ingested by scheduler)* |
 | `community` | `COMMUNITY_POST_CREATE`, `COMMUNITY_POST_DELETE`, `COMMUNITY_COMMENT_ADD`, `COMMUNITY_COMMENT_DELETE`, `COMMUNITY_POLL_VOTE` |
+| `companies` | `COMPANY_CREATE`, `COMPANY_UPDATE` |
+| `facilities` | `FACILITY_CREATE`, `FACILITY_UPDATE`, `FACILITY_DELETE` |
 
-`AuditAction` declares 38 values. All are written by a service.
+`AuditAction` declares 48 values. All are written by a service (`EMISSION_SOURCE_CREATE` and `EMISSION_ENTRY_CREATE` are stale holdovers from the old emissions schema — no service writes them).
 
 `auth` is the only service that populates `AuditEvent.ipAddress`, because it already captures request metadata for `RefreshToken` rows. The others leave it null.
 
@@ -454,4 +474,4 @@ These accounts exist only for local development and should not be created in pro
 
 ## Coverage note
 
-`app.module.ts` registers 27 modules: `database` plus 26 feature modules. All are fully implemented except `ingestion` (job tracking and read endpoints only — no retry queue, no manual trigger endpoint; recurring cron jobs serve as the retry mechanism). BullMQ queues (`email`, `gamification`) are wired via `BullModule.forRootAsync` in `AppModule`. Advanced domains not yet represented by a module — structured surveys, carbon accounting, research publications, satellite/remote sensing ingestion, forest registry, industrial facility registry — are planned for Phase 7 or Phase 8. See `docs/roadmap.md` and `docs/architecture/feature-map.md`.
+`app.module.ts` registers 28 modules: `database` plus 27 feature modules (`companies` added 2026-09-02). All are fully implemented except `ingestion` (job tracking and read endpoints only — no retry queue, no manual trigger endpoint; recurring cron jobs serve as the retry mechanism). BullMQ queues (`email`, `gamification`) are wired via `BullModule.forRootAsync` in `AppModule`. Advanced domains not yet represented by a module — structured surveys, carbon accounting, research publications, satellite/remote sensing ingestion, forest registry — are planned for Phase 7 or Phase 8. See `docs/roadmap.md` and `docs/architecture/feature-map.md`.

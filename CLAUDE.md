@@ -60,7 +60,7 @@ Global setup in `apps/api/src/main.ts`:
 - `JwtAuthGuard` + `RolesGuard` + `PermissionsGuard` registered via `useGlobalGuards`; `ThrottlerGuard` registered via `APP_GUARD` in `AppModule` (needs DI)
 - Rate limits: global 120 req / 60 s; auth endpoints tightened — login/register 5 req / 60 s, refresh 20 req / 60 s
 
-**Feature modules** (`apps/api/src/`): `auth`, `users`, `organizations`, `locations`, `locations/climate`, `providers`, `datasets`, `reports`, `alerts`, `observations`, `restoration`, `biodiversity`, `weather`, `flood`, `radiation`, `marine`, `emissions`, `gamification`, `metrics`, `notifications`, `permissions`, `analytics`, `water-bodies`, `ingestion`, `media`, `database`, `common`. Also registered in `AppModule`: a `SeedService` (seeds dev users + organization on boot).
+**Feature modules** (`apps/api/src/`): `auth`, `users`, `organizations`, `locations`, `locations/climate`, `providers`, `datasets`, `reports`, `alerts`, `observations`, `restoration`, `biodiversity`, `weather`, `flood`, `radiation`, `marine`, `emissions`, `companies`, `gamification`, `metrics`, `notifications`, `permissions`, `analytics`, `water-bodies`, `ingestion`, `media`, `database`, `common`. Also registered in `AppModule`: a `SeedService` (seeds dev users + organization on boot).
 
 Each feature module follows: `*.module.ts` → `*.controller.ts` → `*.service.ts` → `dto/` folder.
 
@@ -79,7 +79,7 @@ Each feature module follows: `*.module.ts` → `*.controller.ts` → `*.service.
 
 ### Database (Prisma)
 
-Schema: `packages/database/prisma/schema.prisma` — 54 models, 31 enums. 8 migrations applied (latest: `20260901000000_postgis_geometry`).
+Schema: `packages/database/prisma/schema.prisma` — 60 models, 31 enums. 11 migrations applied (latest: `20260902181219_add_company_model`).
 
 **All IDs are Prisma CUIDs** (e.g. `cmstewlrj0012usw17sqz1d3n`). Use `@IsString()` in DTO validators, never `@IsUUID()`.
 
@@ -90,6 +90,7 @@ Seeding happens in service `onModuleInit()` hooks (idempotent upserts):
 - `ProvidersService` — seeds OpenMeteo, GBIF, and World Bank provider records
 - `DatasetsService` — seeds 9 dataset catalog records (OpenMeteo Weather, OpenMeteo Flood, District Air Quality Index, Water Body Registry, Biodiversity Occurrences, Sundarbans Monitoring, Emissions Inventory, OpenMeteo Marine Weather, OpenMeteo Satellite Radiation)
 - `PermissionsService` — seeds 11 named permissions (`reports.create`, `reports.moderate`, `alerts.manage`, `restoration.create`, `restoration.join`, `observations.create`, `observations.verify`, `observations.delete`, `organizations.access`, `organizations.manage`, `users.manage`) and default role grants
+- `CompaniesService` — seeds 42 company records (two-pass: parents before subsidiaries) and 44 industrial facility records (lookup by `Company.name @unique`) — see `companies.seed.ts` and `facilities/facilities.seed.ts`
 - `SeedService` — seeds 6 dev user accounts (one per role, password `NatureGrid123!`) and a seed organization for local development
 
 Every mutation writes an `AuditEvent` record (action, userId, entityType, entityId, meta, ipAddress).
@@ -111,6 +112,8 @@ Notable schema decisions:
 - `WaterLevelStation` — gauge stations with `dangerLevel`, `warningLevel`, `normalLevel` thresholds (metres above datum, nullable)
 - `StationFloodForecast` — flood discharge forecasts per station (replaced earlier district-based model)
 - `WaterLevelReading` — observed water level readings per station with `WaterLevelTrend` enum
+- `Company` — legal entity that owns/operates industrial sites; self-referential `parentCompanyId` for conglomerates; `name @unique` for seed lookups; `CompanyType` enum (PRIVATE/STATE_OWNED/JOINT_VENTURE/MULTINATIONAL/CONGLOMERATE/CLUSTER)
+- `IndustrialFacility` — physical industrial site linked to a company; `FacilityType` enum (15 types); `ComplianceStatus` enum (COMPLIANT/NON_COMPLIANT/UNDER_REVIEW/UNKNOWN); `etpInstalled Boolean`; seeded by `CompaniesService`
 
 ### Frontend (apps/web)
 
@@ -118,7 +121,7 @@ Next.js 14 App Router, Server Components throughout — no `useState`, no Redux,
 
 Route groups:
 - `(public)` — `/`, `/login`, `/register`
-- `(app)` — authenticated pages behind a sidebar shell: `/dashboard`, `/profile`, `/alerts`, `/alerts/:id`, `/observations`, `/observations/:id`, `/biodiversity`, `/biodiversity/species/:id`, `/community`, `/reports`, `/reports/:id`, `/locations`, `/locations/divisions/:id`, `/locations/districts/:id`, `/locations/upazilas/:id`, `/locations/unions/:id`, `/restoration`, `/restoration/:id`, `/data`, `/data/:id`, `/organizations`, `/organizations/:id`
+- `(app)` — authenticated pages behind a sidebar shell: `/dashboard`, `/profile`, `/alerts`, `/alerts/:id`, `/observations`, `/observations/:id`, `/biodiversity`, `/biodiversity/species/:id`, `/community`, `/reports`, `/reports/:id`, `/locations`, `/locations/divisions/:id`, `/locations/districts/:id`, `/locations/upazilas/:id`, `/locations/unions/:id`, `/restoration`, `/restoration/:id`, `/data`, `/data/:id`, `/organizations`, `/organizations/:id`, `/industrial-sites` (tabbed: `?tab=companies` or default sites), `/industrial-sites/:id`, `/industrial-sites/companies/:id`
 
 Edge middleware (`middleware.ts`) guards `/profile` and auto-refreshes expired access tokens before page render.
 

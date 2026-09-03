@@ -1,6 +1,6 @@
 # Progress
 
-Last updated: 2026-09-02 (World Bank emissions rewrite — `emissions/` module converted from user-input (`PollutionSource`/`EmissionEntry`) to World Bank Climate Change API ingestion; `NationalEmissionReading` model; 4 GHG indicators; weekly scheduler; `/emissions` frontend page showing time-series table. Previously: E2E test suite — 45 tests across 4 spec files; CI e2e job with postgres service container; docs updated — roadmap Phase 6/7/8 status, roles-and-permissions expanded with role-feature matrix and planned Phase 7/8 permissions. Community module — `CommunityModule`, 5 models, full CRUD + poll vote, `/community` and `/community/:id` pages; Phase 5 closed. PostGIS point geometry on District; Water Bodies module; flood module refactored to station-based; observation measurements; restoration sub-resources; AlertType enum + AlertArea; DatasetVersion; water level readings. 2026-08-29 BullMQ, Gamification module, Media module; 2026-08-28 OpenMeteo audit, Radiation, Marine, Emissions.)
+Last updated: 2026-09-02 (Companies + Industrial Sites — `Company` model (self-referential conglomerate/subsidiary tree) + `IndustrialFacility` model with `CompanyType`/`FacilityType`/`ComplianceStatus` enums; `CompaniesModule` with CRUD + two-pass idempotent seed (42 companies, 44 facilities); tabbed `/industrial-sites` page with URL-param tab switching between sites and companies; `/industrial-sites/companies/:id` and `/industrial-sites/:id` detail pages. Previously: World Bank emissions rewrite — `emissions/` module converted from user-input (`PollutionSource`/`EmissionEntry`) to World Bank Climate Change API ingestion; `NationalEmissionReading` model; 4 GHG indicators; weekly scheduler; `/emissions` frontend page showing time-series table. Before that: E2E test suite — 45 tests across 4 spec files; CI e2e job with postgres service container; docs updated — roadmap Phase 6/7/8 status, roles-and-permissions expanded with role-feature matrix and planned Phase 7/8 permissions. Community module — `CommunityModule`, 5 models, full CRUD + poll vote, `/community` and `/community/:id` pages; Phase 5 closed. PostGIS point geometry on District; Water Bodies module; flood module refactored to station-based; observation measurements; restoration sub-resources; AlertType enum + AlertArea; DatasetVersion; water level readings. 2026-08-29 BullMQ, Gamification module, Media module; 2026-08-28 OpenMeteo audit, Radiation, Marine, Emissions.)
 
 ## Status Legend
 
@@ -24,8 +24,8 @@ Last updated: 2026-09-02 (World Bank emissions rewrite — `emissions/` module c
 | Frontend "app shell" layout (sidebar pages) — M15 | Done | Established via `/profile`, powers all 7 pages. `/data`, `/reports`, `/alerts`, `/observations`, `/restoration`, `/biodiversity`, and now `/community` (all real backend data — community wired 2026-09-01). See "App-Shell Pages: Data, Reports, Alerts", "App-Shell Pages: Observations, Biodiversity, Restoration, Community", "Observations Module", "Restoration Projects Module", "Biodiversity + GBIF Module", and "Community module" below. |
 | Shared types and contracts — M2 | Done | Full enums, DTOs, paginated envelopes, request/response types, route contract map |
 | Backend foundation — M3 | Done | Auth (JWT/bcrypt), users, orgs, locations (8 div/64 district auto-seed), providers, datasets (catalog seed), reports (status workflow + audit), alerts (severity + audit), global validation, guard infrastructure. **Caveat:** role-gated endpoints shipped with a casing bug that rejected every user until 2026-08-17 — see "Critical RBAC Fix" below. |
-| Prisma schema | Done | 31 enums, 54 models — includes water bodies, observation measurements, restoration sub-resources, AlertType/AlertArea, DatasetVersion, StationFloodForecast, WaterLevelReading, PostGIS geom on District |
-| Database migration | Done | 8 migrations applied (latest `20260901000000_postgis_geometry`); 54 tables live; Postgres on port 5432 |
+| Prisma schema | Done | 31 enums, 60 models — includes water bodies, observation measurements, restoration sub-resources, AlertType/AlertArea, DatasetVersion, StationFloodForecast, WaterLevelReading, PostGIS geom on District, Company, IndustrialFacility |
+| Database migration | Done | 11 migrations applied (latest `20260902181219_add_company_model`); 60 tables live; Postgres on port 5432 |
 | District coordinates | Done | Migration `add_district_coordinates`; all 64 districts backfilled with real lat/lng sourced from `open-nature`'s district registry (`LocationsService.onModuleInit` backfills on boot if missing) |
 | Seed data | Done | LocationsService auto-seeds 8 divisions + 64 districts (all with GeoJSON boundary) on boot; DatasetsService auto-seeds 9 catalog records; ProvidersService auto-seeds `OpenMeteo` and `GBIF` providers on boot idempotently; no separate seed script needed |
 | Auth — refresh / logout | Done | Postgres-backed `RefreshToken` model (not Redis — see "Auth Refresh/Logout" below), opaque tokens with rotation, daily cleanup cron |
@@ -72,6 +72,36 @@ Last updated: 2026-09-02 (World Bank emissions rewrite — `emissions/` module c
 | Analytics module | Done | Role-scoped dashboard endpoints: admin, moderator, government, researcher, org admin — each returns aggregated stats relevant to that role. |
 | Seed service | Done | `SeedService` registered in `AppModule`; seeds 6 dev user accounts (one per role, password `NatureGrid123!`) and 1 seed organization on first boot. |
 | Users reactivate endpoint | Done | `PATCH /users/:id/reactivate` re-enables deactivated accounts. |
+| Companies + Industrial Sites | Done | 2026-09-02 — `Company` + `IndustrialFacility` models; `CompanyType`/`FacilityType`/`ComplianceStatus` enums; `CompaniesModule` with CRUD + idempotent two-pass seed (42 companies, 44 facilities); tabbed `/industrial-sites` page; company + facility detail pages. See "2026-09-02 Companies + Industrial Sites" below. |
+
+## 2026-09-02 Companies + Industrial Sites
+
+Added a full `Company` (legal entity) → `IndustrialFacility` (physical site) two-model hierarchy, replacing the earlier single-table design that used a free-text `operatorName` field.
+
+**Schema changes** (migration `20260902181219_add_company_model`):
+- `Company` model — `name @unique`, `companyType CompanyType`, self-referential `parentCompanyId` for conglomerates, `headquarterDistrictId FK`; 5 indexes
+- `IndustrialFacility` model — `companyId FK` (replaces `operatorName String?`), `establishedYear?`, `productionCapacity?`, `landArea?`, `etpInstalled Boolean`, `etpCapacity?`
+- New enums: `CompanyType` (PRIVATE/STATE_OWNED/JOINT_VENTURE/MULTINATIONAL/CONGLOMERATE/CLUSTER), `FacilityType` (15 types), `ComplianceStatus` (COMPLIANT/NON_COMPLIANT/UNDER_REVIEW/UNKNOWN)
+- New `AuditAction` values: `COMPANY_CREATE`, `COMPANY_UPDATE`, `FACILITY_CREATE`, `FACILITY_UPDATE`, `FACILITY_DELETE`
+
+**Seed data:**
+- 42 company records across 6 types — includes state-owned entities (BCIC, BPC, BEPZA), private garment/tannery operators, and conglomerates (Bashundhara Group with a Paper Mills subsidiary)
+- 44 industrial facility records across 15 types — garment factories, tanneries, brick fields, power plants, cement plants, shipbreaking yards, EPZs, paper mills, pharmaceutical plants, oil refineries
+- Two-pass seeding strategy: parent companies first, then subsidiaries (resolve `parentCompanyId` by name lookup), then facilities (lookup company by `Company.name @unique`)
+
+**API:**
+- `GET /companies` — paginated list, filter by type/district/status
+- `GET /companies/:id` — detail with subsidiaries + facilities list
+- `POST/PATCH /companies` — GOVERNMENT/ADMIN only
+- `GET /facilities` — paginated list, filter by type/compliance/district/company
+- `GET /facilities/:id` — detail with company inline + linked citizen reports (latest 5)
+- `POST/PATCH /facilities` — GOVERNMENT/ADMIN only; `DELETE /facilities/:id` — ADMIN only
+
+**Frontend (`apps/web`):**
+- `/industrial-sites` — single "Industry" nav link; tabbed page switching via URL param `?tab=companies` (default = sites); filter forms each carry a hidden `<input name="tab">` to preserve tab on submit; shared pagination
+- `/industrial-sites/companies/:id` — company detail page: type badge, HQ district, parent company link, subsidiaries table, facilities table
+- `/industrial-sites/:id` — facility detail page: compliance badge, facility type tag, company name linked to company page, details grid (ETP, capacity, land area), linked citizen reports, OpenStreetMap link
+- Sidebar nav label changed from "Industrial Sites" to "Industry"
 
 ## 2026-09-02 World Bank Emissions Rewrite
 
