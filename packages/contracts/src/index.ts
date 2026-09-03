@@ -72,6 +72,10 @@ export const routes = {
     refresh: `${apiPrefix}/auth/refresh`,
     logout: `${apiPrefix}/auth/logout`,
     profile: `${apiPrefix}/auth/profile`,
+    forgotPassword: `${apiPrefix}/auth/forgot-password`,
+    resetPassword: `${apiPrefix}/auth/reset-password`,
+    sendVerification: `${apiPrefix}/auth/send-verification`,
+    verifyEmail: `${apiPrefix}/auth/verify-email`,
   },
 
   locations: {
@@ -309,6 +313,19 @@ export interface RefreshTokenRequest {
 
 export interface LogoutRequest {
   refreshToken: string;
+}
+
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+export interface ResetPasswordRequest {
+  token: string;
+  newPassword: string;
+}
+
+export interface VerifyEmailRequest {
+  token: string;
 }
 
 // ─── Geography ────────────────────────────────────────────────────────────────

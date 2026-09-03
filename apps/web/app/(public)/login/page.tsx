@@ -17,7 +17,7 @@ const SEED_USERS = [
 export default function LoginPage({
   searchParams,
 }: {
-  searchParams: { error?: string };
+  searchParams: { error?: string; message?: string };
 }) {
   const showSeedLogin = process.env.NEXT_PUBLIC_ENABLE_SEED_LOGIN === 'true';
 
@@ -37,6 +37,7 @@ export default function LoginPage({
             </div>
           </div>
 
+          {searchParams.message && <p className="form-success">{searchParams.message}</p>}
           {searchParams.error && <p className="form-error">{searchParams.error}</p>}
 
           <form action={loginAction} className="auth-form">
@@ -59,6 +60,10 @@ export default function LoginPage({
               Sign in
             </button>
           </form>
+
+          <p className="auth-switch">
+            <Link href="/forgot-password">Forgot your password?</Link>
+          </p>
 
           {showSeedLogin && (
             <section className="seed-login">

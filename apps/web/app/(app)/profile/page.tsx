@@ -15,7 +15,7 @@ import {
 } from '@nature-grid/contracts';
 import { titleCase, relativeTime } from '../../../lib/format';
 import { ACCESS_TOKEN_COOKIE } from '../../../lib/session-constants';
-import { updateProfileAction } from '../../../lib/profile-actions';
+import { updateProfileAction, changePasswordAction } from '../../../lib/profile-actions';
 import { ENVIRONMENTAL_EXPERTISE, ENVIRONMENTAL_RESEARCH_INTERESTS } from '@nature-grid/shared';
 import TagInput from '../../../components/tag-input';
 import DistrictSelect, { type DistrictWithDivision } from '../../../components/district-select';
@@ -273,6 +273,7 @@ export default async function ProfilePage({
     sub_error?: string;
     profileSaved?: string;
     profileError?: string;
+    pwError?: string;
   };
 }) {
   const activeTab: ProfileTab =
@@ -711,7 +712,6 @@ export default async function ProfilePage({
                 <strong className="profile-security-label">Email address</strong>
                 <span className="profile-security-value">{user?.email}</span>
               </div>
-              <span className="tag success">Verified</span>
             </div>
             <div className="profile-security-row">
               <div>
@@ -740,11 +740,52 @@ export default async function ProfilePage({
             </div>
           </div>
 
-          <h3>Password</h3>
-          <div className="access-note">
-            <p>Password self-service is coming soon.</p>
-            <span>To change your password now, contact an administrator or use the account recovery flow from the login page.</span>
-          </div>
+          <h3>Change password</h3>
+
+          {searchParams.pwError && (
+            <div className="flash flash-error" role="alert">{searchParams.pwError}</div>
+          )}
+
+          <form action={changePasswordAction} className="profile-form">
+            <div className="profile-form-grid">
+              <label>
+                Current password
+                <input
+                  name="currentPassword"
+                  type="password"
+                  required
+                  autoComplete="current-password"
+                />
+              </label>
+              <div />
+              <label>
+                New password
+                <input
+                  name="newPassword"
+                  type="password"
+                  required
+                  autoComplete="new-password"
+                  minLength={8}
+                  maxLength={128}
+                />
+                <small className="field-hint">At least 8 characters</small>
+              </label>
+              <label>
+                Confirm new password
+                <input
+                  name="confirmPassword"
+                  type="password"
+                  required
+                  autoComplete="new-password"
+                  minLength={8}
+                  maxLength={128}
+                />
+              </label>
+            </div>
+            <div className="profile-save-bar">
+              <button className="button" type="submit">Change password</button>
+            </div>
+          </form>
         </article>
       )}
 
