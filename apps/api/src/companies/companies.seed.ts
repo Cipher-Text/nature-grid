@@ -1,4 +1,5 @@
 import type { CompanyType } from '@prisma/client';
+import { MIB_COMPANY_SEED_DATA } from './mib-companies.seed';
 
 export interface CompanySeedEntry {
   name: string;
@@ -12,7 +13,7 @@ export interface CompanySeedEntry {
   parentCompanyName?: string;
 }
 
-export const COMPANY_SEED_DATA: CompanySeedEntry[] = [
+export const COMPANY_SEED_DATA: CompanySeedEntry[] = [...MIB_COMPANY_SEED_DATA,
   // ── Garment / textile manufacturers ────────────────────────────────────────
   // Company and factory details were checked against each operator's official
   // website during the September 2026 seed-data refresh.

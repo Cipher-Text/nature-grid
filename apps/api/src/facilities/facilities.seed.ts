@@ -1,4 +1,5 @@
 import type { ComplianceStatus, FacilityType } from '@prisma/client';
+import { MIB_FACILITY_SEED_DATA } from './mib-facilities.seed';
 
 export interface FacilitySeedEntry {
   name: string;
@@ -21,7 +22,7 @@ export interface FacilitySeedEntry {
  * - districtName must match the seeded District.name exactly.
  * - companyName must match a Company.name from companies.seed.ts exactly.
  */
-export const FACILITY_SEED_DATA: FacilitySeedEntry[] = [
+export const FACILITY_SEED_DATA: FacilitySeedEntry[] = [...MIB_FACILITY_SEED_DATA,
   // ─── Tanneries ──────────────────────────────────────────────────────────────
   {
     name: 'Hazaribagh Tannery Area',
